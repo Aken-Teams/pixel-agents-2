@@ -20,7 +20,13 @@ export type ServerMessage =
 	| { type: 'floorTilesLoaded'; sprites: string[][][] }
 	| { type: 'wallTilesLoaded'; sprites: string[][][] }
 	| { type: 'layoutLoaded'; layout: Record<string, unknown> | null }
-	| { type: 'settingsLoaded'; soundEnabled: boolean };
+	| { type: 'settingsLoaded'; soundEnabled: boolean }
+	| { type: 'chatCreated'; chatId: string }
+	| { type: 'chatClosed'; chatId: string }
+	| { type: 'chatStreamChunk'; chatId: string; text: string }
+	| { type: 'chatStreamEnd'; chatId: string }
+	| { type: 'chatError'; chatId: string; error: string }
+	| { type: 'existingChats'; chatIds: string[] };
 
 // ── Client → Server Messages ──────────────────────────────────
 
@@ -32,7 +38,10 @@ export type ClientMessage =
 	| { type: 'saveAgentSeats'; seats: Record<string, AgentMeta> }
 	| { type: 'saveLayout'; layout: Record<string, unknown> }
 	| { type: 'setSoundEnabled'; enabled: boolean }
-	| { type: 'importLayout'; layout: Record<string, unknown> };
+	| { type: 'importLayout'; layout: Record<string, unknown> }
+	| { type: 'createChat'; cwd?: string }
+	| { type: 'sendChatMessage'; chatId: string; message: string }
+	| { type: 'closeChat'; chatId: string };
 
 export interface AgentMeta {
 	palette?: number;

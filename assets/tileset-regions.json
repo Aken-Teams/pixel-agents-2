@@ -596,6 +596,264 @@
       "orientation": "left",
       "groupId": "side-desk",
       "backgroundTiles": 1
+    },
+
+    {
+      "id": "desk-side-right",
+      "name": "Side Desk",
+      "label": "Side Desk (Right)",
+      "category": "desks",
+      "col": 14, "row": 2,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 2,
+      "isDesk": true,
+      "orientation": "right",
+      "groupId": "side-desk",
+      "partOfGroup": true,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "conference-table-gray",
+      "name": "Conference Table",
+      "label": "Conference Table (Gray)",
+      "category": "desks",
+      "col": 0, "row": 4,
+      "widthTiles": 4, "heightTiles": 2,
+      "footprintW": 4, "footprintH": 2,
+      "isDesk": true,
+      "groupId": "conference-table",
+      "backgroundTiles": 1
+    },
+    {
+      "id": "conference-table-brown",
+      "name": "Conference Table",
+      "label": "Conference Table (Brown)",
+      "category": "desks",
+      "col": 0, "row": 6,
+      "widthTiles": 4, "heightTiles": 2,
+      "footprintW": 4, "footprintH": 2,
+      "isDesk": true,
+      "groupId": "conference-table",
+      "partOfGroup": true,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "partition-1x2",
+      "name": "Partition",
+      "label": "Partition",
+      "category": "walls",
+      "col": 4, "row": 4,
+      "widthTiles": 1, "heightTiles": 2,
+      "footprintW": 1, "footprintH": 1,
+      "isDesk": false,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "counter-3x2-back",
+      "name": "Counter",
+      "label": "Counter (Back)",
+      "category": "desks",
+      "col": 5, "row": 6,
+      "widthTiles": 3, "heightTiles": 2,
+      "footprintW": 3, "footprintH": 2,
+      "isDesk": true,
+      "orientation": "back",
+      "groupId": "counter",
+      "partOfGroup": true,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "colored-shelf-red",
+      "name": "Colored Shelf",
+      "label": "Colored Shelf (Red)",
+      "category": "storage",
+      "col": 8, "row": 4,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+    {
+      "id": "colored-shelf-blue",
+      "name": "Colored Shelf",
+      "label": "Colored Shelf (Blue)",
+      "category": "storage",
+      "col": 10, "row": 4,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+    {
+      "id": "display-shelf",
+      "name": "Display Shelf",
+      "label": "Display Shelf",
+      "category": "storage",
+      "col": 12, "row": 4,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "vending-machine",
+      "name": "Vending Machine",
+      "label": "Vending Machine",
+      "category": "appliances",
+      "col": 12, "row": 6,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "coat-rack",
+      "name": "Coat Rack",
+      "label": "Coat Rack",
+      "category": "decor",
+      "col": 15, "row": 6,
+      "widthTiles": 1, "heightTiles": 2,
+      "footprintW": 1, "footprintH": 1,
+      "isDesk": false,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "paper-stack",
+      "name": "Paper Stack",
+      "label": "Paper Stack",
+      "category": "decor",
+      "col": 10, "row": 8,
+      "widthTiles": 1, "heightTiles": 1,
+      "footprintW": 1, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnSurfaces": true
+    },
+    {
+      "id": "pencil-cup",
+      "name": "Pencil Cup",
+      "label": "Pencil Cup",
+      "category": "decor",
+      "col": 11, "row": 8,
+      "widthTiles": 1, "heightTiles": 1,
+      "footprintW": 1, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnSurfaces": true
+    },
+
+    {
+      "id": "coffee-table",
+      "name": "Coffee Table",
+      "label": "Coffee Table",
+      "category": "desks",
+      "col": 7, "row": 9,
+      "widthTiles": 2, "heightTiles": 1,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": true,
+      "backgroundTiles": 0
+    },
+
+    {
+      "id": "copier",
+      "name": "Copier",
+      "label": "Copier",
+      "category": "electronics",
+      "col": 12, "row": 10,
+      "widthTiles": 1, "heightTiles": 1,
+      "footprintW": 1, "footprintH": 1,
+      "isDesk": false
+    },
+
+    {
+      "id": "tv-wall",
+      "name": "Wall TV",
+      "label": "Wall TV",
+      "category": "electronics",
+      "col": 6, "row": 11,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+    {
+      "id": "picture-frame-small",
+      "name": "Small Picture",
+      "label": "Small Picture Frame",
+      "category": "decor",
+      "col": 8, "row": 11,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+    {
+      "id": "art-frame",
+      "name": "Art Frame",
+      "label": "Art Frame",
+      "category": "decor",
+      "col": 10, "row": 11,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "painting-alt",
+      "name": "Painting",
+      "label": "Painting",
+      "category": "decor",
+      "col": 5, "row": 13,
+      "widthTiles": 2, "heightTiles": 2,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false,
+      "canPlaceOnWalls": true,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "tv-stand",
+      "name": "TV Stand",
+      "label": "TV Stand",
+      "category": "storage",
+      "col": 11, "row": 14,
+      "widthTiles": 1, "heightTiles": 2,
+      "footprintW": 1, "footprintH": 1,
+      "isDesk": false,
+      "backgroundTiles": 1
+    },
+
+    {
+      "id": "rug-checker",
+      "name": "Checker Rug",
+      "label": "Checker Rug",
+      "category": "decor",
+      "col": 2, "row": 15,
+      "widthTiles": 2, "heightTiles": 1,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false
+    },
+    {
+      "id": "rug-blue",
+      "name": "Blue Rug",
+      "label": "Blue Rug",
+      "category": "decor",
+      "col": 4, "row": 15,
+      "widthTiles": 2, "heightTiles": 1,
+      "footprintW": 2, "footprintH": 1,
+      "isDesk": false
     }
   ]
 }

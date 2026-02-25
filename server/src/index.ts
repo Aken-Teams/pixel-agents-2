@@ -35,6 +35,12 @@ import {
 	saveAgentSeats,
 	getAgentSeats,
 } from './settingsPersistence.js';
+import {
+	createChat,
+	sendMessage as sendChatMessage,
+	closeChat as closeChatSession,
+	getExistingChatIds,
+} from './chatManager.js';
 
 // ── State ────────────────────────────────────────────────────
 const agents = new Map<number, AgentState>();
@@ -178,6 +184,20 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 				broadcast({ type: 'layoutLoaded', layout: message.layout });
 			}
 			break;
+
+		case 'createChat': {
+			const chatCwd = message.cwd || process.cwd();
+			createChat(chatCwd, broadcast);
+			break;
+		}
+
+		case 'sendChatMessage':
+			sendChatMessage(message.chatId, message.message, broadcast);
+			break;
+
+		case 'closeChat':
+			closeChatSession(message.chatId, broadcast);
+			break;
 	}
 }
 
@@ -210,6 +230,12 @@ function handleWebviewReady(): void {
 	// Send existing agents
 	const agentMeta = getAgentSeats();
 	sendExistingAgents(agents, agentMeta, broadcast);
+
+	// Send existing chats
+	const chatIds = getExistingChatIds();
+	if (chatIds.length > 0) {
+		broadcast({ type: 'existingChats', chatIds });
+	}
 }
 
 // ── Asset Loading ────────────────────────────────────────────

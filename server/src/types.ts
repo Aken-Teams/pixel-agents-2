@@ -24,3 +24,10 @@ export interface PersistedAgent {
 	projectDir: string;
 	sessionId: string;
 }
+
+export interface ChatSession {
+	chatId: string;
+	sessionId: string; // Claude CLI session-id for conversation continuity
+	cwd: string;
+	activeProcess: ChildProcess | null; // null when idle (between messages)
+}

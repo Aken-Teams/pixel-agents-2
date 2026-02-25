@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { OfficeState } from '../office/engine/officeState.js'
 import type { OfficeLayout, ToolActivity } from '../office/types.js'
 import { extractToolName } from '../office/toolUtils.js'
@@ -35,6 +35,17 @@ export interface FurnitureAsset {
   backgroundTiles?: number
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface ChatState {
+  messages: ChatMessage[]
+  isStreaming: boolean
+  streamBuffer: string
+}
+
 export interface ServerMessageState {
   agents: number[]
   selectedAgent: number | null
@@ -44,6 +55,8 @@ export interface ServerMessageState {
   subagentCharacters: SubagentCharacter[]
   layoutReady: boolean
   loadedAssets?: { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> }
+  chatList: string[]
+  chats: Record<string, ChatState>
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -68,6 +81,8 @@ export function useServerMessages(
   const [subagentCharacters, setSubagentCharacters] = useState<SubagentCharacter[]>([])
   const [layoutReady, setLayoutReady] = useState(false)
   const [loadedAssets, setLoadedAssets] = useState<{ catalog: FurnitureAsset[]; sprites: Record<string, string[][]> } | undefined>()
+  const [chatList, setChatList] = useState<string[]>([])
+  const [chats, setChats] = useState<Record<string, ChatState>>({})
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -340,6 +355,74 @@ export function useServerMessages(
         } catch (err) {
           console.error(`[Webview] Error processing furnitureAssetsLoaded:`, err)
         }
+      } else if (msg.type === 'chatCreated') {
+        const chatId = msg.chatId as string
+        setChatList((prev) => prev.includes(chatId) ? prev : [...prev, chatId])
+        setChats((prev) => ({
+          ...prev,
+          [chatId]: { messages: [], isStreaming: false, streamBuffer: '' },
+        }))
+      } else if (msg.type === 'chatClosed') {
+        const chatId = msg.chatId as string
+        setChatList((prev) => prev.filter((id) => id !== chatId))
+        setChats((prev) => {
+          const next = { ...prev }
+          delete next[chatId]
+          return next
+        })
+      } else if (msg.type === 'chatStreamChunk') {
+        const chatId = msg.chatId as string
+        const text = msg.text as string
+        setChats((prev) => {
+          const chat = prev[chatId]
+          if (!chat) return prev
+          return {
+            ...prev,
+            [chatId]: { ...chat, isStreaming: true, streamBuffer: chat.streamBuffer + text },
+          }
+        })
+      } else if (msg.type === 'chatStreamEnd') {
+        const chatId = msg.chatId as string
+        setChats((prev) => {
+          const chat = prev[chatId]
+          if (!chat) return prev
+          const newMessages = [...chat.messages]
+          if (chat.streamBuffer.trim()) {
+            newMessages.push({ role: 'assistant', content: chat.streamBuffer })
+          }
+          return {
+            ...prev,
+            [chatId]: { messages: newMessages, isStreaming: false, streamBuffer: '' },
+          }
+        })
+      } else if (msg.type === 'chatError') {
+        const chatId = msg.chatId as string
+        const error = msg.error as string
+        setChats((prev) => {
+          const chat = prev[chatId]
+          if (!chat) return prev
+          return {
+            ...prev,
+            [chatId]: {
+              ...chat,
+              isStreaming: false,
+              streamBuffer: '',
+              messages: [...chat.messages, { role: 'assistant', content: `Error: ${error}` }],
+            },
+          }
+        })
+      } else if (msg.type === 'existingChats') {
+        const chatIds = msg.chatIds as string[]
+        setChatList(chatIds)
+        setChats((prev) => {
+          const next = { ...prev }
+          for (const chatId of chatIds) {
+            if (!next[chatId]) {
+              next[chatId] = { messages: [], isStreaming: false, streamBuffer: '' }
+            }
+          }
+          return next
+        })
       }
     }
     wsClient.addMessageListener(handler)
@@ -347,5 +430,19 @@ export function useServerMessages(
     return () => wsClient.removeMessageListener(handler)
   }, [getOfficeState])
 
-  return { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets }
+  const addUserMessage = useCallback((chatId: string, content: string) => {
+    setChats((prev) => {
+      const chat = prev[chatId]
+      if (!chat) return prev
+      return {
+        ...prev,
+        [chatId]: {
+          ...chat,
+          messages: [...chat.messages, { role: 'user', content }],
+        },
+      }
+    })
+  }, [])
+
+  return { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, chatList, chats, addUserMessage }
 }

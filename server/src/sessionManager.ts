@@ -46,11 +46,16 @@ export function launchNewSession(
 	const expectedFile = path.join(projectDir, `${sessionId}.jsonl`);
 	knownJsonlFiles.add(expectedFile);
 
+	// Strip CLAUDECODE env var to avoid "cannot be launched inside another Claude Code session" error
+	const cleanEnv = { ...process.env };
+	delete cleanEnv.CLAUDECODE;
+
 	// Spawn Claude CLI process
 	const proc = spawn('claude', ['--session-id', sessionId], {
 		cwd,
 		shell: true,
 		stdio: ['pipe', 'pipe', 'pipe'],
+		env: cleanEnv,
 	});
 
 	const id = nextAgentIdRef.current++;

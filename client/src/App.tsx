@@ -15,6 +15,7 @@ import { ZoomControls } from './components/ZoomControls.js'
 import { BottomToolbar } from './components/BottomToolbar.js'
 import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
+import { ChatPanel } from './components/ChatPanel.js'
 
 // Game state lives outside React — updated imperatively by message handlers
 const officeStateRef = { current: null as OfficeState | null }
@@ -122,7 +123,7 @@ function App() {
 
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty])
 
-  const { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
+  const { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, chatList, chats, addUserMessage } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   const [isDebugMode, setIsDebugMode] = useState(false)
 
@@ -159,6 +160,19 @@ function App() {
     wsClient.postMessage({ type: 'focusAgent', id: focusId })
   }, [])
 
+  const handleCreateChat = useCallback(() => {
+    wsClient.postMessage({ type: 'createChat' })
+  }, [])
+
+  const handleSendChatMessage = useCallback((chatId: string, message: string) => {
+    addUserMessage(chatId, message)
+    wsClient.postMessage({ type: 'sendChatMessage', chatId, message })
+  }, [addUserMessage])
+
+  const handleCloseChat = useCallback((chatId: string) => {
+    wsClient.postMessage({ type: 'closeChat', chatId })
+  }, [])
+
   const officeState = getOfficeState()
 
   // Force dependency on editorTickForKeyboard to propagate keyboard-triggered re-renders
@@ -185,7 +199,15 @@ function App() {
   }
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex' }}>
+      <ChatPanel
+        chatList={chatList}
+        chats={chats}
+        onCreateChat={handleCreateChat}
+        onSendMessage={handleSendChatMessage}
+        onCloseChat={handleCloseChat}
+      />
+      <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @keyframes pixel-agents-pulse {
           0%, 100% { opacity: 1; }
@@ -308,6 +330,7 @@ function App() {
       )}
 
       <ConnectionStatus />
+      </div>
     </div>
   )
 }
