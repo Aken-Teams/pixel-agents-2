@@ -1,0 +1,24 @@
+{
+  "name": "pixel-agents-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pixel art office that visualizes Claude Code agents as animated characters - Web Edition",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npx tsx watch src/index.ts",
+    "dev:client": "cd client && npx vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:server": "cd server && node esbuild.config.js",
+    "build:client": "cd client && npx vite build",
+    "start": "node dist/server.js",
+    "slice-tileset": "cd server && npx tsx src/tilesetSlicer.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

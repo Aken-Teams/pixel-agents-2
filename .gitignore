@@ -1,0 +1,9 @@
+node_modules/
+dist/
+client-dist/
+*.js.map
+temp_clone/
+Modern_Office_Revamped_v1.2/
+
+.DS_Store
+*.log
