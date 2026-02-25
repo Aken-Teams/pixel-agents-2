@@ -25,9 +25,14 @@ export interface PersistedAgent {
 	sessionId: string;
 }
 
+export interface ChatMessage {
+	role: 'user' | 'assistant';
+	content: string;
+}
+
 export interface ChatSession {
 	chatId: string;
-	sessionId: string; // Claude CLI session-id for conversation continuity
 	cwd: string;
 	activeProcess: ChildProcess | null; // null when idle (between messages)
+	history: ChatMessage[]; // conversation history for context
 }

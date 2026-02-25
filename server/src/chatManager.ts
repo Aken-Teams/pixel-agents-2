@@ -7,19 +7,31 @@ let chatCounter = 0;
 
 export function createChat(cwd: string, broadcast: Broadcast): string {
 	const chatId = `chat-${++chatCounter}`;
-	const sessionId = crypto.randomUUID();
 
 	const session: ChatSession = {
 		chatId,
-		sessionId,
 		cwd,
 		activeProcess: null,
+		history: [],
 	};
 
 	chatSessions.set(chatId, session);
-	console.log(`[Chat] Created chat ${chatId} (session ${sessionId})`);
+	console.log(`[Chat] Created chat ${chatId}`);
 	broadcast({ type: 'chatCreated', chatId });
 	return chatId;
+}
+
+/**
+ * Build a prompt that includes conversation history for context.
+ */
+function buildPromptWithHistory(session: ChatSession, newMessage: string): string {
+	if (session.history.length === 0) {
+		return newMessage;
+	}
+	const historyLines = session.history.map((m) =>
+		m.role === 'user' ? `Human: ${m.content}` : `Assistant: ${m.content}`,
+	);
+	return `${historyLines.join('\n')}\nHuman: ${newMessage}\n\nContinue the conversation above. Respond to the latest Human message only.`;
 }
 
 export function sendMessage(chatId: string, message: string, broadcast: Broadcast): void {
@@ -34,16 +46,22 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 		return;
 	}
 
+	// Record user message in history
+	session.history.push({ role: 'user', content: message });
+
 	// Strip CLAUDECODE env var to avoid "cannot be launched inside another Claude Code session" error
 	const cleanEnv = { ...process.env };
 	delete cleanEnv.CLAUDECODE;
 
-	// Spawn claude in print mode with session continuity
+	const fullPrompt = buildPromptWithHistory(session, message);
+
+	// Spawn claude in print mode
+	// --no-session-persistence: don't write session files (avoids JSONL detection + session locks)
 	// --verbose is required for --output-format stream-json with -p
 	// stdin must be 'ignore' — using 'pipe' causes Claude CLI to hang waiting for stdin
 	const proc = spawn('claude', [
-		'-p', message,
-		'--session-id', session.sessionId,
+		'-p', fullPrompt,
+		'--no-session-persistence',
 		'--output-format', 'stream-json',
 		'--verbose',
 	], {
@@ -57,6 +75,7 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 
 	let stdoutBuffer = '';
 	let sentFromDeltas = false;
+	let assistantResponse = '';
 
 	proc.stdout.on('data', (data: Buffer) => {
 		stdoutBuffer += data.toString();
@@ -74,7 +93,9 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 				// - assistant: complete message with all content blocks
 				// - result: final summary (duplicates assistant text, skip to avoid double-send)
 				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.delta.text });
+					const text = parsed.delta.text;
+					broadcast({ type: 'chatStreamChunk', chatId, text });
+					assistantResponse += text;
 					sentFromDeltas = true;
 				} else if (parsed.type === 'assistant' && parsed.message?.content) {
 					// Only send full assistant message if we didn't already stream via deltas
@@ -82,6 +103,14 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 						for (const block of parsed.message.content) {
 							if (block.type === 'text' && block.text) {
 								broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
+								assistantResponse += block.text;
+							}
+						}
+					} else {
+						// Extract full text for history even if we already streamed deltas
+						for (const block of parsed.message.content) {
+							if (block.type === 'text' && block.text) {
+								assistantResponse = block.text; // Use complete text from assistant msg
 							}
 						}
 					}
@@ -90,6 +119,7 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 			} catch {
 				// Not valid JSON, might be raw text — send as-is
 				broadcast({ type: 'chatStreamChunk', chatId, text: line });
+				assistantResponse += line;
 			}
 		}
 	});
@@ -115,18 +145,26 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 				const parsed = JSON.parse(stdoutBuffer);
 				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
 					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.delta.text });
+					assistantResponse += parsed.delta.text;
 				} else if (parsed.type === 'assistant' && parsed.message?.content && !sentFromDeltas) {
 					for (const block of parsed.message.content) {
 						if (block.type === 'text' && block.text) {
 							broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
+							assistantResponse += block.text;
 						}
 					}
 				}
 			} catch {
 				if (stdoutBuffer.trim()) {
 					broadcast({ type: 'chatStreamChunk', chatId, text: stdoutBuffer });
+					assistantResponse += stdoutBuffer;
 				}
 			}
+		}
+
+		// Save assistant response to history for future context
+		if (assistantResponse.trim()) {
+			session.history.push({ role: 'assistant', content: assistantResponse.trim() });
 		}
 
 		session.activeProcess = null;
