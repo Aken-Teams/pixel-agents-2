@@ -4,7 +4,8 @@
       "Bash(npm install:*)",
       "Bash(env -u CLAUDECODE claude:*)",
       "Bash(claude:*)",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "Bash(curl:*)"
     ]
   }
 }

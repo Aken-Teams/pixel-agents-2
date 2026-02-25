@@ -40,6 +40,7 @@ import {
 	sendMessage as sendChatMessage,
 	closeChat as closeChatSession,
 	getExistingChatIds,
+	getChatAgentIds,
 	initChatManager,
 } from './chatManager.js';
 
@@ -232,10 +233,14 @@ function handleWebviewReady(): void {
 	const agentMeta = getAgentSeats();
 	sendExistingAgents(agents, agentMeta, broadcast);
 
-	// Send existing chats
+	// Send existing chats and their agent characters
 	const chatIds = getExistingChatIds();
 	if (chatIds.length > 0) {
 		broadcast({ type: 'existingChats', chatIds });
+		// Re-create pixel characters for each existing chat
+		for (const chatAgentId of getChatAgentIds()) {
+			broadcast({ type: 'agentCreated', id: chatAgentId });
+		}
 	}
 }
 

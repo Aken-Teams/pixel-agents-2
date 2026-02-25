@@ -101,10 +101,10 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 
 	session.activeProcess = proc;
 
-	// Update agent status to "thinking" on the map
+	// Update agent status to "active" on the map (character starts working)
 	const agentId = chatAgentIds.get(chatId);
 	if (agentId !== undefined) {
-		broadcast({ type: 'agentStatus', id: agentId, status: 'thinking' });
+		broadcast({ type: 'agentStatus', id: agentId, status: 'active' });
 	}
 
 	let stdoutBuffer = '';
@@ -210,7 +210,7 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 			console.log(`[Chat ${chatId}] Process exited with code ${code}`);
 		}
 
-		// Clear agent thinking status
+		// Clear agent active status (back to idle on the map)
 		const agId = chatAgentIds.get(chatId);
 		if (agId !== undefined) {
 			broadcast({ type: 'agentStatus', id: agId, status: 'idle' });
@@ -244,6 +244,10 @@ export function closeChat(chatId: string, broadcast: Broadcast): void {
 
 export function getExistingChatIds(): string[] {
 	return Array.from(chatSessions.keys());
+}
+
+export function getChatAgentIds(): number[] {
+	return Array.from(chatAgentIds.values());
 }
 
 export function closeAllChats(broadcast: Broadcast): void {

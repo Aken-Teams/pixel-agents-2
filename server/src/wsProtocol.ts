@@ -5,7 +5,7 @@ export type ServerMessage =
 	| { type: 'agentClosed'; id: number }
 	| { type: 'agentSelected'; id: number }
 	| { type: 'existingAgents'; agents: number[]; agentMeta: Record<string, AgentMeta> }
-	| { type: 'agentStatus'; id: number; status: 'active' | 'waiting' }
+	| { type: 'agentStatus'; id: number; status: 'active' | 'waiting' | 'idle' }
 	| { type: 'agentToolStart'; id: number; toolId: string; status: string }
 	| { type: 'agentToolDone'; id: number; toolId: string }
 	| { type: 'agentToolsClear'; id: number }

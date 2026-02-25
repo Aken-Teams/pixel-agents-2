@@ -228,7 +228,7 @@ export function useServerMessages(
         const id = msg.id as number
         const status = msg.status as string
         setAgentStatuses((prev) => {
-          if (status === 'active') {
+          if (status === 'active' || status === 'idle') {
             if (!(id in prev)) return prev
             const next = { ...prev }
             delete next[id]

@@ -189,7 +189,7 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
             {activeChat.isStreaming && !activeChat.streamBuffer && (
               <div style={{
                 padding: '6px 10px',
-                fontSize: '18px',
+                fontSize: '20px',
                 color: 'var(--pixel-text-dim)',
               }}>
                 Thinking...
@@ -220,7 +220,7 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
               resize: 'none',
               height: 60,
               padding: '6px 8px',
-              fontSize: '18px',
+              fontSize: '20px',
               fontFamily: "'FS Pixel Sans', monospace",
               background: 'var(--pixel-bg)',
               color: 'var(--pixel-text)',
@@ -234,7 +234,7 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
             disabled={activeChat.isStreaming || !inputValue.trim()}
             style={{
               padding: '6px 12px',
-              fontSize: '18px',
+              fontSize: '20px',
               fontFamily: "'FS Pixel Sans', monospace",
               background: activeChat.isStreaming || !inputValue.trim()
                 ? 'var(--pixel-btn-bg)'
@@ -266,7 +266,7 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
       alignItems: isUser ? 'flex-end' : 'flex-start',
     }}>
       <div style={{
-        fontSize: '18px',
+        fontSize: '20px',
         color: 'var(--pixel-text-dim)',
         marginBottom: 2,
         paddingLeft: isUser ? 0 : 4,
@@ -274,20 +274,79 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
       }}>
         {isUser ? 'You' : 'Claude'}
       </div>
-      <div style={{
-        maxWidth: '90%',
-        padding: '6px 10px',
-        fontSize: '18px',
-        lineHeight: 1.4,
-        background: isUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
-        color: isUser ? '#fff' : 'var(--pixel-text)',
-        border: `2px solid ${isUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
-        borderRadius: 0,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        opacity: isStreaming ? 0.9 : 1,
-      }}>
-        {message.content.trim()}
+      <div
+        className="chat-message-bubble"
+        style={{
+          maxWidth: '90%',
+          padding: '6px 10px',
+          fontSize: '20px',
+          lineHeight: 1.5,
+          background: isUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
+          color: isUser ? '#fff' : 'var(--pixel-text)',
+          border: `2px solid ${isUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
+          borderRadius: 0,
+          wordBreak: 'break-word',
+          opacity: isStreaming ? 0.9 : 1,
+        }}
+      >
+        {isUser ? (
+          <span style={{ whiteSpace: 'pre-wrap' }}>{message.content.trim()}</span>
+        ) : (
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
+              strong: ({ children }) => <strong style={{ fontWeight: 'bold' }}>{children}</strong>,
+              em: ({ children }) => <em>{children}</em>,
+              code: ({ children, className }) => {
+                const isBlock = className?.includes('language-')
+                if (isBlock) {
+                  return (
+                    <code style={{
+                      display: 'block',
+                      background: 'rgba(0,0,0,0.3)',
+                      padding: '6px 8px',
+                      margin: '4px 0',
+                      fontSize: '18px',
+                      overflowX: 'auto',
+                      whiteSpace: 'pre',
+                    }}>
+                      {children}
+                    </code>
+                  )
+                }
+                return (
+                  <code style={{
+                    background: 'rgba(0,0,0,0.25)',
+                    padding: '1px 4px',
+                    fontSize: '18px',
+                  }}>
+                    {children}
+                  </code>
+                )
+              },
+              pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto' }}>{children}</pre>,
+              ul: ({ children }) => <ul style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ul>,
+              ol: ({ children }) => <ol style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ol>,
+              li: ({ children }) => <li style={{ margin: '0.1em 0' }}>{children}</li>,
+              h1: ({ children }) => <div style={{ fontSize: '24px', fontWeight: 'bold', margin: '0.4em 0' }}>{children}</div>,
+              h2: ({ children }) => <div style={{ fontSize: '22px', fontWeight: 'bold', margin: '0.3em 0' }}>{children}</div>,
+              h3: ({ children }) => <div style={{ fontSize: '20px', fontWeight: 'bold', margin: '0.3em 0' }}>{children}</div>,
+              a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#7ecfff' }}>{children}</a>,
+              blockquote: ({ children }) => (
+                <blockquote style={{
+                  borderLeft: '3px solid var(--pixel-text-dim)',
+                  margin: '0.3em 0',
+                  paddingLeft: '8px',
+                  opacity: 0.85,
+                }}>
+                  {children}
+                </blockquote>
+              ),
+            }}
+          >
+            {message.content.trim()}
+          </ReactMarkdown>
+        )}
         {isStreaming && <span className="pixel-agents-pulse">|</span>}
       </div>
     </div>
