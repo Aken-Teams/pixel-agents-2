@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
 import type { ChatState, ChatMessage } from '../hooks/useServerMessages.js'
 
 interface ChatPanelProps {
