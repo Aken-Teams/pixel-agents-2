@@ -426,8 +426,18 @@ export function useServerMessages(
       }
     }
     wsClient.addMessageListener(handler)
+    // Send webviewReady now (if already connected) and on every reconnect
     wsClient.postMessage({ type: 'webviewReady' })
-    return () => wsClient.removeMessageListener(handler)
+    const onConnection = (connected: boolean) => {
+      if (connected) {
+        wsClient.postMessage({ type: 'webviewReady' })
+      }
+    }
+    wsClient.addConnectionListener(onConnection)
+    return () => {
+      wsClient.removeMessageListener(handler)
+      wsClient.removeConnectionListener(onConnection)
+    }
   }, [getOfficeState])
 
   const addUserMessage = useCallback((chatId: string, content: string) => {

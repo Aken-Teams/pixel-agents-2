@@ -265,7 +265,7 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
       alignItems: isUser ? 'flex-end' : 'flex-start',
     }}>
       <div style={{
-        fontSize: '14px',
+        fontSize: '18px',
         color: 'var(--pixel-text-dim)',
         marginBottom: 2,
         paddingLeft: isUser ? 0 : 4,
@@ -286,7 +286,7 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
         wordBreak: 'break-word',
         opacity: isStreaming ? 0.9 : 1,
       }}>
-        {message.content}
+        {message.content.trim()}
         {isStreaming && <span className="pixel-agents-pulse">|</span>}
       </div>
     </div>

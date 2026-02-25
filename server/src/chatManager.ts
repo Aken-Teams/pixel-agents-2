@@ -40,6 +40,7 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 
 	// Spawn claude in print mode with session continuity
 	// --verbose is required for --output-format stream-json with -p
+	// stdin must be 'ignore' — using 'pipe' causes Claude CLI to hang waiting for stdin
 	const proc = spawn('claude', [
 		'-p', message,
 		'--session-id', session.sessionId,
@@ -48,13 +49,14 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 	], {
 		cwd: session.cwd,
 		shell: true,
-		stdio: ['pipe', 'pipe', 'pipe'],
+		stdio: ['ignore', 'pipe', 'pipe'],
 		env: cleanEnv,
 	});
 
 	session.activeProcess = proc;
 
 	let stdoutBuffer = '';
+	let sentFromDeltas = false;
 
 	proc.stdout.on('data', (data: Buffer) => {
 		stdoutBuffer += data.toString();
@@ -67,20 +69,24 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 			if (!line.trim()) continue;
 			try {
 				const parsed = JSON.parse(line);
-				// stream-json format: { type: "content_block_delta", delta: { text: "..." } }
-				// or: { type: "assistant", message: { content: [{ text: "..." }] } }
-				// or: { type: "result", result: "..." }
+				// stream-json format emits multiple message types:
+				// - content_block_delta: incremental text chunks (streaming)
+				// - assistant: complete message with all content blocks
+				// - result: final summary (duplicates assistant text, skip to avoid double-send)
 				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
 					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.delta.text });
+					sentFromDeltas = true;
 				} else if (parsed.type === 'assistant' && parsed.message?.content) {
-					for (const block of parsed.message.content) {
-						if (block.type === 'text' && block.text) {
-							broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
+					// Only send full assistant message if we didn't already stream via deltas
+					if (!sentFromDeltas) {
+						for (const block of parsed.message.content) {
+							if (block.type === 'text' && block.text) {
+								broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
+							}
 						}
 					}
-				} else if (parsed.type === 'result' && typeof parsed.result === 'string') {
-					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.result });
 				}
+				// Skip 'result' type — it duplicates the assistant message text
 			} catch {
 				// Not valid JSON, might be raw text — send as-is
 				broadcast({ type: 'chatStreamChunk', chatId, text: line });
@@ -103,14 +109,18 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 	});
 
 	proc.on('exit', (code) => {
-		// Flush any remaining buffer
+		// Flush any remaining buffer (skip 'result' type to avoid duplicates)
 		if (stdoutBuffer.trim()) {
 			try {
 				const parsed = JSON.parse(stdoutBuffer);
 				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
 					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.delta.text });
-				} else if (parsed.type === 'result' && typeof parsed.result === 'string') {
-					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.result });
+				} else if (parsed.type === 'assistant' && parsed.message?.content && !sentFromDeltas) {
+					for (const block of parsed.message.content) {
+						if (block.type === 'text' && block.text) {
+							broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
+						}
+					}
 				}
 			} catch {
 				if (stdoutBuffer.trim()) {

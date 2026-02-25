@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(env -u CLAUDECODE claude:*)"
+      "Bash(env -u CLAUDECODE claude:*)",
+      "Bash(claude:*)",
+      "Bash(npx kill-port:*)"
     ]
   }
 }
