@@ -40,6 +40,7 @@ import {
 	sendMessage as sendChatMessage,
 	closeChat as closeChatSession,
 	getExistingChatIds,
+	initChatManager,
 } from './chatManager.js';
 
 // ── State ────────────────────────────────────────────────────
@@ -293,6 +294,9 @@ async function loadAllAssets(): Promise<void> {
 // ── Startup ──────────────────────────────────────────────────
 async function start(): Promise<void> {
 	console.log('[Pixel Agents] Starting server...');
+
+	// Initialize chat manager with shared agent ID counter
+	initChatManager(nextAgentId);
 
 	// Load all assets
 	await loadAllAssets();

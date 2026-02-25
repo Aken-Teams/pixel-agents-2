@@ -449,6 +449,7 @@ export function useServerMessages(
         [chatId]: {
           ...chat,
           messages: [...chat.messages, { role: 'user', content }],
+          isStreaming: true, // Show "Thinking..." immediately after sending
         },
       }
     })
