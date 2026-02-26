@@ -82,7 +82,7 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 		teamSessions.set(skill.id, session);
 
 		console.log(`[Team] Added member ${skill.name} (skill ${skill.id}, agent ${agentId}${skill.role === 'orchestrator' ? ', ORCHESTRATOR' : ''})`);
-		broadcast({ type: 'agentCreated', id: agentId, name: skill.name });
+		broadcast({ type: 'agentCreated', id: agentId, name: skill.name, role: skill.role ?? 'worker' });
 	}
 
 	// Broadcast full team info

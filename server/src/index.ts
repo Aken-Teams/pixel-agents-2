@@ -277,8 +277,10 @@ function handleWebviewReady(): void {
 	const teamMembers = getExistingTeamMembers();
 	if (teamMembers.length > 0) {
 		broadcast({ type: 'teamLoaded', members: teamMembers, orchestratorSkillId: getOrchestratorSkillId() ?? undefined });
+		const orchSkillId = getOrchestratorSkillId();
 		for (const member of teamMembers) {
-			broadcast({ type: 'agentCreated', id: member.agentId, name: member.name });
+			const role = member.skillId === orchSkillId ? 'orchestrator' as const : 'worker' as const;
+			broadcast({ type: 'agentCreated', id: member.agentId, name: member.name, role });
 		}
 	}
 }

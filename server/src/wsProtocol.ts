@@ -1,7 +1,7 @@
 // ── Server → Client Messages ──────────────────────────────────
 
 export type ServerMessage =
-	| { type: 'agentCreated'; id: number; name?: string }
+	| { type: 'agentCreated'; id: number; name?: string; role?: 'orchestrator' | 'worker' }
 	| { type: 'agentClosed'; id: number }
 	| { type: 'agentSelected'; id: number }
 	| { type: 'existingAgents'; agents: number[]; agentMeta: Record<string, AgentMeta> }

@@ -182,6 +182,7 @@ export class OfficeState {
     return null
   }
 
+
   /**
    * Pick a diverse palette for a new agent based on currently active agents.
    * First 6 agents each get a unique skin (random order). Beyond 6, skins

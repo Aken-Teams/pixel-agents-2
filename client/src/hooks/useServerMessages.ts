@@ -170,12 +170,14 @@ export function useServerMessages(
       } else if (msg.type === 'agentCreated') {
         const id = msg.id as number
         const name = msg.name as string | undefined
+        const role = msg.role as string | undefined
         setAgents((prev) => (prev.includes(id) ? prev : [...prev, id]))
         setSelectedAgent(id)
         if (name) {
           setAgentNames((prev) => ({ ...prev, [id]: name }))
         }
-        os.addAgent(id, undefined, undefined, undefined, undefined, name)
+        const preferredSeat = role === 'orchestrator' ? 'seat-b1' : undefined
+        os.addAgent(id, undefined, undefined, preferredSeat, undefined, name)
         saveAgentSeats(os)
       } else if (msg.type === 'agentClosed') {
         const id = msg.id as number
