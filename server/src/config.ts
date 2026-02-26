@@ -5,6 +5,9 @@ import * as os from 'os';
 // ── Server ──────────────────────────────────────────────────
 export const HTTP_PORT = parseInt(process.env.PORT || '3000', 10);
 
+// ── Character Limit ─────────────────────────────────────────
+export const MAX_CHARACTERS = 21;
+
 // ── Timing (ms) ──────────────────────────────────────────────
 export const JSONL_POLL_INTERVAL_MS = 1000;
 export const FILE_WATCHER_POLL_INTERVAL_MS = 2000;

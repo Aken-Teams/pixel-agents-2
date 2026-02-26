@@ -2048,6 +2048,90 @@
       "seatCol": 19.5,
       "seatRow": 6.8,
       "facingDir": 0
+    },
+    {
+      "uid": "seat-d1",
+      "seatCol": 5,
+      "seatRow": 22,
+      "facingDir": 3
+    },
+    {
+      "uid": "seat-d2",
+      "seatCol": 10,
+      "seatRow": 22,
+      "facingDir": 3
+    },
+    {
+      "uid": "seat-d3",
+      "seatCol": 15,
+      "seatRow": 22,
+      "facingDir": 3
+    },
+    {
+      "uid": "seat-d4",
+      "seatCol": 5,
+      "seatRow": 25,
+      "facingDir": 0
+    },
+    {
+      "uid": "seat-d5",
+      "seatCol": 10,
+      "seatRow": 25,
+      "facingDir": 0
+    },
+    {
+      "uid": "seat-d6",
+      "seatCol": 15,
+      "seatRow": 25,
+      "facingDir": 0
+    },
+    {
+      "uid": "seat-m1",
+      "seatCol": 28,
+      "seatRow": 20,
+      "facingDir": 2
+    },
+    {
+      "uid": "seat-m2",
+      "seatCol": 28,
+      "seatRow": 22,
+      "facingDir": 2
+    },
+    {
+      "uid": "seat-m3",
+      "seatCol": 35,
+      "seatRow": 20,
+      "facingDir": 1
+    },
+    {
+      "uid": "seat-m4",
+      "seatCol": 35,
+      "seatRow": 22,
+      "facingDir": 1
+    },
+    {
+      "uid": "seat-b1",
+      "seatCol": 33,
+      "seatRow": 43,
+      "facingDir": 3
+    },
+    {
+      "uid": "seat-b2",
+      "seatCol": 10,
+      "seatRow": 39,
+      "facingDir": 0
+    },
+    {
+      "uid": "seat-b3",
+      "seatCol": 15,
+      "seatRow": 39,
+      "facingDir": 0
+    },
+    {
+      "uid": "seat-b4",
+      "seatCol": 20,
+      "seatRow": 39,
+      "facingDir": 0
     }
   ]
 }

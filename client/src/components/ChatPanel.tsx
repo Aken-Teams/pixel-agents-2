@@ -8,9 +8,10 @@ interface ChatPanelProps {
   onCreateChat: () => void
   onSendMessage: (chatId: string, message: string) => void
   onCloseChat: (chatId: string) => void
+  atCharacterLimit?: boolean
 }
 
-export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onCloseChat }: ChatPanelProps) {
+export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit }: ChatPanelProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -84,17 +85,19 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
       }}>
         <span style={{ fontSize: '22px', color: 'var(--pixel-text)' }}>Claude Chat</span>
         <button
-          onClick={handleCreateChat}
+          onClick={atCharacterLimit ? undefined : handleCreateChat}
+          disabled={atCharacterLimit}
           style={{
             padding: '2px 10px',
             fontSize: '22px',
-            background: 'var(--pixel-accent)',
-            color: '#fff',
+            background: atCharacterLimit ? 'var(--pixel-btn-bg)' : 'var(--pixel-accent)',
+            color: atCharacterLimit ? 'var(--pixel-text-dim)' : '#fff',
             border: '2px solid rgba(255,255,255,0.2)',
             borderRadius: 0,
-            cursor: 'pointer',
+            cursor: atCharacterLimit ? 'default' : 'pointer',
+            opacity: atCharacterLimit ? 0.5 : 1,
           }}
-          title="New Chat"
+          title={atCharacterLimit ? 'Character limit reached (max 21)' : 'New Chat'}
         >
           +
         </button>

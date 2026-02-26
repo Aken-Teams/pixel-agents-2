@@ -10,7 +10,7 @@ import { isStaticBackgroundLayout } from './office/layout/layoutSerializer.js'
 import { computeFitZoom } from './office/toolUtils.js'
 import { wsClient } from './wsClient.js'
 import { useServerMessages } from './hooks/useServerMessages.js'
-import { PULSE_ANIMATION_DURATION_SEC } from './constants.js'
+import { PULSE_ANIMATION_DURATION_SEC, MAX_CHARACTERS } from './constants.js'
 import { useEditorActions } from './hooks/useEditorActions.js'
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js'
 import { ZoomControls } from './components/ZoomControls.js'
@@ -217,6 +217,7 @@ function App() {
         onCreateChat={handleCreateChat}
         onSendMessage={handleSendChatMessage}
         onCloseChat={handleCloseChat}
+        atCharacterLimit={agents.length >= MAX_CHARACTERS}
       />
       <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`

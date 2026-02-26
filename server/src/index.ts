@@ -6,7 +6,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { AgentState } from './types.js';
 import type { ClientMessage } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
-import { HTTP_PORT, getAssetsRoot, getClientAssetsDir } from './config.js';
+import { HTTP_PORT, MAX_CHARACTERS, getAssetsRoot, getClientAssetsDir } from './config.js';
 import {
 	launchNewSession,
 	removeAgent,
@@ -188,6 +188,11 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 			break;
 
 		case 'createChat': {
+			const totalCharacters = agents.size + getChatAgentIds().length;
+			if (totalCharacters >= MAX_CHARACTERS) {
+				broadcast({ type: 'chatError', chatId: '', error: `Character limit reached (max ${MAX_CHARACTERS})` });
+				break;
+			}
 			const chatCwd = message.cwd || process.cwd();
 			createChat(chatCwd, broadcast);
 			break;
