@@ -259,13 +259,12 @@ export function ChatPanel({
 
       {/* Team mode: orchestrator + member tabs */}
       {mode === 'team' && teamMembers.length > 0 && (
-        <div style={{
+        <div className="team-tabs" style={{
           display: 'flex',
           flexWrap: 'wrap',
           gap: 0,
           borderBottom: '2px solid var(--pixel-border)',
           background: 'var(--pixel-btn-bg)',
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
           fontSize: '12px',
         }}>
           {/* Orchestrator tab (if exists) — distinct gold accent */}
@@ -672,15 +671,44 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
           <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--pixel-accent)', fontSize: '13px' }}>
             指派給 {getMemberName(task.skillId)}
           </div>
-          <div style={{
+          <div className="hidden-scrollbar" style={{
             fontSize: '12px',
             lineHeight: 1.5,
             color: 'var(--pixel-text-dim)',
-            whiteSpace: 'pre-wrap',
-            maxHeight: 120,
-            overflow: 'auto',
+            maxHeight: 150,
+            overflowY: 'auto',
+            overflowX: 'hidden',
           }}>
-            {task.description.slice(0, 300)}{task.description.length > 300 ? '...' : ''}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
+                strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
+                h1: ({ children }) => <div style={{ fontSize: '14px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
+                h2: ({ children }) => <div style={{ fontSize: '13px', fontWeight: 700, margin: '0.3em 0 0.2em' }}>{children}</div>,
+                h3: ({ children }) => <div style={{ fontSize: '12px', fontWeight: 600, margin: '0.2em 0 0.1em' }}>{children}</div>,
+                ul: ({ children }) => <ul style={{ margin: '0.2em 0', paddingLeft: '1.2em' }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ margin: '0.2em 0', paddingLeft: '1.2em' }}>{children}</ol>,
+                li: ({ children }) => <li style={{ margin: '0.1em 0' }}>{children}</li>,
+                code: ({ children }) => (
+                  <code style={{ background: 'rgba(0,0,0,0.25)', padding: '1px 4px', fontSize: '11px', fontFamily: 'monospace' }}>{children}</code>
+                ),
+                pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto', fontSize: '11px' }}>{children}</pre>,
+                table: ({ children }) => (
+                  <div style={{ overflowX: 'auto', margin: '0.3em 0' }}>
+                    <table style={{ borderCollapse: 'collapse', fontSize: '11px', width: '100%' }}>{children}</table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th style={{ padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.15)', textAlign: 'left', fontWeight: 600 }}>{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td style={{ padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{children}</td>
+                ),
+              }}
+            >
+              {task.description}
+            </ReactMarkdown>
           </div>
         </div>
       ))}
