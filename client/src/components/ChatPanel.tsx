@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { ChatState, ChatMessage, TeamMemberInfo, DispatchedTask } from '../hooks/useServerMessages.js'
 
 interface ChatPanelProps {
@@ -565,6 +566,7 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
             <span style={{ whiteSpace: 'pre-wrap' }}>{cleanText.trim()}</span>
           ) : (
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
                 strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
@@ -616,6 +618,35 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
                     {children}
                   </blockquote>
                 ),
+                table: ({ children }) => (
+                  <div style={{ overflowX: 'auto', margin: '0.4em 0' }}>
+                    <table style={{
+                      borderCollapse: 'collapse',
+                      fontSize: '12.5px',
+                      width: '100%',
+                    }}>
+                      {children}
+                    </table>
+                  </div>
+                ),
+                thead: ({ children }) => (
+                  <thead style={{ background: 'rgba(255,255,255,0.06)' }}>{children}</thead>
+                ),
+                th: ({ children }) => (
+                  <th style={{
+                    padding: '4px 8px',
+                    borderBottom: '2px solid var(--pixel-border)',
+                    textAlign: 'left',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}>{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td style={{
+                    padding: '3px 8px',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  }}>{children}</td>
+                ),
               }}
             >
               {cleanText.trim()}
@@ -628,9 +659,9 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
       {/* Task dispatch cards */}
       {tasks.map((task, i) => (
         <div key={i} style={{
-          maxWidth: '90%',
-          marginTop: 4,
-          padding: '6px 10px',
+          width: '100%',
+          marginTop: 6,
+          padding: '8px 10px',
           fontSize: '13px',
           fontFamily: MESSAGE_FONT,
           background: 'rgba(90, 140, 255, 0.12)',
@@ -638,17 +669,18 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
           borderRadius: 0,
           color: 'var(--pixel-text)',
         }}>
-          <div style={{ fontWeight: 600, marginBottom: 2, color: 'var(--pixel-accent)' }}>
-            Dispatched to {getMemberName(task.skillId)}
+          <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--pixel-accent)', fontSize: '13px' }}>
+            指派給 {getMemberName(task.skillId)}
           </div>
           <div style={{
             fontSize: '12px',
+            lineHeight: 1.5,
             color: 'var(--pixel-text-dim)',
             whiteSpace: 'pre-wrap',
-            maxHeight: 60,
-            overflow: 'hidden',
+            maxHeight: 120,
+            overflow: 'auto',
           }}>
-            {task.description.slice(0, 150)}{task.description.length > 150 ? '...' : ''}
+            {task.description.slice(0, 300)}{task.description.length > 300 ? '...' : ''}
           </div>
         </div>
       ))}
