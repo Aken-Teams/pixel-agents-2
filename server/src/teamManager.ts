@@ -1,4 +1,6 @@
 import { spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { TeamSession, ChatMessage } from './types.js';
 import type { TeamMemberInfo } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
@@ -14,6 +16,9 @@ let nextAgentIdRef: { current: number } = { current: 1000 };
 let orchestratorSkillId: string | null = null;
 let orchestratorBusy = false;
 let taskIdCounter = 0;
+
+// Current project directory (under workspace/)
+let currentProjectDir: string | null = null;
 
 const MAX_ORCHESTRATION_DEPTH = 10;
 
@@ -174,6 +179,62 @@ export function parseTaskBlocks(text: string): { cleanText: string; tasks: Parse
 	return { cleanText, tasks };
 }
 
+// ── Project Directory & Response Persistence ────────────────
+
+let responseCounter = 0;
+
+/**
+ * Create a project directory from the user's message.
+ * Sanitizes the message into a valid folder name.
+ */
+function createProjectDir(message: string): string {
+	const workspaceDir = path.join(getAssetsRoot(), 'workspace');
+	// Extract meaningful keywords from the message for the folder name
+	const sanitized = message
+		.replace(/[<>:"/\\|?*]/g, '')
+		.replace(/\s+/g, '-')
+		.slice(0, 40)
+		.replace(/-+$/, '');
+	const folderName = sanitized || `project-${Date.now()}`;
+	const projectDir = path.join(workspaceDir, folderName);
+	fs.mkdirSync(path.join(projectDir, 'docs'), { recursive: true });
+	return projectDir;
+}
+
+/** Get the current working directory for agents */
+function getAgentCwd(): string {
+	if (currentProjectDir) return currentProjectDir;
+	const fallback = path.join(getAssetsRoot(), 'workspace');
+	fs.mkdirSync(fallback, { recursive: true });
+	return fallback;
+}
+
+/**
+ * Save agent response as a markdown file in {projectDir}/docs/.
+ * Skips orchestrator dispatch messages that only contain [TASK] blocks.
+ */
+function saveAgentResponse(session: TeamSession, response: string): void {
+	try {
+		// Skip orchestrator responses that are purely task dispatches
+		const { cleanText } = parseTaskBlocks(response);
+		if (!cleanText.trim()) return;
+
+		const docsDir = path.join(getAgentCwd(), 'docs');
+		fs.mkdirSync(docsDir, { recursive: true });
+
+		const now = new Date();
+		const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+		const idx = String(++responseCounter).padStart(3, '0');
+		const fileName = `${idx}-${session.skillId}-${session.name}-${ts}.md`;
+
+		const header = `<!-- Agent: ${session.name} (${session.skillId}) -->\n<!-- Time: ${now.toISOString()} -->\n\n`;
+		fs.writeFileSync(path.join(docsDir, fileName), header + response, 'utf-8');
+		console.log(`[Team] Saved: docs/${fileName}`);
+	} catch (err) {
+		console.error(`[Team] Failed to save response for ${session.name}:`, err);
+	}
+}
+
 // ── Core: Send message to a team member (direct) ───────────
 
 function spawnClaudeForSkill(
@@ -192,7 +253,7 @@ function spawnClaudeForSkill(
 			'--verbose',
 			'--dangerously-skip-permissions',
 		], {
-			cwd: getAssetsRoot(),
+			cwd: getAgentCwd(),
 			shell: true,
 			stdio: ['pipe', 'pipe', 'pipe'],
 			env: cleanEnv,
@@ -291,6 +352,8 @@ function spawnClaudeForSkill(
 
 			if (assistantResponse.trim()) {
 				session.history.push({ role: 'assistant', content: assistantResponse.trim() });
+				// Save agent response as document in workspace/docs/{skillId}/
+				saveAgentResponse(session, assistantResponse.trim());
 			}
 
 			session.activeProcess = null;
@@ -345,6 +408,12 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	if (orchestratorBusy) {
 		broadcast({ type: 'teamError', skillId: orchestratorSkillId, error: 'Orchestrator is still processing' });
 		return;
+	}
+
+	// Create a project directory from the user's message
+	if (!currentProjectDir) {
+		currentProjectDir = createProjectDir(message);
+		console.log(`[Orchestrator] Project directory: ${currentProjectDir}`);
 	}
 
 	orchestratorBusy = true;
@@ -458,6 +527,12 @@ async function orchestrateStep(
 	await orchestrateStep(orchSkillId, feedbackMessage, broadcast, depth + 1);
 }
 
+/** Reset current project so next orchestrator message creates a new one */
+export function resetProject(): void {
+	currentProjectDir = null;
+	responseCounter = 0;
+}
+
 export function getTeamAgentIds(): number[] {
 	return Array.from(teamSessions.values()).map((s) => s.agentId);
 }
@@ -472,4 +547,5 @@ export function closeTeam(broadcast: Broadcast): void {
 	teamSessions.clear();
 	orchestratorSkillId = null;
 	orchestratorBusy = false;
+	currentProjectDir = null;
 }
