@@ -28,8 +28,8 @@ const IDLE_MESSAGES = [
   '我來看看怎麼做最好',
 ]
 
-const TYPEWRITER_SPEED_MS = 40
-const MAX_DISPLAY_CHARS = 60
+const TYPEWRITER_SPEED_MS = 35
+const MAX_DISPLAY_CHARS = 50
 const IDLE_MESSAGE_ROTATE_MS = 5000
 
 interface ThoughtBubblesProps {
@@ -40,56 +40,71 @@ interface ThoughtBubblesProps {
   thoughtData: Record<number, ThoughtData>
 }
 
-/** Truncate text to a readable snippet, breaking at word boundaries */
-function truncateText(text: string, maxLen: number): string {
-  // Take last portion of text (most recent thinking)
+/** Extract the last meaningful sentence/fragment from streaming text */
+function extractLatestSnippet(text: string, maxLen: number): string {
   const trimmed = text.trim()
+  if (!trimmed) return ''
   if (trimmed.length <= maxLen) return trimmed
+
   // Take from the end for most recent content
   const tail = trimmed.slice(-maxLen)
-  // Try to break at a word boundary
+  // Try to break at sentence boundary (Chinese period, newline, etc.)
+  const breakChars = ['。', '！', '？', '\n', '；', '. ', '! ', '? ']
+  let bestBreak = -1
+  for (const ch of breakChars) {
+    const idx = tail.indexOf(ch)
+    if (idx >= 0 && idx < maxLen * 0.4) {
+      bestBreak = Math.max(bestBreak, idx + ch.length)
+    }
+  }
+  if (bestBreak > 0) {
+    return tail.slice(bestBreak)
+  }
+  // Fall back to space break
   const spaceIdx = tail.indexOf(' ')
   if (spaceIdx > 0 && spaceIdx < 15) {
-    return '...' + tail.slice(spaceIdx + 1)
+    return tail.slice(spaceIdx + 1)
   }
-  return '...' + tail
+  return tail
 }
 
 function ThoughtBubbleItem({
   text,
+  useTypewriter,
   isIdle,
   isCompleted,
 }: {
   text: string
+  useTypewriter: boolean
   isIdle: boolean
   isCompleted: boolean
 }) {
   const [displayLen, setDisplayLen] = useState(0)
-  const prevTextRef = useRef(text)
+  const prevTextRef = useRef('')
 
-  // Reset typewriter when text changes
+  // Reset typewriter when text changes (only for typewriter mode)
   useEffect(() => {
-    if (text !== prevTextRef.current) {
+    if (useTypewriter && text !== prevTextRef.current) {
       setDisplayLen(0)
       prevTextRef.current = text
     }
-  }, [text])
+  }, [text, useTypewriter])
 
   // Typewriter tick
   useEffect(() => {
-    if (displayLen >= text.length) return
+    if (!useTypewriter || displayLen >= text.length) return
     const timer = setTimeout(() => {
+      // Advance by 1-2 chars to keep up pace
       setDisplayLen((n) => Math.min(n + 1, text.length))
     }, TYPEWRITER_SPEED_MS)
     return () => clearTimeout(timer)
-  }, [displayLen, text])
+  }, [displayLen, text, useTypewriter])
 
-  const displayText = text.slice(0, displayLen)
-  const showCursor = displayLen < text.length
+  const displayText = useTypewriter ? text.slice(0, displayLen) : text
+  const showCursor = useTypewriter && displayLen < text.length
 
   return (
     <div className="thought-bubble-container">
-      {/* Tail triangle */}
       <div className="thought-bubble-tail" />
       <div
         className="thought-bubble-content"
@@ -204,16 +219,20 @@ export function ThoughtBubbles({
         let displayText: string
         let isIdle = false
         let isCompleted = false
+        let useTypewriter = false
 
         if (data.justCompleted) {
           displayText = '已完成任務 ✓'
           isCompleted = true
+          useTypewriter = true
         } else if (data.text) {
-          displayText = truncateText(data.text, MAX_DISPLAY_CHARS)
+          // Live streaming text — show latest snippet without typewriter
+          displayText = extractLatestSnippet(data.text, MAX_DISPLAY_CHARS)
         } else {
-          // Working but no text yet — show idle message
+          // Working but no text yet — show idle message with typewriter
           displayText = idleMessages[agentId] || IDLE_MESSAGES[0]
           isIdle = true
+          useTypewriter = true
         }
 
         // Position: above the character, higher than the existing bubble sprites
@@ -239,6 +258,7 @@ export function ThoughtBubbles({
           >
             <ThoughtBubbleItem
               text={displayText}
+              useTypewriter={useTypewriter}
               isIdle={isIdle}
               isCompleted={isCompleted}
             />

@@ -202,3 +202,4 @@ description: 前端工程師，負責 UI 元件開發、響應式設計、效能
 8. **效能有據** — 不預先優化。使用 `React.memo` / `useMemo` / `useCallback` 必須有明確的效能問題佐證，不要「以防萬一」亂加。
 9. **錯誤不靜默** — 所有非同步操作必須處理錯誤。API 呼叫失敗必須向使用者顯示回饋，不得靜默吞掉錯誤。
 10. **回報要完整** — 每次回覆必須包含：變更摘要、修改檔案清單、完整程式碼、注意事項。讓 Tech Lead 能快速理解你做了什麼。
+11. **Port 分離** — 啟動 dev server 時，**禁止使用 port 5173**（這是 pixel-agents 本身的 port）。請使用 port 3001 或其他不衝突的 port。例如 Vite 專案在 `vite.config.ts` 中設定 `server: { port: 3001 }`。

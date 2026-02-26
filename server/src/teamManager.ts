@@ -472,7 +472,14 @@ async function orchestrateStep(
 	// Wait for any active process to finish
 	if (session.activeProcess) {
 		console.log(`[Orchestrator] Waiting for active process to finish...`);
-		return;
+		await new Promise<void>((resolve) => {
+			const check = setInterval(() => {
+				if (!session.activeProcess) {
+					clearInterval(check);
+					resolve();
+				}
+			}, 500);
+		});
 	}
 
 	const fullPrompt = buildPromptWithHistory(session.history, message);
@@ -488,7 +495,10 @@ async function orchestrateStep(
 		return;
 	}
 
-	if (!response) return;
+	if (!response) {
+		console.log(`[Orchestrator] Empty response from ${session.name} — treating as completed with no text output`);
+		response = '（該成員已完成工作但未產出文字回覆，可能全部是工具操作。）';
+	}
 
 	// Parse for task blocks
 	const { tasks } = parseTaskBlocks(response);
@@ -522,13 +532,27 @@ async function orchestrateStep(
 
 		console.log(`[Orchestrator] Dispatching task ${taskId} to ${targetSession.name}: ${task.description.slice(0, 80)}...`);
 
+		// Wait if sub-agent is still busy from a previous task
+		if (targetSession.activeProcess) {
+			console.log(`[Orchestrator] Waiting for ${targetSession.name}'s active process to finish...`);
+			await new Promise<void>((resolve) => {
+				const check = setInterval(() => {
+					if (!targetSession.activeProcess) {
+						clearInterval(check);
+						resolve();
+					}
+				}, 500);
+			});
+		}
+
 		// Send to sub-agent and wait for result
 		const subPrompt = buildPromptWithHistory(targetSession.history, task.description);
 		targetSession.history.push({ role: 'user', content: task.description });
 
 		try {
 			const result = await spawnClaudeForSkill(targetSession, subPrompt, broadcast);
-			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${result}\n[/RESULT]`);
+			const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
+			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${resultText}\n[/RESULT]`);
 			broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
 			console.log(`[Orchestrator] Task ${taskId} completed by ${targetSession.name}`);
 		} catch (err) {
