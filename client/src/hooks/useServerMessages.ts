@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { OfficeState } from '../office/engine/officeState.js'
 import type { OfficeLayout, ToolActivity } from '../office/types.js'
+import type { ThoughtData } from '../components/ThoughtBubbles.js'
 import { extractToolName } from '../office/toolUtils.js'
 import { migrateLayoutColors } from '../office/layout/layoutSerializer.js'
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js'
@@ -86,6 +87,7 @@ export interface ServerMessageState {
   dispatchedTasks: DispatchedTask[]
   addOrchestratorUserMessage: (content: string) => void
   teamToolActivities: Record<string, string | null>
+  thoughtData: Record<number, ThoughtData>
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -120,11 +122,14 @@ export function useServerMessages(
   const [orchestratorBusy, setOrchestratorBusy] = useState(false)
   const [dispatchedTasks, setDispatchedTasks] = useState<DispatchedTask[]>([])
   const [teamToolActivities, setTeamToolActivities] = useState<Record<string, string | null>>({})
+  const [thoughtData, setThoughtData] = useState<Record<number, ThoughtData>>({})
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
   // Chat agent tracking (chatId → agentId mapping)
   const chatAgentMapRef = useRef<Record<string, number>>({})
+  // skillId → agentId lookup ref (populated from teamMembers)
+  const skillAgentMapRef = useRef<Record<string, number>>({})
 
   useEffect(() => {
     // Buffer agents from existingAgents until layout is loaded
@@ -229,6 +234,15 @@ export function useServerMessages(
         os.setAgentTool(id, toolName)
         os.setAgentActive(id, true)
         os.clearPermissionBubble(id)
+        // Mark agent as working for thought bubble (if no text yet)
+        setThoughtData((prev) => {
+          const existing = prev[id]
+          if (existing && existing.text) return prev
+          return {
+            ...prev,
+            [id]: { text: '', updatedAt: Date.now(), isWorking: true, justCompleted: false },
+          }
+        })
         // Create sub-agent character for Task tool subtasks
         if (status.startsWith('Subtask:')) {
           const label = status.slice('Subtask:'.length).trim()
@@ -436,12 +450,55 @@ export function useServerMessages(
             [chatId]: { ...chat, isStreaming: true, streamBuffer: chat.streamBuffer + text },
           }
         })
+        // Update thought bubble for chat agent (keep last ~100 chars)
+        const chatChunkAgentId = chatAgentMapRef.current[chatId]
+        if (chatChunkAgentId !== undefined) {
+          setThoughtData((prev) => {
+            const combined = (prev[chatChunkAgentId]?.text ?? '') + text
+            return {
+              ...prev,
+              [chatChunkAgentId]: {
+                text: combined.length > 120 ? combined.slice(-100) : combined,
+                updatedAt: Date.now(),
+                isWorking: true,
+                justCompleted: false,
+              },
+            }
+          })
+        }
       } else if (msg.type === 'chatStreamEnd') {
         const chatId = msg.chatId as string
         // Clear thinking bubble
         const streamEndAgentId = msg.agentId as number | undefined
         if (streamEndAgentId !== undefined && streamEndAgentId >= 0) {
           os.clearThinkingBubble(streamEndAgentId)
+        }
+        // Mark thought as completed for chat agent
+        const chatEndAgentId = chatAgentMapRef.current[chatId] ?? streamEndAgentId
+        if (chatEndAgentId !== undefined) {
+          setThoughtData((prev) => {
+            if (!prev[chatEndAgentId]) return prev
+            return {
+              ...prev,
+              [chatEndAgentId]: {
+                text: '已完成',
+                updatedAt: Date.now(),
+                isWorking: false,
+                justCompleted: true,
+              },
+            }
+          })
+          setTimeout(() => {
+            setThoughtData((prev) => {
+              const current = prev[chatEndAgentId]
+              if (current && current.justCompleted) {
+                const next = { ...prev }
+                delete next[chatEndAgentId]
+                return next
+              }
+              return prev
+            })
+          }, 3000)
         }
         setChats((prev) => {
           const chat = prev[chatId]
@@ -505,11 +562,14 @@ export function useServerMessages(
           }
           return next
         })
-        // Store agent names
+        // Store agent names and skill→agent mapping
         const names: Record<number, string> = {}
+        const skillMap: Record<string, number> = {}
         for (const m of members) {
           names[m.agentId] = m.name
+          skillMap[m.skillId] = m.agentId
         }
+        skillAgentMapRef.current = skillMap
         setAgentNames((prev) => ({ ...prev, ...names }))
       } else if (msg.type === 'teamStreamChunk') {
         const skillId = msg.skillId as string
@@ -522,6 +582,22 @@ export function useServerMessages(
             [skillId]: { ...chat, isStreaming: true, streamBuffer: chat.streamBuffer + text },
           }
         })
+        // Update thought bubble with latest text snippet (keep last ~100 chars)
+        const chunkAgentId = skillAgentMapRef.current[skillId]
+        if (chunkAgentId !== undefined) {
+          setThoughtData((prev) => {
+            const combined = (prev[chunkAgentId]?.text ?? '') + text
+            return {
+              ...prev,
+              [chunkAgentId]: {
+                text: combined.length > 120 ? combined.slice(-100) : combined,
+                updatedAt: Date.now(),
+                isWorking: true,
+                justCompleted: false,
+              },
+            }
+          })
+        }
       } else if (msg.type === 'teamStreamEnd') {
         const skillId = msg.skillId as string
         const agentId = msg.agentId as number | undefined
@@ -529,6 +605,31 @@ export function useServerMessages(
           os.clearThinkingBubble(agentId)
         }
         setTeamToolActivities((prev) => ({ ...prev, [skillId]: null }))
+        // Mark thought as completed
+        const endAgentId = skillAgentMapRef.current[skillId]
+        if (endAgentId !== undefined) {
+          setThoughtData((prev) => ({
+            ...prev,
+            [endAgentId]: {
+              text: '已完成任務',
+              updatedAt: Date.now(),
+              isWorking: false,
+              justCompleted: true,
+            },
+          }))
+          // Auto-clear the completed message after a delay
+          setTimeout(() => {
+            setThoughtData((prev) => {
+              const current = prev[endAgentId]
+              if (current && current.justCompleted) {
+                const next = { ...prev }
+                delete next[endAgentId]
+                return next
+              }
+              return prev
+            })
+          }, 3000)
+        }
         setTeamChats((prev) => {
           const chat = prev[skillId]
           if (!chat) return prev
@@ -570,6 +671,19 @@ export function useServerMessages(
           completed: false,
         }
         setDispatchedTasks((prev) => [...prev, task])
+        // Mark target agent as working for thought bubble
+        const targetAgentId = msg.targetAgentId as number
+        if (targetAgentId !== undefined) {
+          setThoughtData((prev) => ({
+            ...prev,
+            [targetAgentId]: {
+              text: '',
+              updatedAt: Date.now(),
+              isWorking: true,
+              justCompleted: false,
+            },
+          }))
+        }
       } else if (msg.type === 'taskCompleted') {
         const taskId = msg.taskId as string
         setDispatchedTasks((prev) =>
@@ -578,14 +692,32 @@ export function useServerMessages(
       } else if (msg.type === 'orchestratorBusy') {
         setOrchestratorBusy(msg.busy as boolean)
         if (!(msg.busy as boolean)) {
-          // Clear dispatched tasks and tool activities when orchestration finishes
+          // Clear dispatched tasks, tool activities, and thought data when orchestration finishes
           setDispatchedTasks([])
           setTeamToolActivities({})
+          setThoughtData({})
         }
       } else if (msg.type === 'teamToolActivity') {
         const skillId = msg.skillId as string
         const status = msg.status as string | null
         setTeamToolActivities((prev) => ({ ...prev, [skillId]: status }))
+        // Mark agent as working for thought bubble (but don't override existing text)
+        const toolAgentId = skillAgentMapRef.current[skillId]
+        if (toolAgentId !== undefined && status) {
+          setThoughtData((prev) => {
+            const existing = prev[toolAgentId]
+            if (existing && existing.text) return prev // don't overwrite stream text
+            return {
+              ...prev,
+              [toolAgentId]: {
+                text: '',
+                updatedAt: Date.now(),
+                isWorking: true,
+                justCompleted: false,
+              },
+            }
+          })
+        }
       }
     }
     wsClient.addMessageListener(handler)
@@ -657,6 +789,6 @@ export function useServerMessages(
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
-    teamToolActivities,
+    teamToolActivities, thoughtData,
   }
 }

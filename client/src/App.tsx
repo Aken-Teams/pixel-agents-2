@@ -19,6 +19,7 @@ import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
 import { ChatPanel } from './components/ChatPanel.js'
 import { AgentLabels } from './components/AgentLabels.js'
+import { ThoughtBubbles } from './components/ThoughtBubbles.js'
 
 // Game state lives outside React — updated imperatively by message handlers
 const officeStateRef = { current: null as OfficeState | null }
@@ -131,7 +132,7 @@ function App() {
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
-    teamToolActivities,
+    teamToolActivities, thoughtData,
   } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
@@ -366,6 +367,14 @@ function App() {
         zoom={editor.zoom}
         panRef={editor.panRef}
         agentNames={agentNames}
+      />
+
+      <ThoughtBubbles
+        officeState={officeState}
+        containerRef={containerRef}
+        zoom={editor.zoom}
+        panRef={editor.panRef}
+        thoughtData={thoughtData}
       />
 
       {isDebugMode && (
