@@ -88,9 +88,8 @@ export function useServerMessages(
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
-  // Chat agent tracking (chatId → agentId mapping and thinking buffer)
+  // Chat agent tracking (chatId → agentId mapping)
   const chatAgentMapRef = useRef<Record<string, number>>({})
-  const thinkingBufferRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
     // Buffer agents from existingAgents until layout is loaded
@@ -378,7 +377,6 @@ export function useServerMessages(
       } else if (msg.type === 'chatClosed') {
         const chatId = msg.chatId as string
         delete chatAgentMapRef.current[chatId]
-        delete thinkingBufferRef.current[chatId]
         setChatList((prev) => prev.filter((id) => id !== chatId))
         setChats((prev) => {
           const next = { ...prev }
@@ -398,12 +396,11 @@ export function useServerMessages(
         })
       } else if (msg.type === 'chatStreamEnd') {
         const chatId = msg.chatId as string
-        // Clear thinking text overlay
+        // Clear thinking bubble
         const streamEndAgentId = msg.agentId as number | undefined
         if (streamEndAgentId !== undefined && streamEndAgentId >= 0) {
-          os.clearThinkingText(streamEndAgentId)
+          os.clearThinkingBubble(streamEndAgentId)
         }
-        delete thinkingBufferRef.current[chatId]
         setChats((prev) => {
           const chat = prev[chatId]
           if (!chat) return prev
@@ -434,17 +431,10 @@ export function useServerMessages(
         })
       } else if (msg.type === 'chatAlertBubble') {
         const agentId = msg.agentId as number
-        const chatId = msg.chatId as string
         os.showAlertBubble(agentId)
         playAlertSound()
-        thinkingBufferRef.current[chatId] = ''
       } else if (msg.type === 'chatThinkingChunk') {
-        const agentId = msg.agentId as number
-        const chatId = msg.chatId as string
-        const text = msg.text as string
-        const buf = (thinkingBufferRef.current[chatId] || '') + text
-        thinkingBufferRef.current[chatId] = buf
-        os.setThinkingText(agentId, buf)
+        // Thinking chunks no longer used for UI — ignored
       } else if (msg.type === 'existingChats') {
         const chatIds = msg.chatIds as string[]
         setChatList(chatIds)

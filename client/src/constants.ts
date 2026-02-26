@@ -111,8 +111,6 @@ export const MAX_CHARACTERS = 21
 // ── Game Logic ───────────────────────────────────────────────
 export const MAX_DELTA_TIME_SEC = 0.1
 export const ALERT_BUBBLE_DURATION_SEC = 3.0
-export const THINKING_DISPLAY_DURATION_SEC = 5.0
-export const THINKING_TEXT_MAX_CHARS = 5
 export const WAITING_BUBBLE_DURATION_SEC = 2.0
 export const DISMISS_BUBBLE_FAST_FADE_SEC = 0.3
 export const INACTIVE_SEAT_TIMER_MIN_SEC = 3.0

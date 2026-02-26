@@ -474,15 +474,19 @@ export function renderBubbles(
   for (const ch of characters) {
     if (!ch.bubbleType) continue
 
-    const sprite = ch.bubbleType === 'permission'
+    // 'thinking' uses the same dots as 'permission' but with a pulse animation
+    const sprite = ch.bubbleType === 'permission' || ch.bubbleType === 'thinking'
       ? BUBBLE_PERMISSION_SPRITE
       : ch.bubbleType === 'alert'
         ? BUBBLE_ALERT_SPRITE
         : BUBBLE_WAITING_SPRITE
 
-    // Compute opacity: permission = full, waiting/alert = fade in last 0.5s
+    // Compute opacity: permission = full, thinking = pulsing, waiting/alert = fade in last 0.5s
     let alpha = 1.0
-    if ((ch.bubbleType === 'waiting' || ch.bubbleType === 'alert') && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC) {
+    if (ch.bubbleType === 'thinking') {
+      // Smooth pulse: oscillate between 0.4 and 1.0
+      alpha = 0.7 + 0.3 * Math.sin(Date.now() / 400)
+    } else if ((ch.bubbleType === 'waiting' || ch.bubbleType === 'alert') && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC) {
       alpha = ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC
     }
 

@@ -18,7 +18,6 @@ import { BottomToolbar } from './components/BottomToolbar.js'
 import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
 import { ChatPanel } from './components/ChatPanel.js'
-import { ThinkingOverlay } from './office/components/ThinkingOverlay.js'
 
 // Game state lives outside React — updated imperatively by message handlers
 const officeStateRef = { current: null as OfficeState | null }
@@ -328,13 +327,6 @@ function App() {
         zoom={editor.zoom}
         panRef={editor.panRef}
         onCloseAgent={handleCloseAgent}
-      />
-
-      <ThinkingOverlay
-        officeState={officeState}
-        containerRef={containerRef}
-        zoom={editor.zoom}
-        panRef={editor.panRef}
       />
 
       {isDebugMode && (
