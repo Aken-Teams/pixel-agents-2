@@ -9,6 +9,7 @@ import {
   INACTIVE_SEAT_TIMER_RANGE_SEC,
   AUTO_ON_FACING_DEPTH,
   AUTO_ON_SIDE_DEPTH,
+  CHARACTER_RENDER_SCALE,
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_HIT_HALF_WIDTH,
   CHARACTER_HIT_HEIGHT,
@@ -694,13 +695,14 @@ export class OfficeState {
     for (const ch of chars) {
       // Skip characters that are despawning
       if (ch.matrixEffect === 'despawn') continue
-      // Character sprite is 16x24, anchored bottom-center
-      // Apply sitting offset to match visual position
-      const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
+      // Character sprite is 16x24 scaled by CHARACTER_RENDER_SCALE, anchored bottom-center
+      // Apply sitting offset (scaled) to match visual position
+      const sittingOffset = ch.state === CharacterState.TYPE
+        ? Math.round(CHARACTER_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
       const anchorY = ch.y + sittingOffset
-      const left = ch.x - CHARACTER_HIT_HALF_WIDTH
-      const right = ch.x + CHARACTER_HIT_HALF_WIDTH
-      const top = anchorY - CHARACTER_HIT_HEIGHT
+      const left = ch.x - CHARACTER_HIT_HALF_WIDTH * CHARACTER_RENDER_SCALE
+      const right = ch.x + CHARACTER_HIT_HALF_WIDTH * CHARACTER_RENDER_SCALE
+      const top = anchorY - CHARACTER_HIT_HEIGHT * CHARACTER_RENDER_SCALE
       const bottom = anchorY
       if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
         return ch.id

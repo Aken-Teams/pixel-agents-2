@@ -3,7 +3,7 @@ import type { ToolActivity } from '../types.js'
 import type { OfficeState } from '../engine/officeState.js'
 import type { SubagentCharacter } from '../../hooks/useServerMessages.js'
 import { TILE_SIZE, CharacterState } from '../types.js'
-import { TOOL_OVERLAY_VERTICAL_OFFSET, CHARACTER_SITTING_OFFSET_PX } from '../../constants.js'
+import { CHARACTER_RENDER_SCALE, TOOL_OVERLAY_VERTICAL_OFFSET, CHARACTER_SITTING_OFFSET_PX } from '../../constants.js'
 
 interface ToolOverlayProps {
   officeState: OfficeState
@@ -92,10 +92,13 @@ export function ToolOverlay({
         // Only show for hovered or selected agents
         if (!isSelected && !isHovered) return null
 
-        // Position above character
-        const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
+        // Position above character (scaled by CHARACTER_RENDER_SCALE)
+        const sittingOffset = ch.state === CharacterState.TYPE
+          ? Math.round(CHARACTER_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
+        const charVisualHeight = 24 * CHARACTER_RENDER_SCALE
+        const toolOffset = charVisualHeight + 8
         const screenX = (deviceOffsetX + ch.x * zoom) / dpr
-        const screenY = (deviceOffsetY + (ch.y + sittingOffset - TOOL_OVERLAY_VERTICAL_OFFSET) * zoom) / dpr
+        const screenY = (deviceOffsetY + (ch.y + sittingOffset - toolOffset) * zoom) / dpr
 
         // Get activity text
         const subHasPermission = isSub && ch.bubbleType === 'permission'

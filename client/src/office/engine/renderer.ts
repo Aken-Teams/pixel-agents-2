@@ -7,6 +7,7 @@ import { renderMatrixEffect } from './matrixEffect.js'
 import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR } from '../floorTiles.js'
 import { hasWallSprites, getWallInstances, wallColorToHex } from '../wallTiles.js'
 import {
+  CHARACTER_RENDER_SCALE,
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
   OUTLINE_Z_SORT_OFFSET,
@@ -132,14 +133,17 @@ export function renderScene(
     })
   }
 
-  // Characters
+  // Characters (rendered at CHARACTER_RENDER_SCALE × zoom for larger sprites)
+  // Round to integer so every sprite-pixel maps to a whole-number block (crisp rendering)
+  const charZoom = Math.round(zoom * CHARACTER_RENDER_SCALE)
   for (const ch of characters) {
     const sprites = getCharacterSprites(ch.palette, ch.hueShift)
     const spriteData = getCharacterSprite(ch, sprites)
-    const cached = getCachedSprite(spriteData, zoom)
-    // Sitting offset: shift character down when seated so they visually sit in the chair
-    const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
-    // Anchor at bottom-center of character — round to integer device pixels
+    const cached = getCachedSprite(spriteData, charZoom)
+    // Sitting offset scaled by render scale so character sits visually in the chair
+    const sittingOffset = ch.state === CharacterState.TYPE
+      ? Math.round(CHARACTER_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
+    // Anchor at bottom-center of character — world position × zoom, sprite size × charZoom
     const drawX = Math.round(offsetX + ch.x * zoom - cached.width / 2)
     const drawY = Math.round(offsetY + (ch.y + sittingOffset) * zoom - cached.height)
 
@@ -157,7 +161,7 @@ export function renderScene(
       drawables.push({
         zY: charZY,
         draw: (c) => {
-          renderMatrixEffect(c, mCh, mSpriteData, mDrawX, mDrawY, zoom)
+          renderMatrixEffect(c, mCh, mSpriteData, mDrawX, mDrawY, charZoom)
         },
       })
       continue
@@ -169,9 +173,9 @@ export function renderScene(
     if (isSelected || isHovered) {
       const outlineAlpha = isSelected ? SELECTED_OUTLINE_ALPHA : HOVERED_OUTLINE_ALPHA
       const outlineData = getOutlineSprite(spriteData)
-      const outlineCached = getCachedSprite(outlineData, zoom)
-      const olDrawX = drawX - zoom  // 1 sprite-pixel offset, scaled
-      const olDrawY = drawY - zoom  // outline follows sitting offset via drawY
+      const outlineCached = getCachedSprite(outlineData, charZoom)
+      const olDrawX = drawX - charZoom  // 1 sprite-pixel offset, scaled
+      const olDrawY = drawY - charZoom  // outline follows sitting offset via drawY
       drawables.push({
         zY: charZY - OUTLINE_Z_SORT_OFFSET, // sort just before character
         draw: (c) => {
@@ -482,11 +486,13 @@ export function renderBubbles(
 
     const cached = getCachedSprite(sprite, zoom)
     // Position: centered above the character's head
-    // Character is anchored bottom-center at (ch.x, ch.y), sprite is 16x24
+    // Character is rendered at charZoom (CHARACTER_RENDER_SCALE × zoom), anchored bottom-center
     // Place bubble above head with a small gap; follow sitting offset
-    const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0
+    const cZoom = Math.round(zoom * CHARACTER_RENDER_SCALE)
+    const sittingOff = ch.state === CharacterState.TYPE
+      ? Math.round(BUBBLE_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
     const bubbleX = Math.round(offsetX + ch.x * zoom - cached.width / 2)
-    const bubbleY = Math.round(offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX) * zoom - cached.height - 1 * zoom)
+    const bubbleY = Math.round(offsetY + (ch.y + sittingOff) * zoom - BUBBLE_VERTICAL_OFFSET_PX * cZoom - cached.height - 1 * zoom)
 
     ctx.save()
     if (alpha < 1.0) ctx.globalAlpha = alpha
