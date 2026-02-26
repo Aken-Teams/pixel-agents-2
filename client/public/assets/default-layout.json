@@ -2099,38 +2099,38 @@
     },
     {
       "uid": "seat-m3",
-      "seatCol": 35,
-      "seatRow": 20,
+      "seatCol": 34,
+      "seatRow": 25,
       "facingDir": 1
     },
     {
       "uid": "seat-m4",
-      "seatCol": 35,
-      "seatRow": 22,
+      "seatCol": 34,
+      "seatRow": 29,
       "facingDir": 1
     },
     {
       "uid": "seat-b1",
-      "seatCol": 33,
-      "seatRow": 43,
+      "seatCol": 30.5,
+      "seatRow": 45,
       "facingDir": 3
     },
     {
       "uid": "seat-b2",
-      "seatCol": 10,
-      "seatRow": 39,
-      "facingDir": 0
+      "seatCol": 4.5,
+      "seatRow": 41,
+      "facingDir": 3
     },
     {
       "uid": "seat-b3",
-      "seatCol": 15,
-      "seatRow": 39,
-      "facingDir": 0
+      "seatCol": 6.5,
+      "seatRow": 41,
+      "facingDir": 3
     },
     {
       "uid": "seat-b4",
-      "seatCol": 20,
-      "seatRow": 39,
+      "seatCol": 10.5,
+      "seatRow": 40.5,
       "facingDir": 0
     }
   ]
