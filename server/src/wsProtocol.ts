@@ -38,7 +38,8 @@ export type ServerMessage =
 	// Orchestrator
 	| { type: 'taskDispatched'; taskId: string; targetSkillId: string; targetAgentId: number; description: string }
 	| { type: 'taskCompleted'; taskId: string; targetSkillId: string }
-	| { type: 'orchestratorBusy'; busy: boolean };
+	| { type: 'orchestratorBusy'; busy: boolean }
+	| { type: 'teamToolActivity'; skillId: string; status: string | null };
 
 // ── Client → Server Messages ──────────────────────────────────
 

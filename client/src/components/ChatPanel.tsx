@@ -19,12 +19,14 @@ interface ChatPanelProps {
   orchestratorBusy: boolean
   dispatchedTasks: DispatchedTask[]
   onSendOrchestratorMessage: (message: string) => void
+  teamToolActivities: Record<string, string | null>
 }
 
 export function ChatPanel({
   chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit,
   mode, onModeChange, teamMembers, teamChats, onSendTeamMessage,
   orchestratorSkillId, orchestratorBusy, dispatchedTasks, onSendOrchestratorMessage,
+  teamToolActivities,
 }: ChatPanelProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null)
@@ -115,6 +117,10 @@ export function ChatPanel({
 
   // Get the active team member name for the message area header
   const activeTeamMember = teamMembers.find((m) => m.skillId === activeSkillId)
+
+  const getMemberName = useCallback((skillId: string) =>
+    teamMembers.find((m) => m.skillId === skillId)?.name || skillId,
+  [teamMembers])
 
   // Get placeholder text
   const getPlaceholder = () => {
@@ -387,6 +393,7 @@ export function ChatPanel({
                 message={msg}
                 assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
                 teamMembers={teamMembers}
+                dispatchedTasks={dispatchedTasks}
               />
             ))}
             {activeChat.isStreaming && activeChat.streamBuffer && (
@@ -394,6 +401,7 @@ export function ChatPanel({
                 message={{ role: 'assistant', content: activeChat.streamBuffer }}
                 assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
                 teamMembers={teamMembers}
+                dispatchedTasks={dispatchedTasks}
                 isStreaming
               />
             )}
@@ -401,10 +409,31 @@ export function ChatPanel({
               <div style={{
                 padding: '6px 10px',
                 fontSize: '14px',
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                fontFamily: MESSAGE_FONT,
                 color: 'var(--pixel-text-dim)',
               }}>
-                Thinking...
+                思考中...
+              </div>
+            )}
+            {/* Show waiting indicator when orchestrator is busy but not streaming (sub-agent working) */}
+            {!activeChat.isStreaming && isActiveOrchestrator && orchestratorBusy && dispatchedTasks.some((t) => !t.completed) && (
+              <div style={{
+                padding: '6px 10px',
+                fontSize: '13px',
+                fontFamily: MESSAGE_FONT,
+                color: 'var(--pixel-text-dim)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--pixel-status-active)',
+                  animation: 'pixel-agents-pulse 1.5s ease-in-out infinite',
+                }} />
+                <span>等待 {dispatchedTasks.filter((t) => !t.completed).map((t) => getMemberName(t.targetSkillId)).join('、')} 回覆中...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -502,11 +531,12 @@ function stripTaskBlocks(text: string): { cleanText: string; tasks: { skillId: s
   return { cleanText, tasks }
 }
 
-function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
+function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispatchedTasks }: {
   message: ChatMessage
   assistantName?: string
   isStreaming?: boolean
   teamMembers?: TeamMemberInfo[]
+  dispatchedTasks?: DispatchedTask[]
 }) {
   const isUser = message.role === 'user'
 
@@ -656,62 +686,87 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
       )}
 
       {/* Task dispatch cards */}
-      {tasks.map((task, i) => (
-        <div key={i} style={{
-          width: '100%',
-          marginTop: 6,
-          padding: '8px 10px',
-          fontSize: '13px',
-          fontFamily: MESSAGE_FONT,
-          background: 'rgba(90, 140, 255, 0.12)',
-          border: '2px solid rgba(90, 140, 255, 0.3)',
-          borderRadius: 0,
-          color: 'var(--pixel-text)',
-        }}>
-          <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--pixel-accent)', fontSize: '13px' }}>
-            指派給 {getMemberName(task.skillId)}
-          </div>
-          <div className="hidden-scrollbar" style={{
-            fontSize: '12px',
-            lineHeight: 1.5,
-            color: 'var(--pixel-text-dim)',
-            maxHeight: 150,
-            overflowY: 'auto',
-            overflowX: 'hidden',
+      {tasks.map((task, i) => {
+        const activeTask = dispatchedTasks?.find((t) => t.targetSkillId === task.skillId && !t.completed)
+        const isWorking = !!activeTask
+        return (
+          <div key={i} style={{
+            maxWidth: '90%',
+            marginTop: 6,
+            padding: '8px 10px',
+            fontSize: '13px',
+            fontFamily: MESSAGE_FONT,
+            background: 'rgba(90, 140, 255, 0.12)',
+            border: '2px solid rgba(90, 140, 255, 0.3)',
+            borderRadius: 0,
+            color: 'var(--pixel-text)',
           }}>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
-                strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
-                h1: ({ children }) => <div style={{ fontSize: '14px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
-                h2: ({ children }) => <div style={{ fontSize: '13px', fontWeight: 700, margin: '0.3em 0 0.2em' }}>{children}</div>,
-                h3: ({ children }) => <div style={{ fontSize: '12px', fontWeight: 600, margin: '0.2em 0 0.1em' }}>{children}</div>,
-                ul: ({ children }) => <ul style={{ margin: '0.2em 0', paddingLeft: '1.2em' }}>{children}</ul>,
-                ol: ({ children }) => <ol style={{ margin: '0.2em 0', paddingLeft: '1.2em' }}>{children}</ol>,
-                li: ({ children }) => <li style={{ margin: '0.1em 0' }}>{children}</li>,
-                code: ({ children }) => (
-                  <code style={{ background: 'rgba(0,0,0,0.25)', padding: '1px 4px', fontSize: '11px', fontFamily: 'monospace' }}>{children}</code>
-                ),
-                pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto', fontSize: '11px' }}>{children}</pre>,
-                table: ({ children }) => (
-                  <div style={{ overflowX: 'auto', margin: '0.3em 0' }}>
-                    <table style={{ borderCollapse: 'collapse', fontSize: '11px', width: '100%' }}>{children}</table>
-                  </div>
-                ),
-                th: ({ children }) => (
-                  <th style={{ padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.15)', textAlign: 'left', fontWeight: 600 }}>{children}</th>
-                ),
-                td: ({ children }) => (
-                  <td style={{ padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{children}</td>
-                ),
-              }}
-            >
-              {task.description}
-            </ReactMarkdown>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, marginBottom: 4, color: 'var(--pixel-accent)', fontSize: '13px' }}>
+              {isWorking && (
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--pixel-status-active)',
+                  flexShrink: 0,
+                  animation: 'pixel-agents-pulse 1.5s ease-in-out infinite',
+                }} />
+              )}
+              <span>指派給 {getMemberName(task.skillId)}</span>
+            </div>
+            {isWorking && (
+              <div style={{
+                fontSize: '11px',
+                color: 'var(--pixel-text-dim)',
+                marginBottom: 4,
+                opacity: 0.7,
+                fontStyle: 'italic',
+              }}>
+                {getMemberName(task.skillId)} 思考中...
+              </div>
+            )}
+            <div className="hidden-scrollbar chat-message-bubble" style={{
+              fontSize: '12px',
+              lineHeight: 1.5,
+              color: 'var(--pixel-text-dim)',
+              maxHeight: 150,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
+                  strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
+                  h1: ({ children }) => <div style={{ fontSize: '14px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
+                  h2: ({ children }) => <div style={{ fontSize: '13px', fontWeight: 700, margin: '0.3em 0 0.2em' }}>{children}</div>,
+                  h3: ({ children }) => <div style={{ fontSize: '12px', fontWeight: 600, margin: '0.2em 0 0.1em' }}>{children}</div>,
+                  ul: ({ children }) => <ul style={{ margin: '0.2em 0', paddingLeft: '1.2em' }}>{children}</ul>,
+                  ol: ({ children }) => <ol style={{ margin: '0.2em 0', paddingLeft: '1.2em' }}>{children}</ol>,
+                  li: ({ children }) => <li style={{ margin: '0.1em 0' }}>{children}</li>,
+                  code: ({ children }) => (
+                    <code style={{ background: 'rgba(0,0,0,0.25)', padding: '1px 4px', fontSize: '11px', fontFamily: 'monospace' }}>{children}</code>
+                  ),
+                  pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto', fontSize: '11px' }}>{children}</pre>,
+                  table: ({ children }) => (
+                    <div style={{ overflowX: 'auto', margin: '0.3em 0' }}>
+                      <table style={{ borderCollapse: 'collapse', fontSize: '11px', width: '100%' }}>{children}</table>
+                    </div>
+                  ),
+                  th: ({ children }) => (
+                    <th style={{ padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.15)', textAlign: 'left', fontWeight: 600 }}>{children}</th>
+                  ),
+                  td: ({ children }) => (
+                    <td style={{ padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{children}</td>
+                  ),
+                }}
+              >
+                {task.description}
+              </ReactMarkdown>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

@@ -131,6 +131,7 @@ function App() {
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
+    teamToolActivities,
   } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
@@ -245,6 +246,7 @@ function App() {
         orchestratorBusy={orchestratorBusy}
         dispatchedTasks={dispatchedTasks}
         onSendOrchestratorMessage={handleSendOrchestratorMessage}
+        teamToolActivities={teamToolActivities}
       />
       <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`

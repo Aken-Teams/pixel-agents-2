@@ -6,6 +6,7 @@ import type { TeamMemberInfo } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
 import type { SkillDefinition } from './skillLoader.js';
 import { getAssetsRoot } from './config.js';
+import { formatToolStatus } from './transcriptParser.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -290,19 +291,35 @@ function spawnClaudeForSkill(
 						assistantResponse += text;
 						sentFromDeltas = true;
 					} else if (parsed.type === 'assistant' && parsed.message?.content) {
+						const blocks = parsed.message.content as Array<{
+							type: string; id?: string; name?: string; input?: Record<string, unknown>; text?: string;
+						}>;
+						// Detect tool_use blocks and broadcast activity
+						for (const block of blocks) {
+							if (block.type === 'tool_use' && block.name) {
+								const status = formatToolStatus(block.name, block.input || {});
+								broadcast({ type: 'teamToolActivity', skillId: session.skillId, status });
+							}
+						}
 						if (!sentFromDeltas) {
-							for (const block of parsed.message.content) {
+							for (const block of blocks) {
 								if (block.type === 'text' && block.text) {
 									broadcast({ type: 'teamStreamChunk', skillId: session.skillId, text: block.text });
 									assistantResponse += block.text;
 								}
 							}
 						} else {
-							for (const block of parsed.message.content) {
+							for (const block of blocks) {
 								if (block.type === 'text' && block.text) {
 									assistantResponse = block.text;
 								}
 							}
+						}
+					} else if (parsed.type === 'user' && Array.isArray(parsed.message?.content)) {
+						// Tool results = tool finished, clear activity
+						const blocks = parsed.message.content as Array<{ type: string; tool_use_id?: string }>;
+						if (blocks.some(b => b.type === 'tool_result')) {
+							broadcast({ type: 'teamToolActivity', skillId: session.skillId, status: null });
 						}
 					}
 				} catch {

@@ -85,6 +85,7 @@ export interface ServerMessageState {
   orchestratorBusy: boolean
   dispatchedTasks: DispatchedTask[]
   addOrchestratorUserMessage: (content: string) => void
+  teamToolActivities: Record<string, string | null>
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -118,6 +119,7 @@ export function useServerMessages(
   const [orchestratorSkillId, setOrchestratorSkillId] = useState<string | null>(null)
   const [orchestratorBusy, setOrchestratorBusy] = useState(false)
   const [dispatchedTasks, setDispatchedTasks] = useState<DispatchedTask[]>([])
+  const [teamToolActivities, setTeamToolActivities] = useState<Record<string, string | null>>({})
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -526,6 +528,7 @@ export function useServerMessages(
         if (agentId !== undefined && agentId >= 0) {
           os.clearThinkingBubble(agentId)
         }
+        setTeamToolActivities((prev) => ({ ...prev, [skillId]: null }))
         setTeamChats((prev) => {
           const chat = prev[skillId]
           if (!chat) return prev
@@ -575,9 +578,14 @@ export function useServerMessages(
       } else if (msg.type === 'orchestratorBusy') {
         setOrchestratorBusy(msg.busy as boolean)
         if (!(msg.busy as boolean)) {
-          // Clear dispatched tasks when orchestration finishes
+          // Clear dispatched tasks and tool activities when orchestration finishes
           setDispatchedTasks([])
+          setTeamToolActivities({})
         }
+      } else if (msg.type === 'teamToolActivity') {
+        const skillId = msg.skillId as string
+        const status = msg.status as string | null
+        setTeamToolActivities((prev) => ({ ...prev, [skillId]: status }))
       }
     }
     wsClient.addMessageListener(handler)
@@ -649,5 +657,6 @@ export function useServerMessages(
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
+    teamToolActivities,
   }
 }
