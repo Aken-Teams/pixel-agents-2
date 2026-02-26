@@ -10,15 +10,23 @@ interface ConversationLine {
 	text: string;
 }
 
-interface IdleAgent {
+export interface IdleAgent {
 	agentId: number;
 	skillId: string;
 	name: string;
+	role?: 'orchestrator' | 'worker';
 }
 
 // ── Conversation Pool ──────────────────────────────────────────
 
-const CONVERSATIONS: Array<{ speakerCount?: number; lines: ConversationLine[] }> = [
+interface ConversationScript {
+	speakerCount?: number;
+	/** Map speaker index → required role, e.g. { 2: 'orchestrator' } */
+	roles?: Record<number, 'orchestrator' | 'worker'>;
+	lines: ConversationLine[];
+}
+
+const CONVERSATIONS: ConversationScript[] = [
 	// ── 午餐 & 美食 ──
 	{ lines: [
 		{ speaker: 0, text: '今天中午想吃什麼？' },
@@ -670,6 +678,411 @@ const CONVERSATIONS: Array<{ speakerCount?: number; lines: ConversationLine[] }>
 		{ speaker: 0, text: '修了，但發現另一個 bug' },
 		{ speaker: 1, text: '永遠修不完的感覺' },
 	] },
+
+	// ── 小心主管 & 辦公室生存 (2人) ──
+	{ lines: [
+		{ speaker: 0, text: '噓...主管今天心情好像不太好' },
+		{ speaker: 1, text: '真的嗎？我剛才還想去問他事情' },
+		{ speaker: 0, text: '我看他早上開完會臉就很臭' },
+		{ speaker: 1, text: '那我下午再去好了...' },
+		{ speaker: 0, text: '聰明，保命要緊' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '你有沒有發現主管最近走路都沒聲音' },
+		{ speaker: 0, text: '對！上次突然出現在我後面，嚇死我' },
+		{ speaker: 1, text: '我那時正好在看 YouTube...' },
+		{ speaker: 0, text: '完蛋，他有看到嗎？' },
+		{ speaker: 1, text: '應該沒有吧...我秒切回 VS Code' },
+		{ speaker: 0, text: '你可以裝一個後照鏡在螢幕上' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '昨天主管突然說要 one-on-one' },
+		{ speaker: 1, text: '天哪，你做了什麼嗎？' },
+		{ speaker: 0, text: '我想了一整晚到底哪裡出錯' },
+		{ speaker: 1, text: '結果呢？' },
+		{ speaker: 0, text: '結果只是問我專案進度...' },
+		{ speaker: 1, text: '哈哈哈，你也太緊張了' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '等一下主管要來巡了嗎？' },
+		{ speaker: 0, text: '不知道，但先把 terminal 切回來比較安全' },
+		{ speaker: 1, text: '我發現只要 terminal 開著，看起來就很忙' },
+		{ speaker: 0, text: '經典的看起來在工作技巧' },
+		{ speaker: 1, text: '專業的都開兩個螢幕，一個是保險用的' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '主管剛剛是不是看了我們這邊？' },
+		{ speaker: 1, text: '沒有吧，你太敏感了' },
+		{ speaker: 0, text: '被盯習慣了，都有創傷反應了' },
+		{ speaker: 1, text: '上一家公司是魔鬼主管嗎？' },
+		{ speaker: 0, text: '別提了，動不動就站在背後看' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '你知道主管今天幾點來的嗎？' },
+		{ speaker: 0, text: '八點就來了，我進來的時候嚇一跳' },
+		{ speaker: 1, text: '該不會又要趕什麼 deadline' },
+		{ speaker: 0, text: '拜託不要...上禮拜才加完班' },
+		{ speaker: 1, text: '你看他一直在打電話，感覺不妙' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '你有沒有被主管問過在幹嘛？' },
+		{ speaker: 1, text: '有啊，有一次我在研究技術他以為我在摸魚' },
+		{ speaker: 0, text: '看技術文章跟看新聞長得一樣嘛' },
+		{ speaker: 1, text: '後來我都把瀏覽器放在第二個螢幕' },
+		{ speaker: 0, text: '生存智慧' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '主管昨天發的那封信你看了嗎？' },
+		{ speaker: 0, text: '看了，又是效率提升計畫' },
+		{ speaker: 1, text: '每季都來一次，你不覺得嗎？' },
+		{ speaker: 0, text: '上次的計畫都還沒執行完呢' },
+		{ speaker: 1, text: '就是做做樣子給上面看的吧' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '聽說主管要開始看我們的 commit 紀錄' },
+		{ speaker: 1, text: '什麼？！那我以後要天天 commit' },
+		{ speaker: 0, text: '不用緊張啦，可能只是聽說' },
+		{ speaker: 1, text: '小心駛得萬年船，先多推幾個小 PR' },
+		{ speaker: 0, text: '你這求生本能也太強了' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '我覺得主管最近對我態度怪怪的' },
+		{ speaker: 0, text: '怎麼說？' },
+		{ speaker: 1, text: '開會都不太看我，我問問題也只回一句' },
+		{ speaker: 0, text: '可能只是他最近壓力大吧' },
+		{ speaker: 1, text: '希望是...不然我要開始更新履歷了' },
+		{ speaker: 0, text: '先別想太多，看看過幾天會不會好' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '主管剛丟了一個急件給我' },
+		{ speaker: 1, text: '又來了，每次都很急' },
+		{ speaker: 0, text: '他說今天下班前要' },
+		{ speaker: 1, text: '那你手上那個 feature 呢？' },
+		{ speaker: 0, text: '他說那個可以先放...就很矛盾' },
+		{ speaker: 1, text: '優先順序每天都在變的日常' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '你發現了嗎？主管中午都不在位子上' },
+		{ speaker: 0, text: '對欸，他都去哪？' },
+		{ speaker: 1, text: '聽說去跟其他部門吃飯套關係' },
+		{ speaker: 0, text: '上面的人都這樣的吧' },
+		{ speaker: 1, text: '至少他不在我們比較自在' },
+	] },
+
+	// ── 小心主管 & 辦公室生存 (3人) ──
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '欸，小聲一點，主管坐那邊' },
+		{ speaker: 1, text: '他戴耳機了啦，聽不到' },
+		{ speaker: 2, text: '你確定？上次我也這麼想結果被聽到' },
+		{ speaker: 0, text: '好吧，那講小聲一點' },
+		{ speaker: 1, text: '其實我就想問，下禮拜那個 deadline 是認真的嗎？' },
+		{ speaker: 2, text: '我看根本來不及吧' },
+		{ speaker: 0, text: '大家都這麼覺得但沒人敢講' },
+		{ speaker: 1, text: '那誰要去跟主管說？' },
+		{ speaker: 2, text: '...你們看我幹嘛' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '主管剛剛走了，終於可以放鬆' },
+		{ speaker: 1, text: '他今天怎麼這麼早走？' },
+		{ speaker: 2, text: '好像說有外部會議' },
+		{ speaker: 0, text: '太棒了，大家可以正常呼吸了' },
+		{ speaker: 1, text: '有人要一起叫下午茶嗎？' },
+		{ speaker: 2, text: '我加一！趁主管不在喝杯飲料' },
+		{ speaker: 0, text: '我也要，幫我點一杯珍奶' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 1, text: '你們有沒有覺得最近會議變好多' },
+		{ speaker: 0, text: '超多的，每天至少三個' },
+		{ speaker: 2, text: '主管很愛開會，然後會後又問為什麼進度慢' },
+		{ speaker: 1, text: '因為時間都在開會啊！' },
+		{ speaker: 0, text: '有一次我算了一下，一天只剩兩小時寫 code' },
+		{ speaker: 2, text: '經典的用會議追蹤為什麼沒時間做事' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 2, text: '小心，主管等等要來 demo 給客戶看' },
+		{ speaker: 0, text: '什麼？！哪個部分？' },
+		{ speaker: 2, text: '就你負責的那個報表' },
+		{ speaker: 0, text: '那個還有 bug 欸...' },
+		{ speaker: 1, text: '趕快修啊！他幾點 demo？' },
+		{ speaker: 0, text: '兩點' },
+		{ speaker: 1, text: '還有一小時，衝啊！' },
+		{ speaker: 2, text: '需要幫忙嗎？我手上剛好做完' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '你們看到主管轉發的那篇文章了嗎？' },
+		{ speaker: 1, text: '哪篇？又是工程師要有狼性那種？' },
+		{ speaker: 2, text: '不是，這次是關於 996 是福報' },
+		{ speaker: 0, text: '他不會是在暗示我們吧...' },
+		{ speaker: 1, text: '別想太多，他可能只是隨手轉的' },
+		{ speaker: 2, text: '但我還是默默按了讚，保險一下' },
+		{ speaker: 0, text: '你太會了' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 1, text: '我剛差點在群組裡發錯訊息' },
+		{ speaker: 0, text: '發什麼？' },
+		{ speaker: 1, text: '本來要跟朋友抱怨工作，差點發到公司群' },
+		{ speaker: 2, text: '天哪，那你社會性死亡了' },
+		{ speaker: 1, text: '還好手快收回來了' },
+		{ speaker: 0, text: '收回訊息會不會反而更可疑...' },
+		{ speaker: 2, text: '以後在不同 app 聊比較安全' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 2, text: '你們有沒有發現主管最愛在五點半交辦事情' },
+		{ speaker: 0, text: '真的！每次快下班就丟東西' },
+		{ speaker: 1, text: '而且都說「不急」但明天一早就問你' },
+		{ speaker: 2, text: '上次他五點二十說不急，隔天九點就來催' },
+		{ speaker: 0, text: '所以現在五點我就開始緊張' },
+		{ speaker: 1, text: '創傷後壓力症候群' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '年底考核快到了，你們有在準備嗎？' },
+		{ speaker: 1, text: '準備什麼？不就是看主管心情？' },
+		{ speaker: 2, text: '至少把自己做的東西整理一下吧' },
+		{ speaker: 0, text: '對，不然到時候想不起來做了什麼' },
+		{ speaker: 1, text: '我每天都有在記工作日誌了' },
+		{ speaker: 2, text: '你好認真，我都忘了自己寫了什麼' },
+		{ speaker: 0, text: '去翻 git log 就知道了吧' },
+	] },
+
+	// ── 多人閒聊 (3人) ──
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '等等中午要吃什麼？' },
+		{ speaker: 1, text: '我想吃那家牛肉麵' },
+		{ speaker: 2, text: '太遠了吧，要走十五分鐘' },
+		{ speaker: 0, text: '叫外送啊' },
+		{ speaker: 1, text: '好主意，你們要不要一起點？' },
+		{ speaker: 2, text: '好啊，湊一下免運費' },
+		{ speaker: 0, text: '那我開群組，大家報餐' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 2, text: '欸你們週末有想去哪嗎？' },
+		{ speaker: 0, text: '我想去那個新開的市集' },
+		{ speaker: 1, text: '在哪裡？' },
+		{ speaker: 0, text: '華山那邊，聽說很多手作的' },
+		{ speaker: 2, text: '好欸，要不要約一團？' },
+		{ speaker: 1, text: '好啊，下午去的話可以順便吃晚餐' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '有人要團購嗎？我看到芒果很便宜' },
+		{ speaker: 1, text: '多便宜？' },
+		{ speaker: 0, text: '一箱十斤才 500' },
+		{ speaker: 2, text: '我要！幫我訂兩箱' },
+		{ speaker: 1, text: '我也要一箱' },
+		{ speaker: 0, text: '那我們三箱湊一團免運了' },
+		{ speaker: 2, text: '太棒了，這就是辦公室的好處' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 1, text: '你們有在追什麼 YouTube 頻道嗎？' },
+		{ speaker: 0, text: '我最近在看一個做木工的' },
+		{ speaker: 2, text: '木工？你也想做嗎？' },
+		{ speaker: 0, text: '看看而已，看別人做很療癒' },
+		{ speaker: 1, text: '我都看吃播，然後就餓了' },
+		{ speaker: 2, text: '我都看科技評測，看完就想買' },
+		{ speaker: 0, text: '每個人的陷阱不一樣' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '你們昨天地震有感嗎？' },
+		{ speaker: 1, text: '搖好大，我家東西都掉了' },
+		{ speaker: 2, text: '我在打遊戲完全沒感覺' },
+		{ speaker: 0, text: '你是不是每次地震都沒感覺' },
+		{ speaker: 2, text: '因為我專注力太強了' },
+		{ speaker: 1, text: '是太遲鈍了吧' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 2, text: '公司尾牙你們要表演什麼？' },
+		{ speaker: 0, text: '還沒想到，你們有 idea 嗎？' },
+		{ speaker: 1, text: '不如唱歌？最安全' },
+		{ speaker: 2, text: '唱什麼？大家音域差很多' },
+		{ speaker: 0, text: '那跳舞？看 YouTube 學一支' },
+		{ speaker: 1, text: '你認真的嗎...我超不會跳' },
+		{ speaker: 2, text: '不如就演個短劇吧，寫段 code 的那種' },
+		{ speaker: 0, text: '好像可以欸，工程師的日常' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 1, text: '明天星期五了，撐一下' },
+		{ speaker: 0, text: '這禮拜好漫長' },
+		{ speaker: 2, text: '真的，感覺已經過了一個月' },
+		{ speaker: 1, text: '明天下班後要不要去吃燒烤？' },
+		{ speaker: 0, text: '好！當作犒賞自己' },
+		{ speaker: 2, text: '我也要去！好久沒聚了' },
+	] },
+
+	// ── 更多小心主管 (2人) ──
+	{ lines: [
+		{ speaker: 0, text: '你剛才有看到主管的表情嗎...' },
+		{ speaker: 1, text: '看到了，嘴角往下那個' },
+		{ speaker: 0, text: '他看完我的報告就那個表情' },
+		{ speaker: 1, text: '先別慌，也許是他午餐沒吃飽' },
+		{ speaker: 0, text: '你這安慰也太隨便了吧' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '我學到一個生存技巧' },
+		{ speaker: 0, text: '什麼？' },
+		{ speaker: 1, text: '主管經過的時候按 Ctrl+Tab 切到 IDE' },
+		{ speaker: 0, text: '我都直接練好反應速度了' },
+		{ speaker: 1, text: '我們這些技能如果可以寫進履歷就好了' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '主管今天穿得特別正式你有注意嗎？' },
+		{ speaker: 1, text: '好像有穿西裝欸' },
+		{ speaker: 0, text: '該不會有大老闆要來巡視吧' },
+		{ speaker: 1, text: '完了，我穿拖鞋...' },
+		{ speaker: 0, text: '趕快去躲在桌子下面' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '主管剛在群組 @all 你看到了嗎？' },
+		{ speaker: 0, text: '看到了，心跳停了一秒' },
+		{ speaker: 1, text: '結果只是提醒大家填週報' },
+		{ speaker: 0, text: '每次 @all 都以為要被開除' },
+		{ speaker: 1, text: '職場 PTSD 確診' },
+	] },
+	{ lines: [
+		{ speaker: 0, text: '聽說隔壁組的主管更恐怖' },
+		{ speaker: 1, text: '怎麼說？' },
+		{ speaker: 0, text: '每天盯著每個人的 online 時間' },
+		{ speaker: 1, text: '這麼誇張？' },
+		{ speaker: 0, text: '突然覺得我們主管其實還不錯' },
+		{ speaker: 1, text: '比下有餘是這樣用的嗎？' },
+	] },
+	{ lines: [
+		{ speaker: 1, text: '你下午有空嗎？主管說要跟我們開個小會' },
+		{ speaker: 0, text: '又開會？上午不是剛開過嗎' },
+		{ speaker: 1, text: '他說有「重要的事」要討論' },
+		{ speaker: 0, text: '每次說重要的事我就很緊張' },
+		{ speaker: 1, text: '上次說重要的事結果是選尾牙餐廳' },
+		{ speaker: 0, text: '好吧那還好' },
+	] },
+
+	// ── 下午茶團購 (3人) ──
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '有人要訂下午茶嗎？我看到一家新的' },
+		{ speaker: 1, text: '要！我也要！什麼店？' },
+		{ speaker: 2, text: '算我一份！' },
+		{ speaker: 0, text: '一家手搖飲，鮮奶茶超好喝的樣子' },
+		{ speaker: 1, text: '我要大杯珍珠鮮奶茶，微糖少冰' },
+		{ speaker: 2, text: '我要烏龍拿鐵，正常糖去冰' },
+		{ speaker: 0, text: '好，我自己要芒果冰沙，那我來統計' },
+		{ speaker: 1, text: '有滿額免運嗎？' },
+		{ speaker: 0, text: '滿 500 免運，我們三杯應該夠' },
+		{ speaker: 2, text: '太棒了，下午就靠這杯了' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 1, text: '欸欸欸，那家雞蛋糕有在外送了！' },
+		{ speaker: 0, text: '真的嗎？！我上次排了半小時' },
+		{ speaker: 2, text: '我也要加入！他們的起司口味超讚' },
+		{ speaker: 1, text: '好，我開單，你們要幾份？' },
+		{ speaker: 0, text: '我要一份原味一份巧克力' },
+		{ speaker: 2, text: '我要兩份起司！' },
+		{ speaker: 1, text: '你也太誇張，兩份' },
+		{ speaker: 2, text: '一份根本不夠啊' },
+		{ speaker: 0, text: '確實，那我也加一份起司好了' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 2, text: '三點了，下午茶時間！' },
+		{ speaker: 0, text: '每次三點你就出現' },
+		{ speaker: 1, text: '我也準時報到，今天喝什麼？' },
+		{ speaker: 2, text: '我查到一家紅茶專賣店，評價超高' },
+		{ speaker: 0, text: '那我要阿薩姆鮮奶茶' },
+		{ speaker: 1, text: '我要伯爵奶茶加珍珠' },
+		{ speaker: 2, text: '好，我要錫蘭紅茶，我來下單！' },
+		{ speaker: 0, text: '順便問其他人要不要加？' },
+		{ speaker: 1, text: '對，湊多一點比較划算' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 0, text: '我發現一個甜點外送，舒芙蕾鬆餅！' },
+		{ speaker: 1, text: '天哪，我最愛舒芙蕾了！加我！' },
+		{ speaker: 2, text: '這種東西外送不會塌嗎？' },
+		{ speaker: 0, text: '評論說包裝做得很好，不會塌' },
+		{ speaker: 2, text: '那好吧，我也要一份，草莓口味' },
+		{ speaker: 1, text: '我要抹茶的！' },
+		{ speaker: 0, text: '我選提拉米蘇口味，三份剛好免運' },
+		{ speaker: 2, text: '完美，今天下午要幸福了' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 1, text: '剛剛經過樓下那家麵包店好香' },
+		{ speaker: 0, text: '他們三點出爐的可頌超好吃' },
+		{ speaker: 2, text: '等等去買嗎？幫我帶一個！' },
+		{ speaker: 1, text: '我也要！原味可頌加一個巧克力的' },
+		{ speaker: 0, text: '好，那我下去一次買，你們轉帳給我' },
+		{ speaker: 2, text: '讚啦，你最好了' },
+		{ speaker: 1, text: '記得拿發票，我要對獎' },
+	] },
+	{ speakerCount: 3, lines: [
+		{ speaker: 2, text: '隔壁部門在團購芒果冰，要加入嗎？' },
+		{ speaker: 0, text: '當然要！多少錢？' },
+		{ speaker: 2, text: '一杯 85，四杯有折扣變 300' },
+		{ speaker: 1, text: '那我們買四杯，多的那杯搶就對了' },
+		{ speaker: 0, text: '哈哈，好啊那我也加一杯' },
+		{ speaker: 2, text: '算我一杯，這樣三杯了，再找一個人' },
+		{ speaker: 1, text: '我去問一下坐後面的' },
+	] },
+
+	// ── 技術長突襲：我聽到了 (需要 orchestrator) ──
+	{ speakerCount: 3, roles: { 2: 'orchestrator' }, lines: [
+		{ speaker: 0, text: '你覺得主管今天會不會又丟一堆需求' },
+		{ speaker: 1, text: '拜託不要，上次改了三天的東西又被打回來' },
+		{ speaker: 0, text: '而且每次都說很急，結果做完又不看' },
+		{ speaker: 1, text: '對對對，有一次我加班到十點做完，他隔了一週才review' },
+		{ speaker: 2, text: '...我都聽到了喔' },
+		{ speaker: 0, text: '！！！什...什麼時候來的！' },
+		{ speaker: 1, text: '對不起！！我們在開玩笑的！！' },
+		{ speaker: 2, text: '沒關係，那個需求我會先 review 再給你們' },
+		{ speaker: 0, text: '謝...謝謝技術長...' },
+	] },
+	{ speakerCount: 3, roles: { 2: 'orchestrator' }, lines: [
+		{ speaker: 0, text: '我覺得這個架構設計有問題欸' },
+		{ speaker: 1, text: '對啊，不知道是誰設計的，好難改' },
+		{ speaker: 0, text: '聽說是很久以前定的，都沒人敢動' },
+		{ speaker: 1, text: '就是那種碰了就壞的那種' },
+		{ speaker: 2, text: '那個架構是我設計的' },
+		{ speaker: 0, text: '啊！！技術長！！我不是那個意思！！' },
+		{ speaker: 1, text: '對不起對不起！其實寫得很好！' },
+		{ speaker: 2, text: '哈哈，開玩笑的。你們說的對，確實該重構了' },
+		{ speaker: 0, text: '嚇死我了...' },
+	] },
+	{ speakerCount: 3, roles: { 2: 'orchestrator' }, lines: [
+		{ speaker: 1, text: '欸你覺得主管會不會偷看我們聊天紀錄' },
+		{ speaker: 0, text: '不會吧...應該沒那麼閒' },
+		{ speaker: 1, text: '但他有時候提到的東西，我只在聊天室講過欸' },
+		{ speaker: 0, text: '太可怕了吧，以後要不要改用紙條' },
+		{ speaker: 2, text: '不用紙條，你們直接跟我說就好' },
+		{ speaker: 0, text: '哇啊啊啊！！技術長你怎麼在這！' },
+		{ speaker: 1, text: '對不起！！我們沒有在說壞話！！' },
+		{ speaker: 2, text: '我知道，放輕鬆。有什麼意見可以直接講' },
+	] },
+	{ speakerCount: 3, roles: { 2: 'orchestrator' }, lines: [
+		{ speaker: 0, text: '昨天那個 code review 也太嚴格了吧' },
+		{ speaker: 1, text: '我也覺得，每一行都有 comment' },
+		{ speaker: 0, text: '改到最後都不知道到底怎樣才對' },
+		{ speaker: 1, text: '嚴格歸嚴格但有些 comment 也太吹毛求疵了' },
+		{ speaker: 2, text: '那些 comment 是我寫的' },
+		{ speaker: 0, text: '！！！技術長！！！' },
+		{ speaker: 1, text: '天哪對不起！！其實您的建議都很好！' },
+		{ speaker: 2, text: '下次如果覺得太細，可以直接跟我說' },
+		{ speaker: 0, text: '好的好的，收到！（冷汗）' },
+	] },
+	{ speakerCount: 3, roles: { 2: 'orchestrator' }, lines: [
+		{ speaker: 1, text: '你說主管是不是都不睡覺的啊' },
+		{ speaker: 0, text: '我半夜兩點收到他的 commit 真的傻眼' },
+		{ speaker: 1, text: '難怪白天有時候看他在放空' },
+		{ speaker: 0, text: '搞不好在打瞌睡' },
+		{ speaker: 2, text: '我沒有打瞌睡，只是在想架構' },
+		{ speaker: 1, text: '啊！！對不起技術長！！' },
+		{ speaker: 0, text: '我也對不起！！半夜那個 commit 很厲害！' },
+		{ speaker: 2, text: '謝謝，但你們說得對，我不該半夜 commit' },
+		{ speaker: 1, text: '不不不，您想什麼時候 commit 都可以！' },
+	] },
+	{ speakerCount: 3, roles: { 2: 'orchestrator' }, lines: [
+		{ speaker: 0, text: '我偷偷跟你說喔，上次 demo 差點出大包' },
+		{ speaker: 1, text: '什麼什麼？怎麼了？' },
+		{ speaker: 0, text: '就是主管在台上 demo，結果 staging 掛了' },
+		{ speaker: 1, text: '哈哈哈，然後呢？' },
+		{ speaker: 0, text: '還好他臨場反應快，說「這是預期中的測試」' },
+		{ speaker: 2, text: '那確實是我說的，不過下次請確保 staging 穩定' },
+		{ speaker: 0, text: '！！！什麼時候...！對不起技術長！！' },
+		{ speaker: 1, text: '我什麼都沒聽到！！' },
+		{ speaker: 2, text: '哈哈放心，staging 的問題已經修了' },
+	] },
 ];
 
 // ── State ──────────────────────────────────────────────────────
@@ -677,8 +1090,9 @@ const CONVERSATIONS: Array<{ speakerCount?: number; lines: ConversationLine[] }>
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let conversationTimer: ReturnType<typeof setTimeout> | null = null;
 let isActive = false;
-let currentParticipants: [number, number] | null = null; // agentId pair
+let currentParticipants: number[] | null = null; // agentIds in conversation
 let recentConversations: number[] = []; // indices of recently used conversations
+let conversationCount = 0; // total conversations played, used for group chat rotation
 
 const IDLE_DELAY_MS = 10_000;     // Wait 10s after becoming idle before first chat
 const LINE_INTERVAL_MS = 3_500;   // 3.5s between each line
@@ -729,8 +1143,9 @@ export function stopIdleChat(): void {
 
 	// Clear any active chat bubbles
 	if (currentParticipants && cachedBroadcast) {
-		cachedBroadcast({ type: 'idleChatEnd', agentId: currentParticipants[0] });
-		cachedBroadcast({ type: 'idleChatEnd', agentId: currentParticipants[1] });
+		for (const agentId of currentParticipants) {
+			cachedBroadcast({ type: 'idleChatEnd', agentId });
+		}
 	}
 
 	currentParticipants = null;
@@ -739,14 +1154,34 @@ export function stopIdleChat(): void {
 
 // ── Internal ───────────────────────────────────────────────────
 
-function pickConversation(): number {
-	// Avoid repeating recent conversations
-	const available = CONVERSATIONS
-		.map((_, i) => i)
-		.filter((i) => !recentConversations.includes(i));
+/** Check if agents can fulfil the role requirements of a conversation */
+function canFulfillRoles(agents: IdleAgent[], conv: ConversationScript): boolean {
+	if (!conv.roles) return true;
+	for (const role of Object.values(conv.roles)) {
+		if (!agents.some((a) => a.role === role)) return false;
+	}
+	return true;
+}
 
-	const pool = available.length > 0 ? available : CONVERSATIONS.map((_, i) => i);
-	const idx = pool[Math.floor(Math.random() * pool.length)];
+function pickConversation(agents: IdleAgent[]): number {
+	// Filter conversations that fit available agent count & role requirements
+	const eligible = CONVERSATIONS
+		.map((c, i) => ({ idx: i, conv: c, needed: c.speakerCount ?? 2 }))
+		.filter((c) => c.needed <= agents.length && canFulfillRoles(agents, c.conv));
+
+	const fresh = eligible.filter((c) => !recentConversations.includes(c.idx));
+	const base = fresh.length > 0 ? fresh : eligible;
+
+	// Every 3rd conversation, prefer multi-person (3+) if available
+	conversationCount++;
+	let pool = base;
+	if (conversationCount % 3 === 0 && agents.length >= 3) {
+		const groupChats = base.filter((c) => c.needed >= 3);
+		if (groupChats.length > 0) pool = groupChats;
+	}
+
+	const pick = pool[Math.floor(Math.random() * pool.length)];
+	const idx = pick.idx;
 
 	recentConversations.push(idx);
 	if (recentConversations.length > Math.floor(CONVERSATIONS.length / 2)) {
@@ -756,38 +1191,67 @@ function pickConversation(): number {
 	return idx;
 }
 
-function pickParticipants(agents: IdleAgent[]): [IdleAgent, IdleAgent] | null {
-	if (agents.length < 2) return null;
+function pickParticipants(agents: IdleAgent[], conv: ConversationScript): IdleAgent[] | null {
+	const count = conv.speakerCount ?? 2;
+	if (agents.length < count) return null;
 
-	// Shuffle and pick 2
-	const shuffled = [...agents].sort(() => Math.random() - 0.5);
-	return [shuffled[0], shuffled[1]];
+	const result: IdleAgent[] = new Array(count);
+	const used = new Set<number>(); // indices into agents array
+
+	// First, fill role-constrained slots
+	if (conv.roles) {
+		for (const [slotStr, role] of Object.entries(conv.roles)) {
+			const slot = Number(slotStr);
+			const candidate = agents.findIndex((a, i) => !used.has(i) && a.role === role);
+			if (candidate < 0) return null; // shouldn't happen if canFulfillRoles passed
+			result[slot] = agents[candidate];
+			used.add(candidate);
+		}
+	}
+
+	// Fill remaining slots randomly from unused agents
+	const remaining = agents
+		.map((a, i) => ({ agent: a, idx: i }))
+		.filter((x) => !used.has(x.idx))
+		.sort(() => Math.random() - 0.5);
+
+	let ri = 0;
+	for (let slot = 0; slot < count; slot++) {
+		if (!result[slot]) {
+			result[slot] = remaining[ri++].agent;
+		}
+	}
+
+	return result;
 }
 
 function startNextConversation(): void {
 	if (!isActive || !cachedBroadcast || !cachedGetIdleAgents) return;
 
 	const agents = cachedGetIdleAgents();
-	const pair = pickParticipants(agents);
-
-	if (!pair) {
+	if (agents.length < 2) {
 		// Not enough idle agents, try again later
 		idleTimer = setTimeout(() => startNextConversation(), BETWEEN_CHAT_MS);
 		return;
 	}
 
-	const convIdx = pickConversation();
+	// Pick a conversation that fits available agent count & roles
+	const convIdx = pickConversation(agents);
 	const conv = CONVERSATIONS[convIdx];
-	currentParticipants = [pair[0].agentId, pair[1].agentId];
 
-	console.log(`[IdleChat] Starting conversation between ${pair[0].name} and ${pair[1].name}`);
+	const group = pickParticipants(agents, conv)!;
 
-	playConversation(conv.lines, pair, 0);
+	currentParticipants = group.map((a) => a.agentId);
+
+	const names = group.map((a) => a.name).join(', ');
+	console.log(`[IdleChat] Starting conversation between ${names}`);
+
+	playConversation(conv.lines, group, 0);
 }
 
 function playConversation(
 	lines: ConversationLine[],
-	pair: [IdleAgent, IdleAgent],
+	group: IdleAgent[],
 	lineIdx: number,
 ): void {
 	if (!isActive || !cachedBroadcast) return;
@@ -796,9 +1260,10 @@ function playConversation(
 		// Conversation ended — linger the last bubble, then clean up and schedule next
 		conversationTimer = setTimeout(() => {
 			if (!isActive || !cachedBroadcast) return;
-			// Clear both participants' bubbles
-			cachedBroadcast({ type: 'idleChatEnd', agentId: pair[0].agentId });
-			cachedBroadcast({ type: 'idleChatEnd', agentId: pair[1].agentId });
+			// Clear all participants' bubbles
+			for (const agent of group) {
+				cachedBroadcast({ type: 'idleChatEnd', agentId: agent.agentId });
+			}
 			currentParticipants = null;
 
 			// Schedule next conversation
@@ -810,7 +1275,7 @@ function playConversation(
 	}
 
 	const line = lines[lineIdx];
-	const speaker = pair[line.speaker];
+	const speaker = group[line.speaker];
 
 	cachedBroadcast({
 		type: 'idleChatMessage',
@@ -818,20 +1283,19 @@ function playConversation(
 		text: line.text,
 	});
 
-	// Clear the other speaker's bubble (only current speaker has bubble)
-	const otherSpeaker = pair[line.speaker === 0 ? 1 : 0];
+	// Clear other speakers' bubbles (only current speaker has bubble)
 	if (lineIdx > 0) {
-		// Only clear if the previous line was from the other speaker
 		const prevLine = lines[lineIdx - 1];
 		if (prevLine.speaker !== line.speaker) {
+			const prevSpeaker = group[prevLine.speaker];
 			cachedBroadcast({
 				type: 'idleChatEnd',
-				agentId: otherSpeaker.agentId,
+				agentId: prevSpeaker.agentId,
 			});
 		}
 	}
 
 	conversationTimer = setTimeout(() => {
-		playConversation(lines, pair, lineIdx + 1);
+		playConversation(lines, group, lineIdx + 1);
 	}, LINE_INTERVAL_MS);
 }

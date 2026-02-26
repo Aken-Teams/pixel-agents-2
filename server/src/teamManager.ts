@@ -7,7 +7,7 @@ import type { Broadcast } from './timerManager.js';
 import type { SkillDefinition } from './skillLoader.js';
 import { getAssetsRoot } from './config.js';
 import { formatToolStatus } from './transcriptParser.js';
-import { startIdleChatScheduler, stopIdleChat } from './idleChatManager.js';
+import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChatManager.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -155,11 +155,12 @@ export function getExistingTeamMembers(): TeamMemberInfo[] {
 }
 
 /** Get idle team agents (not currently running a process) for idle chat */
-function getIdleAgents(): Array<{ agentId: number; skillId: string; name: string }> {
-	const result: Array<{ agentId: number; skillId: string; name: string }> = [];
+function getIdleAgents(): IdleAgent[] {
+	const result: IdleAgent[] = [];
 	for (const [skillId, session] of teamSessions) {
 		if (!session.activeProcess) {
-			result.push({ agentId: session.agentId, skillId, name: session.name });
+			const role = skillId === orchestratorSkillId ? 'orchestrator' as const : 'worker' as const;
+			result.push({ agentId: session.agentId, skillId, name: session.name, role });
 		}
 	}
 	return result;
