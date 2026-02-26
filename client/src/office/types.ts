@@ -132,6 +132,13 @@ export interface PlacedFurniture {
   color?: FloorColor
 }
 
+export interface StaticSeat {
+  uid: string
+  seatCol: number
+  seatRow: number
+  facingDir: Direction
+}
+
 export interface OfficeLayout {
   version: 1
   cols: number
@@ -140,6 +147,10 @@ export interface OfficeLayout {
   furniture: PlacedFurniture[]
   /** Per-tile color settings, parallel to tiles array. null = wall/no color */
   tileColors?: Array<FloorColor | null>
+  /** Path to a static background PNG (relative to /assets/). When set, tiles/furniture are not rendered visually. */
+  backgroundImage?: string
+  /** Explicit seat definitions for static background mode */
+  staticSeats?: StaticSeat[]
 }
 
 export interface Character {

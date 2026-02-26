@@ -9,6 +9,7 @@ import { setWallSprites } from '../office/wallTiles.js'
 import { setCharacterTemplates } from '../office/sprites/spriteData.js'
 import { wsClient } from '../wsClient.js'
 import { playDoneSound, setSoundEnabled } from '../notificationSound.js'
+import { loadBackgroundImage } from '../office/backgroundImage.js'
 
 export interface SubagentCharacter {
   id: number
@@ -57,6 +58,7 @@ export interface ServerMessageState {
   loadedAssets?: { catalog: FurnitureAsset[]; sprites: Record<string, string[][]> }
   chatList: string[]
   chats: Record<string, ChatState>
+  addUserMessage: (chatId: string, content: string) => void
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -91,7 +93,8 @@ export function useServerMessages(
     // Buffer agents from existingAgents until layout is loaded
     let pendingAgents: Array<{ id: number; palette?: number; hueShift?: number; seatId?: string }> = []
 
-    const handler = (msg: Record<string, unknown>) => {
+    const handler = (raw: unknown) => {
+      const msg = raw as Record<string, unknown>
       const os = getOfficeState()
 
       if (msg.type === 'layoutLoaded') {
@@ -103,6 +106,9 @@ export function useServerMessages(
         const rawLayout = msg.layout as OfficeLayout | null
         const layout = rawLayout && rawLayout.version === 1 ? migrateLayoutColors(rawLayout) : null
         if (layout) {
+          if (layout.backgroundImage) {
+            loadBackgroundImage(`/assets/${layout.backgroundImage}`)
+          }
           os.rebuildFromLayout(layout)
           onLayoutLoaded?.(layout)
         } else {

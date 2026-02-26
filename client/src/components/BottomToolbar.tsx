@@ -5,6 +5,7 @@ interface BottomToolbarProps {
   isEditMode: boolean
   onOpenClaude: () => void
   onToggleEditMode: () => void
+  isStaticBackground?: boolean
   isDebugMode: boolean
   onToggleDebugMode: () => void
 }
@@ -45,6 +46,7 @@ export function BottomToolbar({
   isEditMode,
   onOpenClaude,
   onToggleEditMode,
+  isStaticBackground,
   isDebugMode,
   onToggleDebugMode,
 }: BottomToolbarProps) {
@@ -70,22 +72,24 @@ export function BottomToolbar({
       >
         + Agent
       </button>
-      <button
-        onClick={onToggleEditMode}
-        onMouseEnter={() => setHovered('edit')}
-        onMouseLeave={() => setHovered(null)}
-        style={
-          isEditMode
-            ? { ...btnActive }
-            : {
-                ...btnBase,
-                background: hovered === 'edit' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
-              }
-        }
-        title="Edit office layout"
-      >
-        Layout
-      </button>
+      {!isStaticBackground && (
+        <button
+          onClick={onToggleEditMode}
+          onMouseEnter={() => setHovered('edit')}
+          onMouseLeave={() => setHovered(null)}
+          style={
+            isEditMode
+              ? { ...btnActive }
+              : {
+                  ...btnBase,
+                  background: hovered === 'edit' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+                }
+          }
+          title="Edit office layout"
+        >
+          Layout
+        </button>
+      )}
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setIsSettingsOpen((v) => !v)}

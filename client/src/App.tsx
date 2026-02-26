@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { OfficeState } from './office/engine/officeState.js'
 import { OfficeCanvas } from './office/components/OfficeCanvas.js'
 import { ToolOverlay } from './office/components/ToolOverlay.js'
@@ -6,6 +6,8 @@ import { EditorToolbar } from './office/editor/EditorToolbar.js'
 import { EditorState } from './office/editor/editorState.js'
 import { EditTool } from './office/types.js'
 import { isRotatable } from './office/layout/furnitureCatalog.js'
+import { isStaticBackgroundLayout } from './office/layout/layoutSerializer.js'
+import { computeFitZoom } from './office/toolUtils.js'
 import { wsClient } from './wsClient.js'
 import { useServerMessages } from './hooks/useServerMessages.js'
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js'
@@ -124,6 +126,15 @@ function App() {
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty])
 
   const { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, chatList, chats, addUserMessage } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
+
+  // Auto-fit zoom when layout first loads (especially for large static backgrounds)
+  useEffect(() => {
+    if (layoutReady) {
+      const layout = getOfficeState().getLayout()
+      const fitZoom = computeFitZoom(layout.cols, layout.rows)
+      editor.handleZoomChange(fitZoom)
+    }
+  }, [layoutReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isDebugMode, setIsDebugMode] = useState(false)
 
@@ -250,6 +261,7 @@ function App() {
         isEditMode={editor.isEditMode}
         onOpenClaude={editor.handleOpenClaude}
         onToggleEditMode={editor.handleToggleEditMode}
+        isStaticBackground={isStaticBackgroundLayout(officeState.getLayout())}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
       />

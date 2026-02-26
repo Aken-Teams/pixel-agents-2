@@ -8,6 +8,8 @@ import { TILE_SIZE, EditTool } from '../types.js'
 import { CAMERA_FOLLOW_LERP, CAMERA_FOLLOW_SNAP_THRESHOLD, ZOOM_MIN, ZOOM_MAX, ZOOM_SCROLL_THRESHOLD, PAN_MARGIN_FRACTION } from '../../constants.js'
 import { getCatalogEntry, isRotatable } from '../layout/furnitureCatalog.js'
 import { canPlaceFurniture, getWallPlacementRow } from '../editor/editorActions.js'
+import { isStaticBackgroundLayout } from '../layout/layoutSerializer.js'
+import { loadBackgroundImage } from '../backgroundImage.js'
 import { wsClient } from '../../wsClient.js'
 import { unlockAudio } from '../../notificationSound.js'
 
@@ -94,9 +96,17 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
         const w = canvas.width
         const h = canvas.height
 
-        // Build editor render state
+        const layout = officeState.getLayout()
+        const hasStaticBg = isStaticBackgroundLayout(layout)
+
+        // Load background image if needed
+        if (hasStaticBg && layout.backgroundImage) {
+          loadBackgroundImage(`/assets/${layout.backgroundImage}`)
+        }
+
+        // Build editor render state (skip in static background mode)
         let editorRender: EditorRenderState | undefined
-        if (isEditMode) {
+        if (isEditMode && !hasStaticBg) {
           const showGhostBorder = editorState.activeTool === EditTool.TILE_PAINT || editorState.activeTool === EditTool.WALL_PAINT || editorState.activeTool === EditTool.ERASE
           editorRender = {
             showGrid: true,
@@ -215,9 +225,10 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
           panRef.current.y,
           selectionRender,
           editorRender,
-          officeState.getLayout().tileColors,
-          officeState.getLayout().cols,
-          officeState.getLayout().rows,
+          layout.tileColors,
+          layout.cols,
+          layout.rows,
+          hasStaticBg,
         )
         offsetRef.current = { x: offsetX, y: offsetY }
 

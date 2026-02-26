@@ -39,8 +39,21 @@ import {
   DELETE_BUTTON_BG,
   ROTATE_BUTTON_BG,
 } from '../../constants.js'
+import { getScaledBackground } from '../backgroundImage.js'
 
 // ── Render functions ────────────────────────────────────────────
+
+export function renderStaticBackground(
+  ctx: CanvasRenderingContext2D,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  const scaled = getScaledBackground(zoom)
+  if (scaled) {
+    ctx.drawImage(scaled, offsetX, offsetY)
+  }
+}
 
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
@@ -541,6 +554,7 @@ export function renderFrame(
   tileColors?: Array<FloorColor | null>,
   layoutCols?: number,
   layoutRows?: number,
+  isStaticBackground?: boolean,
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -555,32 +569,42 @@ export function renderFrame(
   const offsetX = Math.floor((canvasWidth - mapW) / 2) + Math.round(panX)
   const offsetY = Math.floor((canvasHeight - mapH) / 2) + Math.round(panY)
 
-  // Draw tiles (floor + wall base color)
-  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols)
+  if (isStaticBackground) {
+    // Static background mode: draw PNG, then characters only
+    renderStaticBackground(ctx, offsetX, offsetY, zoom)
 
-  // Seat indicators (below furniture/characters, on top of floor)
-  if (selection) {
-    renderSeatIndicators(ctx, selection.seats, selection.characters, selection.selectedAgentId, selection.hoveredTile, offsetX, offsetY, zoom)
+    if (selection) {
+      renderSeatIndicators(ctx, selection.seats, selection.characters, selection.selectedAgentId, selection.hoveredTile, offsetX, offsetY, zoom)
+    }
+
+    const selectedId = selection?.selectedAgentId ?? null
+    const hoveredId = selection?.hoveredAgentId ?? null
+    renderScene(ctx, [], characters, offsetX, offsetY, zoom, selectedId, hoveredId)
+  } else {
+    // Standard tile-based rendering
+    renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols)
+
+    if (selection) {
+      renderSeatIndicators(ctx, selection.seats, selection.characters, selection.selectedAgentId, selection.hoveredTile, offsetX, offsetY, zoom)
+    }
+
+    const wallInstances = hasWallSprites()
+      ? getWallInstances(tileMap, tileColors, layoutCols)
+      : []
+    const allFurniture = wallInstances.length > 0
+      ? [...wallInstances, ...furniture]
+      : furniture
+
+    const selectedId = selection?.selectedAgentId ?? null
+    const hoveredId = selection?.hoveredAgentId ?? null
+    renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedId, hoveredId)
   }
-
-  // Build wall instances for z-sorting with furniture and characters
-  const wallInstances = hasWallSprites()
-    ? getWallInstances(tileMap, tileColors, layoutCols)
-    : []
-  const allFurniture = wallInstances.length > 0
-    ? [...wallInstances, ...furniture]
-    : furniture
-
-  // Draw walls + furniture + characters (z-sorted)
-  const selectedId = selection?.selectedAgentId ?? null
-  const hoveredId = selection?.hoveredAgentId ?? null
-  renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedId, hoveredId)
 
   // Speech bubbles (always on top of characters)
   renderBubbles(ctx, characters, offsetX, offsetY, zoom)
 
-  // Editor overlays
-  if (editor) {
+  // Editor overlays (not in static background mode)
+  if (editor && !isStaticBackground) {
     if (editor.showGrid) {
       renderGridOverlay(ctx, offsetX, offsetY, zoom, cols, rows, tileMap)
     }

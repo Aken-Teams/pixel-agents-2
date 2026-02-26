@@ -1,7 +1,27 @@
 import { TileType, FurnitureType, DEFAULT_COLS, DEFAULT_ROWS, TILE_SIZE, Direction } from '../types.js'
-import type { TileType as TileTypeVal, OfficeLayout, PlacedFurniture, Seat, FurnitureInstance, FloorColor } from '../types.js'
+import type { TileType as TileTypeVal, OfficeLayout, PlacedFurniture, Seat, FurnitureInstance, FloorColor, StaticSeat } from '../types.js'
 import { getCatalogEntry } from './furnitureCatalog.js'
 import { getColorizedSprite } from '../colorize.js'
+
+/** Check if a layout uses a static background image */
+export function isStaticBackgroundLayout(layout: OfficeLayout): boolean {
+  return !!layout.backgroundImage
+}
+
+/** Convert static seat definitions to the standard Seat map */
+export function staticSeatsToMap(staticSeats: StaticSeat[]): Map<string, Seat> {
+  const seats = new Map<string, Seat>()
+  for (const s of staticSeats) {
+    seats.set(s.uid, {
+      uid: s.uid,
+      seatCol: s.seatCol,
+      seatRow: s.seatRow,
+      facingDir: s.facingDir,
+      assigned: false,
+    })
+  }
+  return seats
+}
 
 /** Convert flat tile array from layout into 2D grid */
 export function layoutToTileMap(layout: OfficeLayout): TileTypeVal[][] {

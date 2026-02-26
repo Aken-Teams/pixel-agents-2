@@ -23,6 +23,8 @@ import {
   layoutToFurnitureInstances,
   layoutToSeats,
   getBlockedTiles,
+  isStaticBackgroundLayout,
+  staticSeatsToMap,
 } from '../layout/layoutSerializer.js'
 import { getCatalogEntry, getOnStateType } from '../layout/furnitureCatalog.js'
 
@@ -47,9 +49,15 @@ export class OfficeState {
   constructor(layout?: OfficeLayout) {
     this.layout = layout || createDefaultLayout()
     this.tileMap = layoutToTileMap(this.layout)
-    this.seats = layoutToSeats(this.layout.furniture)
-    this.blockedTiles = getBlockedTiles(this.layout.furniture)
-    this.furniture = layoutToFurnitureInstances(this.layout.furniture)
+    if (isStaticBackgroundLayout(this.layout)) {
+      this.seats = staticSeatsToMap(this.layout.staticSeats || [])
+      this.blockedTiles = new Set()
+      this.furniture = []
+    } else {
+      this.seats = layoutToSeats(this.layout.furniture)
+      this.blockedTiles = getBlockedTiles(this.layout.furniture)
+      this.furniture = layoutToFurnitureInstances(this.layout.furniture)
+    }
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles)
   }
 
@@ -58,9 +66,15 @@ export class OfficeState {
   rebuildFromLayout(layout: OfficeLayout, shift?: { col: number; row: number }): void {
     this.layout = layout
     this.tileMap = layoutToTileMap(layout)
-    this.seats = layoutToSeats(layout.furniture)
-    this.blockedTiles = getBlockedTiles(layout.furniture)
-    this.rebuildFurnitureInstances()
+    if (isStaticBackgroundLayout(layout)) {
+      this.seats = staticSeatsToMap(layout.staticSeats || [])
+      this.blockedTiles = new Set()
+      this.furniture = []
+    } else {
+      this.seats = layoutToSeats(layout.furniture)
+      this.blockedTiles = getBlockedTiles(layout.furniture)
+      this.rebuildFurnitureInstances()
+    }
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles)
 
     // Shift character positions when grid expands left/up
@@ -496,11 +510,27 @@ export class OfficeState {
     if (ch) {
       ch.isActive = active
       if (!active) {
-        // Sentinel -1: signals turn just ended, skip next seat rest timer.
-        // Prevents the WALK handler from setting a 2-4 min rest on arrival.
-        ch.seatTimer = -1
         ch.path = []
         ch.moveProgress = 0
+        if (isStaticBackgroundLayout(this.layout)) {
+          // Static background: snap to seat and stay seated (no wandering)
+          if (ch.seatId) {
+            const seat = this.seats.get(ch.seatId)
+            if (seat) {
+              ch.tileCol = seat.seatCol
+              ch.tileRow = seat.seatRow
+              ch.x = seat.seatCol * TILE_SIZE + TILE_SIZE / 2
+              ch.y = seat.seatRow * TILE_SIZE + TILE_SIZE / 2
+              ch.dir = seat.facingDir
+            }
+          }
+          ch.state = CharacterState.TYPE
+          ch.seatTimer = Infinity // never transition to IDLE
+        } else {
+          // Sentinel -1: signals turn just ended, skip next seat rest timer.
+          // Prevents the WALK handler from setting a 2-4 min rest on arrival.
+          ch.seatTimer = -1
+        }
       }
       this.rebuildFurnitureInstances()
     }
@@ -508,6 +538,10 @@ export class OfficeState {
 
   /** Rebuild furniture instances with auto-state applied (active agents turn electronics ON) */
   private rebuildFurnitureInstances(): void {
+    if (isStaticBackgroundLayout(this.layout)) {
+      this.furniture = []
+      return
+    }
     // Collect tiles where active agents face desks
     const autoOnTiles = new Set<string>()
     for (const ch of this.characters.values()) {
