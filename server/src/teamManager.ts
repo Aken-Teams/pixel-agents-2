@@ -6,6 +6,7 @@ import type { SkillDefinition } from './skillLoader.js';
 import { getAssetsRoot } from './config.js';
 
 const teamSessions = new Map<string, TeamSession>();
+let cachedSkills: SkillDefinition[] = [];
 
 let nextAgentIdRef: { current: number } = { current: 1000 };
 
@@ -49,6 +50,8 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 			break;
 		}
 	}
+
+	cachedSkills = skills;
 
 	// Add or update members
 	for (const skill of skills) {
@@ -133,15 +136,7 @@ function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
 
 /** Get team member infos for sending to new clients */
 export function getExistingTeamMembers(): TeamMemberInfo[] {
-	const members: TeamMemberInfo[] = [];
-	for (const session of teamSessions.values()) {
-		members.push({
-			skillId: session.skillId,
-			name: session.name,
-			agentId: session.agentId,
-		});
-	}
-	return members;
+	return getTeamMemberInfos(cachedSkills);
 }
 
 function buildPromptWithHistory(history: ChatMessage[], newMessage: string): string {

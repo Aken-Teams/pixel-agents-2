@@ -426,7 +426,7 @@ export function ChatPanel({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={getPlaceholder()}
-            disabled={isSendBlocked() && !inputValue.trim()}
+            disabled={mode === 'team' && hasOrchestrator && isActiveOrchestrator ? orchestratorBusy : activeChat?.isStreaming}
             style={{
               flex: 1,
               resize: 'none',

@@ -276,7 +276,7 @@ function handleWebviewReady(): void {
 	// Send existing team members
 	const teamMembers = getExistingTeamMembers();
 	if (teamMembers.length > 0) {
-		broadcast({ type: 'teamLoaded', members: teamMembers });
+		broadcast({ type: 'teamLoaded', members: teamMembers, orchestratorSkillId: getOrchestratorSkillId() ?? undefined });
 		for (const member of teamMembers) {
 			broadcast({ type: 'agentCreated', id: member.agentId, name: member.name });
 		}
