@@ -39,7 +39,10 @@ export type ServerMessage =
 	| { type: 'taskDispatched'; taskId: string; targetSkillId: string; targetAgentId: number; description: string }
 	| { type: 'taskCompleted'; taskId: string; targetSkillId: string }
 	| { type: 'orchestratorBusy'; busy: boolean }
-	| { type: 'teamToolActivity'; skillId: string; status: string | null };
+	| { type: 'teamToolActivity'; skillId: string; status: string | null }
+	// Idle chat
+	| { type: 'idleChatMessage'; agentId: number; text: string }
+	| { type: 'idleChatEnd'; agentId: number };
 
 // ── Client → Server Messages ──────────────────────────────────
 

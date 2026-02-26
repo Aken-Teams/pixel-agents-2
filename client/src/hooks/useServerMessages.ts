@@ -718,6 +718,30 @@ export function useServerMessages(
             }
           })
         }
+      // ── Idle Chat ──
+      } else if (msg.type === 'idleChatMessage') {
+        const agentId = msg.agentId as number
+        const text = msg.text as string
+        setThoughtData((prev) => ({
+          ...prev,
+          [agentId]: {
+            text,
+            updatedAt: Date.now(),
+            isWorking: false,
+            justCompleted: false,
+            isIdleChat: true,
+          },
+        }))
+      } else if (msg.type === 'idleChatEnd') {
+        const agentId = msg.agentId as number
+        setThoughtData((prev) => {
+          const next = { ...prev }
+          // Only remove if it's an idle chat entry (don't remove work bubbles)
+          if (next[agentId]?.isIdleChat) {
+            delete next[agentId]
+          }
+          return next
+        })
       }
     }
     wsClient.addMessageListener(handler)

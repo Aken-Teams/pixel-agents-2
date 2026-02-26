@@ -13,6 +13,8 @@ export interface ThoughtData {
   isWorking: boolean
   /** Whether the agent just completed a task */
   justCompleted: boolean
+  /** Whether this is idle office chat (not work-related) */
+  isIdleChat?: boolean
 }
 
 const IDLE_MESSAGES = [
@@ -73,11 +75,13 @@ function ThoughtBubbleItem({
   useTypewriter,
   isIdle,
   isCompleted,
+  isIdleChat,
 }: {
   text: string
   useTypewriter: boolean
   isIdle: boolean
   isCompleted: boolean
+  isIdleChat: boolean
 }) {
   const [displayLen, setDisplayLen] = useState(0)
   const prevTextRef = useRef('')
@@ -104,16 +108,18 @@ function ThoughtBubbleItem({
   const showCursor = useTypewriter && displayLen < text.length
 
   return (
-    <div className="thought-bubble-container">
-      <div className="thought-bubble-tail" />
+    <div className={isIdleChat ? 'thought-bubble-container idle-chat' : 'thought-bubble-container'}>
+      <div className={isIdleChat ? 'thought-bubble-tail idle-chat' : 'thought-bubble-tail'} />
       <div
-        className="thought-bubble-content"
+        className={isIdleChat ? 'thought-bubble-content idle-chat' : 'thought-bubble-content'}
         style={{
           color: isCompleted
             ? 'var(--pixel-green)'
-            : isIdle
-              ? 'rgba(255,255,255,0.5)'
-              : 'rgba(255,255,255,0.85)',
+            : isIdleChat
+              ? 'rgba(255, 240, 200, 0.9)'
+              : isIdle
+                ? 'rgba(255,255,255,0.5)'
+                : 'rgba(255,255,255,0.85)',
         }}
       >
         {displayText}
@@ -212,16 +218,21 @@ export function ThoughtBubbles({
         if (!ch) return null
         // Don't show bubble for despawning characters
         if (ch.matrixEffect === 'despawn') return null
-        // Must be working or just completed
-        if (!data.isWorking && !data.justCompleted) return null
+        // Must be working, just completed, or idle chatting
+        if (!data.isWorking && !data.justCompleted && !data.isIdleChat) return null
 
         // Determine what text to show
         let displayText: string
         let isIdle = false
         let isCompleted = false
         let useTypewriter = false
+        const isIdleChatBubble = !!data.isIdleChat
 
-        if (data.justCompleted) {
+        if (isIdleChatBubble) {
+          // Idle office chat — show text with typewriter
+          displayText = data.text
+          useTypewriter = true
+        } else if (data.justCompleted) {
           displayText = '已完成任務 ✓'
           isCompleted = true
           useTypewriter = true
@@ -261,6 +272,7 @@ export function ThoughtBubbles({
               useTypewriter={useTypewriter}
               isIdle={isIdle}
               isCompleted={isCompleted}
+              isIdleChat={isIdleChatBubble}
             />
           </div>
         )

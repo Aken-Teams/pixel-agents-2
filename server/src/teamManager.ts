@@ -7,6 +7,7 @@ import type { Broadcast } from './timerManager.js';
 import type { SkillDefinition } from './skillLoader.js';
 import { getAssetsRoot } from './config.js';
 import { formatToolStatus } from './transcriptParser.js';
+import { startIdleChatScheduler, stopIdleChat } from './idleChatManager.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -94,6 +95,11 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 	if (orchestratorSkillId) {
 		console.log(`[Team] Orchestrator identified: ${orchestratorSkillId}`);
 	}
+
+	// Start idle chat when team is loaded and not busy
+	if (!orchestratorBusy) {
+		startIdleChatScheduler(broadcast, getIdleAgents);
+	}
 }
 
 /**
@@ -146,6 +152,17 @@ function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
 /** Get team member infos for sending to new clients */
 export function getExistingTeamMembers(): TeamMemberInfo[] {
 	return getTeamMemberInfos(cachedSkills);
+}
+
+/** Get idle team agents (not currently running a process) for idle chat */
+function getIdleAgents(): Array<{ agentId: number; skillId: string; name: string }> {
+	const result: Array<{ agentId: number; skillId: string; name: string }> = [];
+	for (const [skillId, session] of teamSessions) {
+		if (!session.activeProcess) {
+			result.push({ agentId: session.agentId, skillId, name: session.name });
+		}
+	}
+	return result;
 }
 
 function buildPromptWithHistory(history: ChatMessage[], newMessage: string): string {
@@ -392,6 +409,9 @@ function spawnClaudeForSkill(
  * Used when user manually talks to a sub-agent, or when there's no orchestrator.
  */
 export function sendTeamMessage(skillId: string, message: string, broadcast: Broadcast): void {
+	// Stop idle chat when someone starts working
+	stopIdleChat();
+
 	const session = teamSessions.get(skillId);
 	if (!session) {
 		broadcast({ type: 'teamError', skillId, error: 'Team member not found' });
@@ -434,12 +454,17 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		console.log(`[Orchestrator] Project directory: ${currentProjectDir}`);
 	}
 
+	// Stop idle chat when work begins
+	stopIdleChat();
+
 	orchestratorBusy = true;
 	broadcast({ type: 'orchestratorBusy', busy: true });
 
 	orchestrateStep(orchestratorSkillId, message, broadcast, 0).finally(() => {
 		orchestratorBusy = false;
 		broadcast({ type: 'orchestratorBusy', busy: false });
+		// Resume idle chat when work is done
+		startIdleChatScheduler(broadcast, getIdleAgents);
 	});
 }
 
@@ -580,6 +605,7 @@ export function getTeamAgentIds(): number[] {
 }
 
 export function closeTeam(broadcast: Broadcast): void {
+	stopIdleChat();
 	for (const session of teamSessions.values()) {
 		if (session.activeProcess) {
 			try { session.activeProcess.kill('SIGTERM'); } catch { /* */ }
