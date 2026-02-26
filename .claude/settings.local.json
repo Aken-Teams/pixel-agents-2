@@ -5,7 +5,8 @@
       "Bash(env -u CLAUDECODE claude:*)",
       "Bash(claude:*)",
       "Bash(npx kill-port:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter \"\"name=''claude.exe''\"\" | Select-Object ProcessId, CreationDate, CommandLine | Format-List\")"
     ]
   }
 }

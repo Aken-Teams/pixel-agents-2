@@ -191,7 +191,6 @@ function spawnClaudeForSkill(
 			'--output-format', 'stream-json',
 			'--verbose',
 			'--dangerously-skip-permissions',
-			'--append-system-prompt', session.systemPrompt,
 		], {
 			cwd: getAssetsRoot(),
 			shell: true,
@@ -199,7 +198,10 @@ function spawnClaudeForSkill(
 			env: cleanEnv,
 		});
 
-		proc.stdin.write(fullPrompt);
+		// Embed system prompt in stdin to avoid Windows cmd.exe ~8191 char limit
+		// for --append-system-prompt argument.
+		const stdinPayload = `<role>\n${session.systemPrompt}\n</role>\n\n${fullPrompt}`;
+		proc.stdin.write(stdinPayload);
 		proc.stdin.end();
 
 		session.activeProcess = proc;
