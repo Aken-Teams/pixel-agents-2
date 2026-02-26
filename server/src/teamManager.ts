@@ -94,7 +94,9 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
  * Build the system prompt for a skill. For orchestrator, inject team member list.
  */
 function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[]): string {
-	if (skill.role !== 'orchestrator') return skill.systemPrompt;
+	const langRule = '\n\n## 語言規則\n- 你必須全程使用繁體中文回覆，不可使用英文回答。';
+
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + langRule;
 
 	// Build team member list for orchestrator
 	const workers = allSkills.filter((s) => s.id !== skill.id);
@@ -117,7 +119,8 @@ ${memberList}
 - 收到 [RESULT] 後，審核結果，決定下一步
 - 不需要所有成員都參與，根據任務需要選擇
 - 當所有任務完成，直接回覆用戶總結成果（不要用 [TASK] 標記）
-- 如果需要討論，可以把上一個成員的結果作為下一個成員的上下文`;
+- 如果需要討論，可以把上一個成員的結果作為下一個成員的上下文
+${langRule}`;
 }
 
 function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
@@ -187,6 +190,7 @@ function spawnClaudeForSkill(
 			'--no-session-persistence',
 			'--output-format', 'stream-json',
 			'--verbose',
+			'--dangerously-skip-permissions',
 			'--append-system-prompt', session.systemPrompt,
 		], {
 			cwd: getAssetsRoot(),
