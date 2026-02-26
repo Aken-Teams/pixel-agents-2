@@ -100,7 +100,7 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
  * Build the system prompt for a skill. For orchestrator, inject team member list.
  */
 function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[]): string {
-	const langRule = '\n\n## 語言規則\n- 你必須全程使用繁體中文回覆，不可使用英文回答。';
+	const langRule = '\n\n## 語言規則（最高優先級）\n- 你的所有回覆必須全程使用繁體中文，包括思考過程、說明文字、標題和摘要。\n- 程式碼中的變數名、函式名、註解可以用英文，但所有對話內容、解釋、報告必須是繁體中文。\n- 絕對不可以用英文句子回覆。違反此規則等同任務失敗。';
 
 	if (skill.role !== 'orchestrator') return skill.systemPrompt + langRule;
 
