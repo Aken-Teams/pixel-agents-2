@@ -588,7 +588,8 @@ export function useServerMessages(
         const chunkAgentId = skillAgentMapRef.current[skillId]
         if (chunkAgentId !== undefined) {
           setThoughtData((prev) => {
-            const combined = (prev[chunkAgentId]?.text ?? '') + text
+            const existing = prev[chunkAgentId]
+            const combined = (existing?.text ?? '') + text
             return {
               ...prev,
               [chunkAgentId]: {
@@ -596,6 +597,8 @@ export function useServerMessages(
                 updatedAt: Date.now(),
                 isWorking: true,
                 justCompleted: false,
+                workStartedAt: existing?.workStartedAt ?? Date.now(),
+                toolStatus: undefined, // clear tool status when streaming text
               },
             }
           })
@@ -683,6 +686,7 @@ export function useServerMessages(
               updatedAt: Date.now(),
               isWorking: true,
               justCompleted: false,
+              workStartedAt: Date.now(),
             },
           }))
         }
@@ -708,14 +712,15 @@ export function useServerMessages(
         if (toolAgentId !== undefined && status) {
           setThoughtData((prev) => {
             const existing = prev[toolAgentId]
-            if (existing && existing.text) return prev // don't overwrite stream text
             return {
               ...prev,
               [toolAgentId]: {
-                text: '',
+                text: existing?.text ?? '',
                 updatedAt: Date.now(),
                 isWorking: true,
                 justCompleted: false,
+                workStartedAt: existing?.workStartedAt ?? Date.now(),
+                toolStatus: status,
               },
             }
           })

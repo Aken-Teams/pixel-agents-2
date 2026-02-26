@@ -15,6 +15,10 @@ export interface ThoughtData {
   justCompleted: boolean
   /** Whether this is idle office chat (not work-related) */
   isIdleChat?: boolean
+  /** Timestamp when the agent started working on current task */
+  workStartedAt?: number
+  /** Current tool/activity status string (e.g. "Read 檔案", "Bash 執行中") */
+  toolStatus?: string
 }
 
 const IDLE_MESSAGES = [
@@ -70,21 +74,34 @@ function extractLatestSnippet(text: string, maxLen: number): string {
   return tail
 }
 
+/** Format elapsed seconds into mm:ss */
+function formatElapsed(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  const min = Math.floor(totalSec / 60)
+  const sec = totalSec % 60
+  return `${min}:${sec.toString().padStart(2, '0')}`
+}
+
 function ThoughtBubbleItem({
   text,
   useTypewriter,
   isIdle,
   isCompleted,
   isIdleChat,
+  workStartedAt,
+  toolStatus,
 }: {
   text: string
   useTypewriter: boolean
   isIdle: boolean
   isCompleted: boolean
   isIdleChat: boolean
+  workStartedAt?: number
+  toolStatus?: string
 }) {
   const [displayLen, setDisplayLen] = useState(0)
   const prevTextRef = useRef('')
+  const [elapsed, setElapsed] = useState(0)
 
   // Reset typewriter when text changes (only for typewriter mode)
   useEffect(() => {
@@ -104,8 +121,23 @@ function ThoughtBubbleItem({
     return () => clearTimeout(timer)
   }, [displayLen, text, useTypewriter])
 
+  // Elapsed timer — only tick when working (not idle chat / completed)
+  useEffect(() => {
+    if (!workStartedAt || isIdleChat || isCompleted) {
+      setElapsed(0)
+      return
+    }
+    setElapsed(Date.now() - workStartedAt)
+    const timer = setInterval(() => {
+      setElapsed(Date.now() - workStartedAt)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [workStartedAt, isIdleChat, isCompleted])
+
   const displayText = useTypewriter ? text.slice(0, displayLen) : text
   const showCursor = useTypewriter && displayLen < text.length
+  // Show elapsed + tool status when working for over 5 seconds
+  const showMeta = !isIdleChat && !isCompleted && workStartedAt && elapsed > 5000
 
   return (
     <div className={isIdleChat ? 'thought-bubble-container idle-chat' : 'thought-bubble-container'}>
@@ -124,6 +156,12 @@ function ThoughtBubbleItem({
       >
         {displayText}
         {showCursor && <span className="thought-cursor">|</span>}
+        {showMeta && (
+          <div className="thought-bubble-meta">
+            <span className="thought-elapsed">{formatElapsed(elapsed)}</span>
+            {toolStatus && <span className="thought-tool-status">{toolStatus}</span>}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -273,6 +311,8 @@ export function ThoughtBubbles({
               isIdle={isIdle}
               isCompleted={isCompleted}
               isIdleChat={isIdleChatBubble}
+              workStartedAt={data.workStartedAt}
+              toolStatus={data.toolStatus}
             />
           </div>
         )
