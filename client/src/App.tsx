@@ -7,7 +7,7 @@ import { EditorState } from './office/editor/editorState.js'
 import { EditTool } from './office/types.js'
 import { isRotatable } from './office/layout/furnitureCatalog.js'
 import { isStaticBackgroundLayout } from './office/layout/layoutSerializer.js'
-import { computeFitZoom } from './office/toolUtils.js'
+// computeFitZoom removed — using fixed zoom=1
 import { wsClient } from './wsClient.js'
 import { useServerMessages } from './hooks/useServerMessages.js'
 import { PULSE_ANIMATION_DURATION_SEC, MAX_CHARACTERS } from './constants.js'
@@ -18,6 +18,7 @@ import { BottomToolbar } from './components/BottomToolbar.js'
 import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
 import { ChatPanel } from './components/ChatPanel.js'
+import { ThinkingOverlay } from './office/components/ThinkingOverlay.js'
 
 // Game state lives outside React — updated imperatively by message handlers
 const officeStateRef = { current: null as OfficeState | null }
@@ -327,6 +328,13 @@ function App() {
         zoom={editor.zoom}
         panRef={editor.panRef}
         onCloseAgent={handleCloseAgent}
+      />
+
+      <ThinkingOverlay
+        officeState={officeState}
+        containerRef={containerRef}
+        zoom={editor.zoom}
+        panRef={editor.panRef}
       />
 
       {isDebugMode && (

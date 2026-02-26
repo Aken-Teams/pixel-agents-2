@@ -8,7 +8,7 @@ import { setFloorSprites } from '../office/floorTiles.js'
 import { setWallSprites } from '../office/wallTiles.js'
 import { setCharacterTemplates } from '../office/sprites/spriteData.js'
 import { wsClient } from '../wsClient.js'
-import { playDoneSound, setSoundEnabled } from '../notificationSound.js'
+import { playDoneSound, playAlertSound, setSoundEnabled } from '../notificationSound.js'
 import { loadBackgroundImage } from '../office/backgroundImage.js'
 
 export interface SubagentCharacter {
@@ -88,6 +88,9 @@ export function useServerMessages(
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
+  // Chat agent tracking (chatId → agentId mapping and thinking buffer)
+  const chatAgentMapRef = useRef<Record<string, number>>({})
+  const thinkingBufferRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
     // Buffer agents from existingAgents until layout is loaded
@@ -363,6 +366,10 @@ export function useServerMessages(
         }
       } else if (msg.type === 'chatCreated') {
         const chatId = msg.chatId as string
+        const agentId = msg.agentId as number | undefined
+        if (agentId !== undefined) {
+          chatAgentMapRef.current[chatId] = agentId
+        }
         setChatList((prev) => prev.includes(chatId) ? prev : [...prev, chatId])
         setChats((prev) => ({
           ...prev,
@@ -370,6 +377,8 @@ export function useServerMessages(
         }))
       } else if (msg.type === 'chatClosed') {
         const chatId = msg.chatId as string
+        delete chatAgentMapRef.current[chatId]
+        delete thinkingBufferRef.current[chatId]
         setChatList((prev) => prev.filter((id) => id !== chatId))
         setChats((prev) => {
           const next = { ...prev }
@@ -389,6 +398,12 @@ export function useServerMessages(
         })
       } else if (msg.type === 'chatStreamEnd') {
         const chatId = msg.chatId as string
+        // Clear thinking text overlay
+        const streamEndAgentId = msg.agentId as number | undefined
+        if (streamEndAgentId !== undefined && streamEndAgentId >= 0) {
+          os.clearThinkingText(streamEndAgentId)
+        }
+        delete thinkingBufferRef.current[chatId]
         setChats((prev) => {
           const chat = prev[chatId]
           if (!chat) return prev
@@ -417,6 +432,19 @@ export function useServerMessages(
             },
           }
         })
+      } else if (msg.type === 'chatAlertBubble') {
+        const agentId = msg.agentId as number
+        const chatId = msg.chatId as string
+        os.showAlertBubble(agentId)
+        playAlertSound()
+        thinkingBufferRef.current[chatId] = ''
+      } else if (msg.type === 'chatThinkingChunk') {
+        const agentId = msg.agentId as number
+        const chatId = msg.chatId as string
+        const text = msg.text as string
+        const buf = (thinkingBufferRef.current[chatId] || '') + text
+        thinkingBufferRef.current[chatId] = buf
+        os.setThinkingText(agentId, buf)
       } else if (msg.type === 'existingChats') {
         const chatIds = msg.chatIds as string[]
         setChatList(chatIds)

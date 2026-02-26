@@ -318,6 +318,28 @@ export const BUBBLE_WAITING_SPRITE: SpriteData = (() => {
   ]
 })()
 
+/** Alert bubble: white square with red "!" exclamation, and a tail pointer (11x13) */
+export const BUBBLE_ALERT_SPRITE: SpriteData = (() => {
+  const B = '#555566' // border
+  const F = '#EEEEFF' // fill
+  const R = '#DD4444' // red exclamation
+  return [
+    [_, B, B, B, B, B, B, B, B, B, _],
+    [B, F, F, F, F, F, F, F, F, F, B],
+    [B, F, F, F, F, R, F, F, F, F, B],
+    [B, F, F, F, F, R, F, F, F, F, B],
+    [B, F, F, F, F, R, F, F, F, F, B],
+    [B, F, F, F, F, R, F, F, F, F, B],
+    [B, F, F, F, F, F, F, F, F, F, B],
+    [B, F, F, F, F, R, F, F, F, F, B],
+    [B, F, F, F, F, F, F, F, F, F, B],
+    [_, B, B, B, B, B, B, B, B, B, _],
+    [_, _, _, _, B, B, B, _, _, _, _],
+    [_, _, _, _, _, B, _, _, _, _, _],
+    [_, _, _, _, _, _, _, _, _, _, _],
+  ]
+})()
+
 // ── Character Sprites ───────────────────────────────────────────
 // 16x24 characters with palette substitution
 

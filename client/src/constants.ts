@@ -97,11 +97,22 @@ export const NOTIFICATION_NOTE_2_START_SEC = 0.1
 export const NOTIFICATION_NOTE_DURATION_SEC = 0.18
 export const NOTIFICATION_VOLUME = 0.14
 
+// ── Alert Sound ─────────────────────────────────────────────
+export const ALERT_NOTE_1_HZ = 987.77     // B5
+export const ALERT_NOTE_2_HZ = 659.25     // E5 (descending)
+export const ALERT_NOTE_1_START_SEC = 0
+export const ALERT_NOTE_2_START_SEC = 0.08
+export const ALERT_NOTE_DURATION_SEC = 0.15
+export const ALERT_VOLUME = 0.12
+
 // ── Character Limit ─────────────────────────────────────────
 export const MAX_CHARACTERS = 21
 
 // ── Game Logic ───────────────────────────────────────────────
 export const MAX_DELTA_TIME_SEC = 0.1
+export const ALERT_BUBBLE_DURATION_SEC = 3.0
+export const THINKING_DISPLAY_DURATION_SEC = 5.0
+export const THINKING_TEXT_MAX_CHARS = 5
 export const WAITING_BUBBLE_DURATION_SEC = 2.0
 export const DISMISS_BUBBLE_FAST_FADE_SEC = 0.3
 export const INACTIVE_SEAT_TIMER_MIN_SEC = 3.0

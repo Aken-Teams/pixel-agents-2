@@ -21,11 +21,13 @@ export type ServerMessage =
 	| { type: 'wallTilesLoaded'; sprites: string[][][] }
 	| { type: 'layoutLoaded'; layout: Record<string, unknown> | null }
 	| { type: 'settingsLoaded'; soundEnabled: boolean }
-	| { type: 'chatCreated'; chatId: string }
+	| { type: 'chatCreated'; chatId: string; agentId: number }
 	| { type: 'chatClosed'; chatId: string }
 	| { type: 'chatStreamChunk'; chatId: string; text: string }
-	| { type: 'chatStreamEnd'; chatId: string }
+	| { type: 'chatStreamEnd'; chatId: string; agentId: number }
 	| { type: 'chatError'; chatId: string; error: string }
+	| { type: 'chatAlertBubble'; chatId: string; agentId: number }
+	| { type: 'chatThinkingChunk'; chatId: string; agentId: number; text: string }
 	| { type: 'existingChats'; chatIds: string[] };
 
 // ── Client → Server Messages ──────────────────────────────────

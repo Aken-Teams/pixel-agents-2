@@ -38,7 +38,7 @@ export function createChat(cwd: string, broadcast: Broadcast): string {
 	chatAgentIds.set(chatId, agentId);
 
 	console.log(`[Chat] Created chat ${chatId} (agent ${agentId})`);
-	broadcast({ type: 'chatCreated', chatId });
+	broadcast({ type: 'chatCreated', chatId, agentId });
 	broadcast({ type: 'agentCreated', id: agentId });
 	return chatId;
 }
@@ -101,10 +101,11 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 
 	session.activeProcess = proc;
 
-	// Update agent status to "active" on the map (character starts working)
+	// Update agent status to "active" and show alert bubble
 	const agentId = chatAgentIds.get(chatId);
 	if (agentId !== undefined) {
 		broadcast({ type: 'agentStatus', id: agentId, status: 'active' });
+		broadcast({ type: 'chatAlertBubble', chatId, agentId });
 	}
 
 	let stdoutBuffer = '';
@@ -129,9 +130,17 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 				}
 
 				// stream-json format emits multiple message types:
-				// - content_block_delta: incremental text chunks (streaming)
+				// - content_block_delta: incremental text/thinking chunks (streaming)
 				// - assistant: complete message with all content blocks
 				// - result: final summary (duplicates assistant text, skip to avoid double-send)
+
+				// Parse thinking deltas (Claude's extended thinking)
+				if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'thinking_delta' && parsed.delta?.thinking) {
+					if (agentId !== undefined) {
+						broadcast({ type: 'chatThinkingChunk', chatId, agentId, text: parsed.delta.thinking });
+					}
+				}
+
 				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
 					const text = parsed.delta.text;
 					broadcast({ type: 'chatStreamChunk', chatId, text });
@@ -214,12 +223,13 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 		const agId = chatAgentIds.get(chatId);
 		if (agId !== undefined) {
 			broadcast({ type: 'agentStatus', id: agId, status: 'waiting' });
+			broadcast({ type: 'chatStreamEnd', chatId, agentId: agId });
 			setTimeout(() => {
 				broadcast({ type: 'agentStatus', id: agId, status: 'idle' });
 			}, 3000);
+		} else {
+			broadcast({ type: 'chatStreamEnd', chatId, agentId: -1 });
 		}
-
-		broadcast({ type: 'chatStreamEnd', chatId });
 	});
 }
 

@@ -4,6 +4,9 @@ import {
   HUE_SHIFT_MIN_DEG,
   HUE_SHIFT_RANGE_DEG,
   WAITING_BUBBLE_DURATION_SEC,
+  ALERT_BUBBLE_DURATION_SEC,
+  THINKING_DISPLAY_DURATION_SEC,
+  THINKING_TEXT_MAX_CHARS,
   DISMISS_BUBBLE_FAST_FADE_SEC,
   INACTIVE_SEAT_TIMER_MIN_SEC,
   INACTIVE_SEAT_TIMER_RANGE_SEC,
@@ -632,16 +635,39 @@ export class OfficeState {
     }
   }
 
-  /** Dismiss bubble on click — permission: instant, waiting: quick fade */
+  /** Dismiss bubble on click — permission: instant, waiting/alert: quick fade */
   dismissBubble(id: number): void {
     const ch = this.characters.get(id)
     if (!ch || !ch.bubbleType) return
     if (ch.bubbleType === 'permission') {
       ch.bubbleType = null
       ch.bubbleTimer = 0
-    } else if (ch.bubbleType === 'waiting') {
-      // Trigger immediate fade (0.3s remaining)
+    } else if (ch.bubbleType === 'waiting' || ch.bubbleType === 'alert') {
       ch.bubbleTimer = Math.min(ch.bubbleTimer, DISMISS_BUBBLE_FAST_FADE_SEC)
+    }
+  }
+
+  showAlertBubble(id: number): void {
+    const ch = this.characters.get(id)
+    if (ch) {
+      ch.bubbleType = 'alert'
+      ch.bubbleTimer = ALERT_BUBBLE_DURATION_SEC
+    }
+  }
+
+  setThinkingText(id: number, text: string): void {
+    const ch = this.characters.get(id)
+    if (ch) {
+      ch.thinkingText = text.slice(0, THINKING_TEXT_MAX_CHARS)
+      ch.thinkingTimer = THINKING_DISPLAY_DURATION_SEC
+    }
+  }
+
+  clearThinkingText(id: number): void {
+    const ch = this.characters.get(id)
+    if (ch) {
+      ch.thinkingText = null
+      ch.thinkingTimer = 0
     }
   }
 
@@ -670,12 +696,21 @@ export class OfficeState {
         updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles)
       )
 
-      // Tick bubble timer for waiting bubbles
-      if (ch.bubbleType === 'waiting') {
+      // Tick bubble timer for waiting and alert bubbles
+      if (ch.bubbleType === 'waiting' || ch.bubbleType === 'alert') {
         ch.bubbleTimer -= dt
         if (ch.bubbleTimer <= 0) {
           ch.bubbleType = null
           ch.bubbleTimer = 0
+        }
+      }
+
+      // Tick thinking text timer
+      if (ch.thinkingText !== null) {
+        ch.thinkingTimer -= dt
+        if (ch.thinkingTimer <= 0) {
+          ch.thinkingText = null
+          ch.thinkingTimer = 0
         }
       }
     }

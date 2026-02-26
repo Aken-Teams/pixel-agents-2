@@ -189,9 +189,13 @@ export interface Character {
   /** Assigned seat uid, or null if no seat */
   seatId: string | null
   /** Active speech bubble type, or null if none showing */
-  bubbleType: 'permission' | 'waiting' | null
-  /** Countdown timer for bubble (waiting: 2→0, permission: unused) */
+  bubbleType: 'permission' | 'waiting' | 'alert' | null
+  /** Countdown timer for bubble (waiting: 2→0, alert: 3→0, permission: unused) */
   bubbleTimer: number
+  /** Current thinking preview text to show above character, or null */
+  thinkingText: string | null
+  /** Countdown timer for thinking text display */
+  thinkingTimer: number
   /** Timer to stay seated while inactive after seat reassignment (counts down to 0) */
   seatTimer: number
   /** Whether this character represents a sub-agent (spawned by Task tool) */
