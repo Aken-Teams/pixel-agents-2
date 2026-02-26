@@ -18,6 +18,7 @@ import { BottomToolbar } from './components/BottomToolbar.js'
 import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
 import { ChatPanel } from './components/ChatPanel.js'
+import { AgentLabels } from './components/AgentLabels.js'
 
 // Game state lives outside React — updated imperatively by message handlers
 const officeStateRef = { current: null as OfficeState | null }
@@ -125,7 +126,11 @@ function App() {
 
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty])
 
-  const { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, chatList, chats, addUserMessage } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
+  const {
+    agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters,
+    layoutReady, loadedAssets, chatList, chats, addUserMessage,
+    mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
+  } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
   useEffect(() => {
@@ -182,6 +187,15 @@ function App() {
     wsClient.postMessage({ type: 'closeChat', chatId })
   }, [])
 
+  const handleModeChange = useCallback((newMode: 'chat' | 'team') => {
+    wsClient.postMessage({ type: 'setMode', mode: newMode })
+  }, [])
+
+  const handleSendTeamMessage = useCallback((skillId: string, message: string) => {
+    addTeamUserMessage(skillId, message)
+    wsClient.postMessage({ type: 'sendTeamMessage', skillId, message })
+  }, [addTeamUserMessage])
+
   const officeState = getOfficeState()
 
   // Force dependency on editorTickForKeyboard to propagate keyboard-triggered re-renders
@@ -216,6 +230,11 @@ function App() {
         onSendMessage={handleSendChatMessage}
         onCloseChat={handleCloseChat}
         atCharacterLimit={agents.length >= MAX_CHARACTERS}
+        mode={mode}
+        onModeChange={handleModeChange}
+        teamMembers={teamMembers}
+        teamChats={teamChats}
+        onSendTeamMessage={handleSendTeamMessage}
       />
       <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`
@@ -327,6 +346,14 @@ function App() {
         zoom={editor.zoom}
         panRef={editor.panRef}
         onCloseAgent={handleCloseAgent}
+      />
+
+      <AgentLabels
+        officeState={officeState}
+        containerRef={containerRef}
+        zoom={editor.zoom}
+        panRef={editor.panRef}
+        agentNames={agentNames}
       />
 
       {isDebugMode && (

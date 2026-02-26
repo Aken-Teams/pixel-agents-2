@@ -47,6 +47,14 @@ export interface ChatState {
   streamBuffer: string
 }
 
+export interface TeamMemberInfo {
+  skillId: string
+  name: string
+  agentId: number
+  palette?: number
+  hueShift?: number
+}
+
 export interface ServerMessageState {
   agents: number[]
   selectedAgent: number | null
@@ -59,6 +67,11 @@ export interface ServerMessageState {
   chatList: string[]
   chats: Record<string, ChatState>
   addUserMessage: (chatId: string, content: string) => void
+  mode: 'chat' | 'team'
+  teamMembers: TeamMemberInfo[]
+  teamChats: Record<string, ChatState>
+  addTeamUserMessage: (skillId: string, content: string) => void
+  agentNames: Record<number, string>
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -85,6 +98,10 @@ export function useServerMessages(
   const [loadedAssets, setLoadedAssets] = useState<{ catalog: FurnitureAsset[]; sprites: Record<string, string[][]> } | undefined>()
   const [chatList, setChatList] = useState<string[]>([])
   const [chats, setChats] = useState<Record<string, ChatState>>({})
+  const [mode, setMode] = useState<'chat' | 'team'>('chat')
+  const [teamMembers, setTeamMembers] = useState<TeamMemberInfo[]>([])
+  const [teamChats, setTeamChats] = useState<Record<string, ChatState>>({})
+  const [agentNames, setAgentNames] = useState<Record<number, string>>({})
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -129,9 +146,13 @@ export function useServerMessages(
         }
       } else if (msg.type === 'agentCreated') {
         const id = msg.id as number
+        const name = msg.name as string | undefined
         setAgents((prev) => (prev.includes(id) ? prev : [...prev, id]))
         setSelectedAgent(id)
-        os.addAgent(id)
+        if (name) {
+          setAgentNames((prev) => ({ ...prev, [id]: name }))
+        }
+        os.addAgent(id, undefined, undefined, undefined, undefined, name)
         saveAgentSeats(os)
       } else if (msg.type === 'agentClosed') {
         const id = msg.id as number
@@ -352,6 +373,9 @@ export function useServerMessages(
       } else if (msg.type === 'settingsLoaded') {
         const soundOn = msg.soundEnabled as boolean
         setSoundEnabled(soundOn)
+        if (msg.mode) {
+          setMode(msg.mode as 'chat' | 'team')
+        }
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[]
@@ -447,6 +471,74 @@ export function useServerMessages(
           }
           return next
         })
+      } else if (msg.type === 'teamLoaded') {
+        const members = msg.members as TeamMemberInfo[]
+        setTeamMembers(members)
+        // Initialize team chat states for new members
+        setTeamChats((prev) => {
+          const next = { ...prev }
+          for (const m of members) {
+            if (!next[m.skillId]) {
+              next[m.skillId] = { messages: [], isStreaming: false, streamBuffer: '' }
+            }
+          }
+          return next
+        })
+        // Store agent names
+        const names: Record<number, string> = {}
+        for (const m of members) {
+          names[m.agentId] = m.name
+        }
+        setAgentNames((prev) => ({ ...prev, ...names }))
+      } else if (msg.type === 'teamStreamChunk') {
+        const skillId = msg.skillId as string
+        const text = msg.text as string
+        setTeamChats((prev) => {
+          const chat = prev[skillId]
+          if (!chat) return prev
+          return {
+            ...prev,
+            [skillId]: { ...chat, isStreaming: true, streamBuffer: chat.streamBuffer + text },
+          }
+        })
+      } else if (msg.type === 'teamStreamEnd') {
+        const skillId = msg.skillId as string
+        const agentId = msg.agentId as number | undefined
+        if (agentId !== undefined && agentId >= 0) {
+          os.clearThinkingBubble(agentId)
+        }
+        setTeamChats((prev) => {
+          const chat = prev[skillId]
+          if (!chat) return prev
+          const newMessages = [...chat.messages]
+          if (chat.streamBuffer.trim()) {
+            newMessages.push({ role: 'assistant', content: chat.streamBuffer })
+          }
+          return {
+            ...prev,
+            [skillId]: { messages: newMessages, isStreaming: false, streamBuffer: '' },
+          }
+        })
+      } else if (msg.type === 'teamError') {
+        const skillId = msg.skillId as string
+        const error = msg.error as string
+        setTeamChats((prev) => {
+          const chat = prev[skillId]
+          if (!chat) return prev
+          return {
+            ...prev,
+            [skillId]: {
+              ...chat,
+              isStreaming: false,
+              streamBuffer: '',
+              messages: [...chat.messages, { role: 'assistant', content: `Error: ${error}` }],
+            },
+          }
+        })
+      } else if (msg.type === 'teamAlertBubble') {
+        const agentId = msg.agentId as number
+        os.showAlertBubble(agentId)
+        playAlertSound()
       }
     }
     wsClient.addMessageListener(handler)
@@ -473,11 +565,30 @@ export function useServerMessages(
         [chatId]: {
           ...chat,
           messages: [...chat.messages, { role: 'user', content }],
-          isStreaming: true, // Show "Thinking..." immediately after sending
+          isStreaming: true,
         },
       }
     })
   }, [])
 
-  return { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, chatList, chats, addUserMessage }
+  const addTeamUserMessage = useCallback((skillId: string, content: string) => {
+    setTeamChats((prev) => {
+      const chat = prev[skillId]
+      if (!chat) return prev
+      return {
+        ...prev,
+        [skillId]: {
+          ...chat,
+          messages: [...chat.messages, { role: 'user', content }],
+          isStreaming: true,
+        },
+      }
+    })
+  }, [])
+
+  return {
+    agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters,
+    layoutReady, loadedAssets, chatList, chats, addUserMessage,
+    mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
+  }
 }

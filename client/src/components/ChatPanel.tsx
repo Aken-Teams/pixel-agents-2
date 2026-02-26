@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { ChatState, ChatMessage } from '../hooks/useServerMessages.js'
+import type { ChatState, ChatMessage, TeamMemberInfo } from '../hooks/useServerMessages.js'
 
 interface ChatPanelProps {
   chatList: string[]
@@ -9,10 +9,19 @@ interface ChatPanelProps {
   onSendMessage: (chatId: string, message: string) => void
   onCloseChat: (chatId: string) => void
   atCharacterLimit?: boolean
+  mode: 'chat' | 'team'
+  onModeChange: (mode: 'chat' | 'team') => void
+  teamMembers: TeamMemberInfo[]
+  teamChats: Record<string, ChatState>
+  onSendTeamMessage: (skillId: string, message: string) => void
 }
 
-export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit }: ChatPanelProps) {
+export function ChatPanel({
+  chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit,
+  mode, onModeChange, teamMembers, teamChats, onSendTeamMessage,
+}: ChatPanelProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const [activeSkillId, setActiveSkillId] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -31,26 +40,47 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
     }
   }, [chatList, activeChatId])
 
+  // Auto-select first team member
+  useEffect(() => {
+    if (teamMembers.length > 0 && !activeSkillId) {
+      setActiveSkillId(teamMembers[0].skillId)
+    }
+  }, [teamMembers, activeSkillId])
+
+  // Determine active chat state based on mode
+  const activeChat = mode === 'chat'
+    ? (activeChatId ? chats[activeChatId] : null)
+    : (activeSkillId ? teamChats[activeSkillId] : null)
+
   // Scroll to bottom when messages change
-  const activeChat = activeChatId ? chats[activeChatId] : null
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [activeChat?.messages.length, activeChat?.streamBuffer])
 
+  // Clear input when switching modes or active conversations
+  useEffect(() => {
+    setInputValue('')
+  }, [mode, activeChatId, activeSkillId])
+
   const handleSend = useCallback(() => {
-    if (!activeChatId || !inputValue.trim()) return
-    const chat = chats[activeChatId]
-    if (chat?.isStreaming) return
+    const text = inputValue.trim()
+    if (!text) return
 
-    // Add user message to local state immediately (optimistic)
-    // The server doesn't echo back user messages
-    onSendMessage(activeChatId, inputValue.trim())
+    if (mode === 'chat') {
+      if (!activeChatId) return
+      const chat = chats[activeChatId]
+      if (chat?.isStreaming) return
+      onSendMessage(activeChatId, text)
+    } else {
+      if (!activeSkillId) return
+      const chat = teamChats[activeSkillId]
+      if (chat?.isStreaming) return
+      onSendTeamMessage(activeSkillId, text)
+    }
 
-    // We need to add the user message to the chat state ourselves
-    // This is handled by storing it in a local queue
     setInputValue('')
     inputRef.current?.focus()
-  }, [activeChatId, inputValue, chats, onSendMessage])
+  }, [mode, activeChatId, activeSkillId, inputValue, chats, teamChats, onSendMessage, onSendTeamMessage])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -63,6 +93,9 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
     onCreateChat()
   }, [onCreateChat])
 
+  // Get the active team member name for the message area header
+  const activeTeamMember = teamMembers.find((m) => m.skillId === activeSkillId)
+
   return (
     <div style={{
       width: 340,
@@ -74,7 +107,7 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
       borderRight: '2px solid var(--pixel-border)',
       fontFamily: "'FS Pixel Sans', monospace",
     }}>
-      {/* Header */}
+      {/* Header with mode toggle */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -83,28 +116,62 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
         borderBottom: '2px solid var(--pixel-border)',
         background: 'var(--pixel-btn-bg)',
       }}>
-        <span style={{ fontSize: '22px', color: 'var(--pixel-text)' }}>Claude Chat</span>
-        <button
-          onClick={atCharacterLimit ? undefined : handleCreateChat}
-          disabled={atCharacterLimit}
-          style={{
-            padding: '2px 10px',
-            fontSize: '22px',
-            background: atCharacterLimit ? 'var(--pixel-btn-bg)' : 'var(--pixel-accent)',
-            color: atCharacterLimit ? 'var(--pixel-text-dim)' : '#fff',
-            border: '2px solid rgba(255,255,255,0.2)',
-            borderRadius: 0,
-            cursor: atCharacterLimit ? 'default' : 'pointer',
-            opacity: atCharacterLimit ? 0.5 : 1,
-          }}
-          title={atCharacterLimit ? 'Character limit reached (max 21)' : 'New Chat'}
-        >
-          +
-        </button>
+        <div style={{ display: 'flex', gap: 0 }}>
+          <button
+            onClick={() => onModeChange('chat')}
+            style={{
+              padding: '2px 12px',
+              fontSize: '22px',
+              background: mode === 'chat' ? 'var(--pixel-accent)' : 'transparent',
+              color: mode === 'chat' ? '#fff' : 'var(--pixel-text-dim)',
+              border: '2px solid',
+              borderColor: mode === 'chat' ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)',
+              borderRadius: 0,
+              cursor: 'pointer',
+            }}
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => onModeChange('team')}
+            style={{
+              padding: '2px 12px',
+              fontSize: '22px',
+              background: mode === 'team' ? 'var(--pixel-accent)' : 'transparent',
+              color: mode === 'team' ? '#fff' : 'var(--pixel-text-dim)',
+              border: '2px solid',
+              borderColor: mode === 'team' ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)',
+              borderLeft: 'none',
+              borderRadius: 0,
+              cursor: 'pointer',
+            }}
+          >
+            Team
+          </button>
+        </div>
+        {mode === 'chat' && (
+          <button
+            onClick={atCharacterLimit ? undefined : handleCreateChat}
+            disabled={atCharacterLimit}
+            style={{
+              padding: '2px 10px',
+              fontSize: '22px',
+              background: atCharacterLimit ? 'var(--pixel-btn-bg)' : 'var(--pixel-accent)',
+              color: atCharacterLimit ? 'var(--pixel-text-dim)' : '#fff',
+              border: '2px solid rgba(255,255,255,0.2)',
+              borderRadius: 0,
+              cursor: atCharacterLimit ? 'default' : 'pointer',
+              opacity: atCharacterLimit ? 0.5 : 1,
+            }}
+            title={atCharacterLimit ? 'Character limit reached (max 21)' : 'New Chat'}
+          >
+            +
+          </button>
+        )}
       </div>
 
-      {/* Tab bar */}
-      {chatList.length > 0 && (
+      {/* Chat mode: tab bar */}
+      {mode === 'chat' && chatList.length > 0 && (
         <div style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -154,6 +221,52 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
         </div>
       )}
 
+      {/* Team mode: member list */}
+      {mode === 'team' && teamMembers.length > 0 && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 0,
+          borderBottom: '2px solid var(--pixel-border)',
+          background: 'var(--pixel-btn-bg)',
+        }}>
+          {teamMembers.map((member) => {
+            const memberChat = teamChats[member.skillId]
+            const isStreaming = memberChat?.isStreaming
+            return (
+              <div
+                key={member.skillId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 8px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  background: member.skillId === activeSkillId ? 'var(--pixel-bg)' : 'transparent',
+                  color: member.skillId === activeSkillId ? 'var(--pixel-text)' : 'var(--pixel-text-dim)',
+                  borderRight: '1px solid var(--pixel-border)',
+                  borderBottom: member.skillId === activeSkillId ? '2px solid var(--pixel-bg)' : '2px solid transparent',
+                  marginBottom: -2,
+                }}
+                onClick={() => setActiveSkillId(member.skillId)}
+              >
+                {isStreaming && (
+                  <span style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'var(--pixel-status-active)',
+                    flexShrink: 0,
+                  }} />
+                )}
+                <span>{member.name}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Messages area */}
       <div style={{
         flex: 1,
@@ -174,18 +287,27 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
             textAlign: 'center',
             padding: 20,
           }}>
-            {chatList.length === 0
-              ? 'Click + to start a new Claude chat'
-              : 'Select a chat tab'}
+            {mode === 'chat'
+              ? (chatList.length === 0
+                ? 'Click + to start a new Claude chat'
+                : 'Select a chat tab')
+              : (teamMembers.length === 0
+                ? 'No team skills found.\nAdd .md files to skills/ directory.'
+                : 'Select a team member')}
           </div>
         ) : (
           <>
             {activeChat.messages.map((msg, idx) => (
-              <MessageBubble key={idx} message={msg} />
+              <MessageBubble
+                key={idx}
+                message={msg}
+                assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
+              />
             ))}
             {activeChat.isStreaming && activeChat.streamBuffer && (
               <MessageBubble
                 message={{ role: 'assistant', content: activeChat.streamBuffer }}
+                assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
                 isStreaming
               />
             )}
@@ -216,7 +338,9 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder={mode === 'team' && activeTeamMember
+              ? `Message ${activeTeamMember.name}...`
+              : 'Type a message...'}
             disabled={activeChat.isStreaming}
             style={{
               flex: 1,
@@ -259,7 +383,11 @@ export function ChatPanel({ chatList, chats, onCreateChat, onSendMessage, onClos
   )
 }
 
-function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStreaming?: boolean }) {
+function MessageBubble({ message, assistantName, isStreaming }: {
+  message: ChatMessage
+  assistantName?: string
+  isStreaming?: boolean
+}) {
   const isUser = message.role === 'user'
 
   return (
@@ -275,7 +403,7 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
         paddingLeft: isUser ? 0 : 4,
         paddingRight: isUser ? 4 : 0,
       }}>
-        {isUser ? 'You' : 'Claude'}
+        {isUser ? 'You' : (assistantName || 'Claude')}
       </div>
       <div
         className="chat-message-bubble"

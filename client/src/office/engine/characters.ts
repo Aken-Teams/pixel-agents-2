@@ -46,6 +46,7 @@ export function createCharacter(
   seatId: string | null,
   seat: Seat | null,
   hueShift = 0,
+  name?: string,
 ): Character {
   const col = seat ? seat.seatCol : 1
   const row = seat ? seat.seatRow : 1
@@ -73,6 +74,7 @@ export function createCharacter(
     bubbleType: null,
     bubbleTimer: 0,
     seatTimer: 0,
+    name,
     isSubagent: false,
     parentAgentId: null,
     matrixEffect: null,

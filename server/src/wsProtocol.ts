@@ -1,7 +1,7 @@
 // ── Server → Client Messages ──────────────────────────────────
 
 export type ServerMessage =
-	| { type: 'agentCreated'; id: number }
+	| { type: 'agentCreated'; id: number; name?: string }
 	| { type: 'agentClosed'; id: number }
 	| { type: 'agentSelected'; id: number }
 	| { type: 'existingAgents'; agents: number[]; agentMeta: Record<string, AgentMeta> }
@@ -20,7 +20,7 @@ export type ServerMessage =
 	| { type: 'floorTilesLoaded'; sprites: string[][][] }
 	| { type: 'wallTilesLoaded'; sprites: string[][][] }
 	| { type: 'layoutLoaded'; layout: Record<string, unknown> | null }
-	| { type: 'settingsLoaded'; soundEnabled: boolean }
+	| { type: 'settingsLoaded'; soundEnabled: boolean; mode?: 'chat' | 'team' }
 	| { type: 'chatCreated'; chatId: string; agentId: number }
 	| { type: 'chatClosed'; chatId: string }
 	| { type: 'chatStreamChunk'; chatId: string; text: string }
@@ -28,7 +28,13 @@ export type ServerMessage =
 	| { type: 'chatError'; chatId: string; error: string }
 	| { type: 'chatAlertBubble'; chatId: string; agentId: number }
 	| { type: 'chatThinkingChunk'; chatId: string; agentId: number; text: string }
-	| { type: 'existingChats'; chatIds: string[] };
+	| { type: 'existingChats'; chatIds: string[] }
+	// Team mode
+	| { type: 'teamLoaded'; members: TeamMemberInfo[] }
+	| { type: 'teamStreamChunk'; skillId: string; text: string }
+	| { type: 'teamStreamEnd'; skillId: string; agentId: number }
+	| { type: 'teamError'; skillId: string; error: string }
+	| { type: 'teamAlertBubble'; skillId: string; agentId: number };
 
 // ── Client → Server Messages ──────────────────────────────────
 
@@ -43,10 +49,21 @@ export type ClientMessage =
 	| { type: 'importLayout'; layout: Record<string, unknown> }
 	| { type: 'createChat'; cwd?: string }
 	| { type: 'sendChatMessage'; chatId: string; message: string }
-	| { type: 'closeChat'; chatId: string };
+	| { type: 'closeChat'; chatId: string }
+	// Team mode
+	| { type: 'sendTeamMessage'; skillId: string; message: string }
+	| { type: 'setMode'; mode: 'chat' | 'team' };
 
 export interface AgentMeta {
 	palette?: number;
 	hueShift?: number;
 	seatId?: string;
+}
+
+export interface TeamMemberInfo {
+	skillId: string;
+	name: string;
+	agentId: number;
+	palette?: number;
+	hueShift?: number;
 }

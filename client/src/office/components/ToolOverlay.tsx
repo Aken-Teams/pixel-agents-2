@@ -92,6 +92,9 @@ export function ToolOverlay({
         // Only show for hovered or selected agents
         if (!isSelected && !isHovered) return null
 
+        // Skip hover tooltip when there's no tool activity to show
+        if (!isSelected && !agentTools[id]?.length) return null
+
         // Position above character (scaled by CHARACTER_RENDER_SCALE)
         const sittingOffset = ch.state === CharacterState.TYPE
           ? Math.round(CHARACTER_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0

@@ -6,11 +6,13 @@ import type { AgentMeta } from './wsProtocol.js';
 interface Settings {
 	soundEnabled: boolean;
 	agentSeats: Record<string, AgentMeta>;
+	mode: 'chat' | 'team';
 }
 
 const defaultSettings: Settings = {
 	soundEnabled: true,
 	agentSeats: {},
+	mode: 'chat',
 };
 
 let cachedSettings: Settings | null = null;
@@ -73,4 +75,14 @@ export function saveAgentSeats(seats: Record<string, AgentMeta>): void {
 
 export function getAgentSeats(): Record<string, AgentMeta> {
 	return loadSettings().agentSeats;
+}
+
+export function setMode(mode: 'chat' | 'team'): void {
+	const settings = loadSettings();
+	settings.mode = mode;
+	saveSettingsDebounced();
+}
+
+export function getMode(): 'chat' | 'team' {
+	return loadSettings().mode || 'chat';
 }

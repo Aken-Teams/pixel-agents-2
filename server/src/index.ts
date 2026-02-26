@@ -34,6 +34,8 @@ import {
 	setSoundEnabled,
 	saveAgentSeats,
 	getAgentSeats,
+	getMode,
+	setMode,
 } from './settingsPersistence.js';
 import {
 	createChat,
@@ -43,6 +45,14 @@ import {
 	getChatAgentIds,
 	initChatManager,
 } from './chatManager.js';
+import { loadSkills, watchSkills } from './skillLoader.js';
+import {
+	initTeamManager,
+	loadTeam,
+	sendTeamMessage,
+	getTeamAgentIds,
+	getExistingTeamMembers,
+} from './teamManager.js';
 
 // ── State ────────────────────────────────────────────────────
 const agents = new Map<number, AgentState>();
@@ -188,7 +198,7 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 			break;
 
 		case 'createChat': {
-			const totalCharacters = agents.size + getChatAgentIds().length;
+			const totalCharacters = agents.size + getChatAgentIds().length + getTeamAgentIds().length;
 			if (totalCharacters >= MAX_CHARACTERS) {
 				broadcast({ type: 'chatError', chatId: '', error: `Character limit reached (max ${MAX_CHARACTERS})` });
 				break;
@@ -205,12 +215,21 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 		case 'closeChat':
 			closeChatSession(message.chatId, broadcast);
 			break;
+
+		case 'sendTeamMessage':
+			sendTeamMessage(message.skillId, message.message, broadcast);
+			break;
+
+		case 'setMode':
+			setMode(message.mode);
+			broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: message.mode });
+			break;
 	}
 }
 
 function handleWebviewReady(): void {
-	// Send settings
-	broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled() });
+	// Send settings (including mode)
+	broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: getMode() });
 
 	// Send cached assets
 	if (cachedAssets.characterSprites) {
@@ -245,6 +264,15 @@ function handleWebviewReady(): void {
 		// Re-create pixel characters for each existing chat
 		for (const chatAgentId of getChatAgentIds()) {
 			broadcast({ type: 'agentCreated', id: chatAgentId });
+		}
+	}
+
+	// Send existing team members
+	const teamMembers = getExistingTeamMembers();
+	if (teamMembers.length > 0) {
+		broadcast({ type: 'teamLoaded', members: teamMembers });
+		for (const member of teamMembers) {
+			broadcast({ type: 'agentCreated', id: member.agentId, name: member.name });
 		}
 	}
 }
@@ -305,11 +333,23 @@ async function loadAllAssets(): Promise<void> {
 async function start(): Promise<void> {
 	console.log('[Pixel Agents] Starting server...');
 
-	// Initialize chat manager with shared agent ID counter
+	// Initialize chat manager and team manager with shared agent ID counter
 	initChatManager(nextAgentId);
+	initTeamManager(nextAgentId);
 
 	// Load all assets
 	await loadAllAssets();
+
+	// Load team skills and start watcher
+	const skills = loadSkills();
+	if (skills.length > 0) {
+		loadTeam(skills, broadcast);
+		console.log(`[Pixel Agents] Loaded ${skills.length} team skills`);
+	}
+	watchSkills((updatedSkills) => {
+		console.log(`[Pixel Agents] Skills changed — reloading ${updatedSkills.length} skills`);
+		loadTeam(updatedSkills, broadcast);
+	});
 
 	// Start project scanning to discover Claude CLI sessions
 	const projectDirs = getAllProjectDirs();

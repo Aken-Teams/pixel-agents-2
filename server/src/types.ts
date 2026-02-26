@@ -36,3 +36,12 @@ export interface ChatSession {
 	activeProcess: ChildProcess | null; // null when idle (between messages)
 	history: ChatMessage[]; // conversation history for context
 }
+
+export interface TeamSession {
+	skillId: string;
+	name: string;
+	agentId: number;
+	activeProcess: ChildProcess | null;
+	history: ChatMessage[];
+	systemPrompt: string;
+}
