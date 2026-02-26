@@ -1,6 +1,7 @@
 ---
 name: 行動哥
 palette: 5
+order: 7
 description: 行動應用工程師，負責 iOS/Android 開發、跨平台框架和行動端效能優化
 ---
 

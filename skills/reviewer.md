@@ -1,6 +1,7 @@
 ---
 name: 小審
 palette: 1
+order: 13
 description: 程式碼審查員，負責 code review、安全檢查、效能評估和品質把關
 ---
 

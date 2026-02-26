@@ -1,6 +1,7 @@
 ---
 name: 測試姐
 palette: 1
+order: 12
 description: QA 工程師，負責測試策略、自動化測試、Bug 追蹤和品質保證
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: 小前
 palette: 0
+order: 4
 description: 前端工程師，負責 UI 元件開發、響應式設計、效能優化和 API 串接
 ---
 

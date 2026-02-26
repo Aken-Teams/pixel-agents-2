@@ -1,6 +1,7 @@
 ---
 name: 小資
 palette: 2
+order: 6
 description: 資料庫管理員，負責 schema 設計、查詢優化、遷移規劃和資料管理
 ---
 

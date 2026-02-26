@@ -1,6 +1,7 @@
 ---
 name: 設計師
 palette: 4
+order: 3
 description: UI/UX 設計師，負責介面設計、使用者體驗、設計系統和原型製作
 ---
 

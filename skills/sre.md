@@ -1,6 +1,7 @@
 ---
 name: 穩定哥
 palette: 3
+order: 10
 description: SRE 工程師，負責系統可靠性、SLO 管理、監控告警和事件應變
 ---
 

@@ -16,6 +16,8 @@ export interface SkillDefinition {
 	role?: 'orchestrator' | 'worker';
 	/** Short description from frontmatter */
 	description?: string;
+	/** Display order (lower = first) */
+	order?: number;
 	/** The markdown body = system prompt content */
 	systemPrompt: string;
 }
@@ -52,6 +54,7 @@ function parseSkillFile(filePath: string): SkillDefinition | null {
 		let hueShift: number | undefined;
 		let role: 'orchestrator' | 'worker' | undefined;
 		let description: string | undefined;
+		let order: number | undefined;
 
 		for (const line of frontmatter.split('\n')) {
 			const match = line.match(/^\s*(\w+)\s*:\s*(.+?)\s*$/);
@@ -62,10 +65,11 @@ function parseSkillFile(filePath: string): SkillDefinition | null {
 			else if (key === 'hueShift') hueShift = parseInt(value, 10);
 			else if (key === 'role' && (value === 'orchestrator' || value === 'worker')) role = value;
 			else if (key === 'description') description = value.replace(/^["']|["']$/g, '');
+			else if (key === 'order') order = parseInt(value, 10);
 		}
 
 		if (!body) return null;
-		return { id, name, palette, hueShift, role, description, systemPrompt: body };
+		return { id, name, palette, hueShift, role, description, order, systemPrompt: body };
 	} catch {
 		return null;
 	}
@@ -82,6 +86,8 @@ export function loadSkills(): SkillDefinition[] {
 		const skill = parseSkillFile(path.join(dir, file));
 		if (skill) skills.push(skill);
 	}
+	// Sort by order field (lower first), unordered skills go to end
+	skills.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 	return skills;
 }
 

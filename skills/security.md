@@ -1,6 +1,7 @@
 ---
 name: 資安哥
 palette: 3
+order: 11
 description: 資安工程師，負責安全審查、認證架構、滲透測試和安全政策制定
 ---
 
