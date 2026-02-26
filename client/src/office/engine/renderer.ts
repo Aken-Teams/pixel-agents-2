@@ -484,11 +484,12 @@ export function renderBubbles(
       alpha = ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC
     }
 
-    const cached = getCachedSprite(sprite, zoom)
+    // Scale bubble to match character size (CHARACTER_RENDER_SCALE)
+    const cZoom = Math.round(zoom * CHARACTER_RENDER_SCALE)
+    const cached = getCachedSprite(sprite, cZoom)
     // Position: centered above the character's head
     // Character is rendered at charZoom (CHARACTER_RENDER_SCALE × zoom), anchored bottom-center
     // Place bubble above head with a small gap; follow sitting offset
-    const cZoom = Math.round(zoom * CHARACTER_RENDER_SCALE)
     const sittingOff = ch.state === CharacterState.TYPE
       ? Math.round(BUBBLE_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
     const bubbleX = Math.round(offsetX + ch.x * zoom - cached.width / 2)

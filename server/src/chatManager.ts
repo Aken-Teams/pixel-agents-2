@@ -210,10 +210,13 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 			console.log(`[Chat ${chatId}] Process exited with code ${code}`);
 		}
 
-		// Clear agent active status (back to idle on the map)
+		// Show waiting/checkmark bubble, then go idle
 		const agId = chatAgentIds.get(chatId);
 		if (agId !== undefined) {
-			broadcast({ type: 'agentStatus', id: agId, status: 'idle' });
+			broadcast({ type: 'agentStatus', id: agId, status: 'waiting' });
+			setTimeout(() => {
+				broadcast({ type: 'agentStatus', id: agId, status: 'idle' });
+			}, 3000);
 		}
 
 		broadcast({ type: 'chatStreamEnd', chatId });
