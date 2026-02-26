@@ -283,7 +283,8 @@ export function ChatPanel({
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--pixel-text-dim)',
-            fontSize: '20px',
+            fontSize: '14px',
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif",
             textAlign: 'center',
             padding: 20,
           }}>
@@ -314,7 +315,8 @@ export function ChatPanel({
             {activeChat.isStreaming && !activeChat.streamBuffer && (
               <div style={{
                 padding: '6px 10px',
-                fontSize: '20px',
+                fontSize: '14px',
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                 color: 'var(--pixel-text-dim)',
               }}>
                 Thinking...
@@ -347,8 +349,8 @@ export function ChatPanel({
               resize: 'none',
               height: 60,
               padding: '6px 8px',
-              fontSize: '20px',
-              fontFamily: "'FS Pixel Sans', monospace",
+              fontSize: '14.5px',
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
               background: 'var(--pixel-bg)',
               color: 'var(--pixel-text)',
               border: '2px solid var(--pixel-border)',
@@ -361,8 +363,9 @@ export function ChatPanel({
             disabled={activeChat.isStreaming || !inputValue.trim()}
             style={{
               padding: '6px 12px',
-              fontSize: '20px',
-              fontFamily: "'FS Pixel Sans', monospace",
+              fontSize: '14px',
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontWeight: 600,
               background: activeChat.isStreaming || !inputValue.trim()
                 ? 'var(--pixel-btn-bg)'
                 : 'var(--pixel-accent)',
@@ -383,6 +386,10 @@ export function ChatPanel({
   )
 }
 
+// System font stack for readable mixed CJK/Latin content
+const MESSAGE_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif"
+const CODE_FONT = "'Cascadia Code', 'Fira Code', 'Source Code Pro', Consolas, monospace"
+
 function MessageBubble({ message, assistantName, isStreaming }: {
   message: ChatMessage
   assistantName?: string
@@ -397,11 +404,14 @@ function MessageBubble({ message, assistantName, isStreaming }: {
       alignItems: isUser ? 'flex-end' : 'flex-start',
     }}>
       <div style={{
-        fontSize: '20px',
+        fontSize: '12px',
+        fontFamily: MESSAGE_FONT,
+        fontWeight: 600,
         color: 'var(--pixel-text-dim)',
         marginBottom: 2,
         paddingLeft: isUser ? 0 : 4,
         paddingRight: isUser ? 4 : 0,
+        letterSpacing: '0.02em',
       }}>
         {isUser ? 'You' : (assistantName || 'Claude')}
       </div>
@@ -409,9 +419,10 @@ function MessageBubble({ message, assistantName, isStreaming }: {
         className="chat-message-bubble"
         style={{
           maxWidth: '90%',
-          padding: '6px 10px',
-          fontSize: '20px',
-          lineHeight: 1.5,
+          padding: '8px 10px',
+          fontSize: '14.5px',
+          lineHeight: 1.6,
+          fontFamily: MESSAGE_FONT,
           background: isUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
           color: isUser ? '#fff' : 'var(--pixel-text)',
           border: `2px solid ${isUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
@@ -426,7 +437,7 @@ function MessageBubble({ message, assistantName, isStreaming }: {
           <ReactMarkdown
             components={{
               p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
-              strong: ({ children }) => <strong style={{ fontWeight: 'bold' }}>{children}</strong>,
+              strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
               em: ({ children }) => <em>{children}</em>,
               code: ({ children, className }) => {
                 const isBlock = className?.includes('language-')
@@ -437,7 +448,8 @@ function MessageBubble({ message, assistantName, isStreaming }: {
                       background: 'rgba(0,0,0,0.3)',
                       padding: '6px 8px',
                       margin: '4px 0',
-                      fontSize: '18px',
+                      fontSize: '13px',
+                      fontFamily: CODE_FONT,
                       overflowX: 'auto',
                       whiteSpace: 'pre',
                     }}>
@@ -449,7 +461,8 @@ function MessageBubble({ message, assistantName, isStreaming }: {
                   <code style={{
                     background: 'rgba(0,0,0,0.25)',
                     padding: '1px 4px',
-                    fontSize: '18px',
+                    fontSize: '13px',
+                    fontFamily: CODE_FONT,
                   }}>
                     {children}
                   </code>
@@ -458,10 +471,10 @@ function MessageBubble({ message, assistantName, isStreaming }: {
               pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto' }}>{children}</pre>,
               ul: ({ children }) => <ul style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ul>,
               ol: ({ children }) => <ol style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ol>,
-              li: ({ children }) => <li style={{ margin: '0.1em 0' }}>{children}</li>,
-              h1: ({ children }) => <div style={{ fontSize: '24px', fontWeight: 'bold', margin: '0.4em 0' }}>{children}</div>,
-              h2: ({ children }) => <div style={{ fontSize: '22px', fontWeight: 'bold', margin: '0.3em 0' }}>{children}</div>,
-              h3: ({ children }) => <div style={{ fontSize: '20px', fontWeight: 'bold', margin: '0.3em 0' }}>{children}</div>,
+              li: ({ children }) => <li style={{ margin: '0.15em 0' }}>{children}</li>,
+              h1: ({ children }) => <div style={{ fontSize: '17px', fontWeight: 700, margin: '0.5em 0 0.3em' }}>{children}</div>,
+              h2: ({ children }) => <div style={{ fontSize: '16px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
+              h3: ({ children }) => <div style={{ fontSize: '15px', fontWeight: 600, margin: '0.3em 0 0.2em' }}>{children}</div>,
               a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#7ecfff' }}>{children}</a>,
               blockquote: ({ children }) => (
                 <blockquote style={{
