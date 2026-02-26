@@ -127,12 +127,10 @@ function App() {
 
   const { agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters, layoutReady, loadedAssets, chatList, chats, addUserMessage } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
-  // Auto-fit zoom when layout first loads (especially for large static backgrounds)
+  // Set default zoom to 1x when layout first loads
   useEffect(() => {
     if (layoutReady) {
-      const layout = getOfficeState().getLayout()
-      const fitZoom = computeFitZoom(layout.cols, layout.rows)
-      editor.handleZoomChange(fitZoom)
+      editor.handleZoomChange(1)
     }
   }, [layoutReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
