@@ -265,21 +265,24 @@ export function ChatPanel({
           borderBottom: '2px solid var(--pixel-border)',
           background: 'var(--pixel-btn-bg)',
         }}>
-          {/* Orchestrator tab (if exists) */}
+          {/* Orchestrator tab (if exists) — distinct gold accent */}
           {orchestratorMember && (
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
-                padding: '4px 8px',
+                padding: '4px 10px',
                 fontSize: '18px',
                 cursor: 'pointer',
-                background: orchestratorSkillId === activeSkillId ? 'var(--pixel-bg)' : 'transparent',
-                color: orchestratorSkillId === activeSkillId ? '#fff' : 'var(--pixel-text-dim)',
+                background: orchestratorSkillId === activeSkillId
+                  ? 'rgba(218, 165, 32, 0.25)'
+                  : 'rgba(218, 165, 32, 0.08)',
+                color: orchestratorSkillId === activeSkillId ? '#ffd666' : '#c8a840',
                 borderRight: '2px solid var(--pixel-border)',
-                borderBottom: orchestratorSkillId === activeSkillId ? '2px solid var(--pixel-bg)' : '2px solid transparent',
+                borderBottom: orchestratorSkillId === activeSkillId ? '2px solid rgba(218, 165, 32, 0.25)' : '2px solid transparent',
                 marginBottom: -2,
+                fontWeight: 600,
               }}
               onClick={() => setActiveSkillId(orchestratorSkillId)}
             >
@@ -290,6 +293,7 @@ export function ChatPanel({
                   borderRadius: '50%',
                   background: '#f0a030',
                   flexShrink: 0,
+                  animation: 'pixel-agents-pulse 1.5s ease-in-out infinite',
                 }} />
               )}
               <span>{orchestratorMember.name}</span>
