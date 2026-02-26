@@ -30,11 +30,15 @@ export type ServerMessage =
 	| { type: 'chatThinkingChunk'; chatId: string; agentId: number; text: string }
 	| { type: 'existingChats'; chatIds: string[] }
 	// Team mode
-	| { type: 'teamLoaded'; members: TeamMemberInfo[] }
+	| { type: 'teamLoaded'; members: TeamMemberInfo[]; orchestratorSkillId?: string }
 	| { type: 'teamStreamChunk'; skillId: string; text: string }
 	| { type: 'teamStreamEnd'; skillId: string; agentId: number }
 	| { type: 'teamError'; skillId: string; error: string }
-	| { type: 'teamAlertBubble'; skillId: string; agentId: number };
+	| { type: 'teamAlertBubble'; skillId: string; agentId: number }
+	// Orchestrator
+	| { type: 'taskDispatched'; taskId: string; targetSkillId: string; targetAgentId: number; description: string }
+	| { type: 'taskCompleted'; taskId: string; targetSkillId: string }
+	| { type: 'orchestratorBusy'; busy: boolean };
 
 // ── Client → Server Messages ──────────────────────────────────
 
@@ -52,7 +56,9 @@ export type ClientMessage =
 	| { type: 'closeChat'; chatId: string }
 	// Team mode
 	| { type: 'sendTeamMessage'; skillId: string; message: string }
-	| { type: 'setMode'; mode: 'chat' | 'team' };
+	| { type: 'setMode'; mode: 'chat' | 'team' }
+	// Orchestrator
+	| { type: 'sendOrchestratorMessage'; message: string };
 
 export interface AgentMeta {
 	palette?: number;
@@ -66,4 +72,5 @@ export interface TeamMemberInfo {
 	agentId: number;
 	palette?: number;
 	hueShift?: number;
+	role?: 'orchestrator' | 'worker';
 }

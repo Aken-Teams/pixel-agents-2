@@ -45,3 +45,11 @@ export interface TeamSession {
 	history: ChatMessage[];
 	systemPrompt: string;
 }
+
+export interface OrchestratorTask {
+	taskId: string;
+	targetSkillId: string;
+	description: string;
+	status: 'pending' | 'in_progress' | 'completed' | 'failed';
+	result?: string;
+}

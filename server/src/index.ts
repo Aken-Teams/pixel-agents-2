@@ -50,8 +50,10 @@ import {
 	initTeamManager,
 	loadTeam,
 	sendTeamMessage,
+	sendOrchestratorMessage,
 	getTeamAgentIds,
 	getExistingTeamMembers,
+	getOrchestratorSkillId,
 } from './teamManager.js';
 
 // ── State ────────────────────────────────────────────────────
@@ -218,6 +220,10 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 
 		case 'sendTeamMessage':
 			sendTeamMessage(message.skillId, message.message, broadcast);
+			break;
+
+		case 'sendOrchestratorMessage':
+			sendOrchestratorMessage(message.message, broadcast);
 			break;
 
 		case 'setMode':

@@ -53,6 +53,15 @@ export interface TeamMemberInfo {
   agentId: number
   palette?: number
   hueShift?: number
+  role?: 'orchestrator' | 'worker'
+}
+
+export interface DispatchedTask {
+  taskId: string
+  targetSkillId: string
+  targetAgentId: number
+  description: string
+  completed: boolean
 }
 
 export interface ServerMessageState {
@@ -72,6 +81,10 @@ export interface ServerMessageState {
   teamChats: Record<string, ChatState>
   addTeamUserMessage: (skillId: string, content: string) => void
   agentNames: Record<number, string>
+  orchestratorSkillId: string | null
+  orchestratorBusy: boolean
+  dispatchedTasks: DispatchedTask[]
+  addOrchestratorUserMessage: (content: string) => void
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -102,6 +115,9 @@ export function useServerMessages(
   const [teamMembers, setTeamMembers] = useState<TeamMemberInfo[]>([])
   const [teamChats, setTeamChats] = useState<Record<string, ChatState>>({})
   const [agentNames, setAgentNames] = useState<Record<number, string>>({})
+  const [orchestratorSkillId, setOrchestratorSkillId] = useState<string | null>(null)
+  const [orchestratorBusy, setOrchestratorBusy] = useState(false)
+  const [dispatchedTasks, setDispatchedTasks] = useState<DispatchedTask[]>([])
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -474,6 +490,9 @@ export function useServerMessages(
       } else if (msg.type === 'teamLoaded') {
         const members = msg.members as TeamMemberInfo[]
         setTeamMembers(members)
+        // Set orchestrator
+        const orchId = (msg.orchestratorSkillId as string) || null
+        setOrchestratorSkillId(orchId)
         // Initialize team chat states for new members
         setTeamChats((prev) => {
           const next = { ...prev }
@@ -539,6 +558,26 @@ export function useServerMessages(
         const agentId = msg.agentId as number
         os.showAlertBubble(agentId)
         playAlertSound()
+      } else if (msg.type === 'taskDispatched') {
+        const task: DispatchedTask = {
+          taskId: msg.taskId as string,
+          targetSkillId: msg.targetSkillId as string,
+          targetAgentId: msg.targetAgentId as number,
+          description: msg.description as string,
+          completed: false,
+        }
+        setDispatchedTasks((prev) => [...prev, task])
+      } else if (msg.type === 'taskCompleted') {
+        const taskId = msg.taskId as string
+        setDispatchedTasks((prev) =>
+          prev.map((t) => t.taskId === taskId ? { ...t, completed: true } : t),
+        )
+      } else if (msg.type === 'orchestratorBusy') {
+        setOrchestratorBusy(msg.busy as boolean)
+        if (!(msg.busy as boolean)) {
+          // Clear dispatched tasks when orchestration finishes
+          setDispatchedTasks([])
+        }
       }
     }
     wsClient.addMessageListener(handler)
@@ -586,9 +625,29 @@ export function useServerMessages(
     })
   }, [])
 
+  const addOrchestratorUserMessage = useCallback((content: string) => {
+    // In orchestrator mode, user messages go to the orchestrator's chat
+    if (!orchestratorSkillId) return
+    setTeamChats((prev) => {
+      const chat = prev[orchestratorSkillId]
+      if (!chat) return prev
+      return {
+        ...prev,
+        [orchestratorSkillId]: {
+          ...chat,
+          messages: [...chat.messages, { role: 'user', content }],
+          isStreaming: true,
+        },
+      }
+    })
+    // Clear previous tasks for new orchestration round
+    setDispatchedTasks([])
+  }, [orchestratorSkillId])
+
   return {
     agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters,
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
+    orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
   }
 }

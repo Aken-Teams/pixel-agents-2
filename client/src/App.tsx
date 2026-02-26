@@ -130,6 +130,7 @@ function App() {
     agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters,
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
+    orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
   } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
@@ -196,6 +197,11 @@ function App() {
     wsClient.postMessage({ type: 'sendTeamMessage', skillId, message })
   }, [addTeamUserMessage])
 
+  const handleSendOrchestratorMessage = useCallback((message: string) => {
+    addOrchestratorUserMessage(message)
+    wsClient.postMessage({ type: 'sendOrchestratorMessage', message })
+  }, [addOrchestratorUserMessage])
+
   const officeState = getOfficeState()
 
   // Force dependency on editorTickForKeyboard to propagate keyboard-triggered re-renders
@@ -235,6 +241,10 @@ function App() {
         teamMembers={teamMembers}
         teamChats={teamChats}
         onSendTeamMessage={handleSendTeamMessage}
+        orchestratorSkillId={orchestratorSkillId}
+        orchestratorBusy={orchestratorBusy}
+        dispatchedTasks={dispatchedTasks}
+        onSendOrchestratorMessage={handleSendOrchestratorMessage}
       />
       <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`

@@ -12,6 +12,10 @@ export interface SkillDefinition {
 	palette?: number;
 	/** Optional hue shift in degrees */
 	hueShift?: number;
+	/** Role: 'orchestrator' = main dispatcher, 'worker' (default) = sub-agent */
+	role?: 'orchestrator' | 'worker';
+	/** Short description from frontmatter */
+	description?: string;
 	/** The markdown body = system prompt content */
 	systemPrompt: string;
 }
@@ -46,6 +50,8 @@ function parseSkillFile(filePath: string): SkillDefinition | null {
 		let name = id;
 		let palette: number | undefined;
 		let hueShift: number | undefined;
+		let role: 'orchestrator' | 'worker' | undefined;
+		let description: string | undefined;
 
 		for (const line of frontmatter.split('\n')) {
 			const match = line.match(/^\s*(\w+)\s*:\s*(.+?)\s*$/);
@@ -54,10 +60,12 @@ function parseSkillFile(filePath: string): SkillDefinition | null {
 			if (key === 'name') name = value;
 			else if (key === 'palette') palette = parseInt(value, 10);
 			else if (key === 'hueShift') hueShift = parseInt(value, 10);
+			else if (key === 'role' && (value === 'orchestrator' || value === 'worker')) role = value;
+			else if (key === 'description') description = value.replace(/^["']|["']$/g, '');
 		}
 
 		if (!body) return null;
-		return { id, name, palette, hueShift, systemPrompt: body };
+		return { id, name, palette, hueShift, role, description, systemPrompt: body };
 	} catch {
 		return null;
 	}

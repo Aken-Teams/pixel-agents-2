@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { ChatState, ChatMessage, TeamMemberInfo } from '../hooks/useServerMessages.js'
+import type { ChatState, ChatMessage, TeamMemberInfo, DispatchedTask } from '../hooks/useServerMessages.js'
 
 interface ChatPanelProps {
   chatList: string[]
@@ -14,17 +14,28 @@ interface ChatPanelProps {
   teamMembers: TeamMemberInfo[]
   teamChats: Record<string, ChatState>
   onSendTeamMessage: (skillId: string, message: string) => void
+  orchestratorSkillId: string | null
+  orchestratorBusy: boolean
+  dispatchedTasks: DispatchedTask[]
+  onSendOrchestratorMessage: (message: string) => void
 }
 
 export function ChatPanel({
   chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit,
   mode, onModeChange, teamMembers, teamChats, onSendTeamMessage,
+  orchestratorSkillId, orchestratorBusy, dispatchedTasks, onSendOrchestratorMessage,
 }: ChatPanelProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  const hasOrchestrator = !!orchestratorSkillId
+  const orchestratorMember = teamMembers.find((m) => m.skillId === orchestratorSkillId)
+  const workerMembers = hasOrchestrator
+    ? teamMembers.filter((m) => m.skillId !== orchestratorSkillId)
+    : teamMembers
 
   // Auto-select first chat if active one was closed
   useEffect(() => {
@@ -40,12 +51,12 @@ export function ChatPanel({
     }
   }, [chatList, activeChatId])
 
-  // Auto-select first team member
+  // Auto-select orchestrator or first team member
   useEffect(() => {
     if (teamMembers.length > 0 && !activeSkillId) {
-      setActiveSkillId(teamMembers[0].skillId)
+      setActiveSkillId(orchestratorSkillId || teamMembers[0].skillId)
     }
-  }, [teamMembers, activeSkillId])
+  }, [teamMembers, activeSkillId, orchestratorSkillId])
 
   // Determine active chat state based on mode
   const activeChat = mode === 'chat'
@@ -62,6 +73,9 @@ export function ChatPanel({
     setInputValue('')
   }, [mode, activeChatId, activeSkillId])
 
+  const isActiveOrchestrator = activeSkillId === orchestratorSkillId
+  const isInputDisabled = mode === 'team' && hasOrchestrator && !isActiveOrchestrator
+
   const handleSend = useCallback(() => {
     const text = inputValue.trim()
     if (!text) return
@@ -71,6 +85,9 @@ export function ChatPanel({
       const chat = chats[activeChatId]
       if (chat?.isStreaming) return
       onSendMessage(activeChatId, text)
+    } else if (hasOrchestrator && isActiveOrchestrator) {
+      if (orchestratorBusy) return
+      onSendOrchestratorMessage(text)
     } else {
       if (!activeSkillId) return
       const chat = teamChats[activeSkillId]
@@ -80,7 +97,9 @@ export function ChatPanel({
 
     setInputValue('')
     inputRef.current?.focus()
-  }, [mode, activeChatId, activeSkillId, inputValue, chats, teamChats, onSendMessage, onSendTeamMessage])
+  }, [mode, activeChatId, activeSkillId, inputValue, chats, teamChats,
+    onSendMessage, onSendTeamMessage, onSendOrchestratorMessage,
+    hasOrchestrator, isActiveOrchestrator, orchestratorBusy])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -95,6 +114,22 @@ export function ChatPanel({
 
   // Get the active team member name for the message area header
   const activeTeamMember = teamMembers.find((m) => m.skillId === activeSkillId)
+
+  // Get placeholder text
+  const getPlaceholder = () => {
+    if (mode === 'chat') return 'Type a message...'
+    if (isInputDisabled) return `${activeTeamMember?.name || ''} (read-only)`
+    if (isActiveOrchestrator) return 'Describe your task...'
+    return activeTeamMember ? `Message ${activeTeamMember.name}...` : 'Type a message...'
+  }
+
+  // Check if send is blocked
+  const isSendBlocked = () => {
+    if (!activeChat) return true
+    if (isInputDisabled) return true
+    if (mode === 'team' && hasOrchestrator && isActiveOrchestrator) return orchestratorBusy || !inputValue.trim()
+    return activeChat.isStreaming || !inputValue.trim()
+  }
 
   return (
     <div style={{
@@ -221,7 +256,7 @@ export function ChatPanel({
         </div>
       )}
 
-      {/* Team mode: member list */}
+      {/* Team mode: orchestrator + member tabs */}
       {mode === 'team' && teamMembers.length > 0 && (
         <div style={{
           display: 'flex',
@@ -230,9 +265,42 @@ export function ChatPanel({
           borderBottom: '2px solid var(--pixel-border)',
           background: 'var(--pixel-btn-bg)',
         }}>
-          {teamMembers.map((member) => {
+          {/* Orchestrator tab (if exists) */}
+          {orchestratorMember && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 8px',
+                fontSize: '18px',
+                cursor: 'pointer',
+                background: orchestratorSkillId === activeSkillId ? 'var(--pixel-bg)' : 'transparent',
+                color: orchestratorSkillId === activeSkillId ? '#fff' : 'var(--pixel-text-dim)',
+                borderRight: '2px solid var(--pixel-border)',
+                borderBottom: orchestratorSkillId === activeSkillId ? '2px solid var(--pixel-bg)' : '2px solid transparent',
+                marginBottom: -2,
+              }}
+              onClick={() => setActiveSkillId(orchestratorSkillId)}
+            >
+              {orchestratorBusy && (
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#f0a030',
+                  flexShrink: 0,
+                }} />
+              )}
+              <span>{orchestratorMember.name}</span>
+            </div>
+          )}
+          {/* Worker tabs */}
+          {workerMembers.map((member) => {
             const memberChat = teamChats[member.skillId]
             const isStreaming = memberChat?.isStreaming
+            const task = dispatchedTasks.find((t) => t.targetSkillId === member.skillId && !t.completed)
+            const hasCompleted = dispatchedTasks.some((t) => t.targetSkillId === member.skillId && t.completed)
             return (
               <div
                 key={member.skillId}
@@ -251,12 +319,21 @@ export function ChatPanel({
                 }}
                 onClick={() => setActiveSkillId(member.skillId)}
               >
-                {isStreaming && (
+                {(isStreaming || task) && (
                   <span style={{
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
                     background: 'var(--pixel-status-active)',
+                    flexShrink: 0,
+                  }} />
+                )}
+                {!isStreaming && !task && hasCompleted && (
+                  <span style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'var(--pixel-green)',
                     flexShrink: 0,
                   }} />
                 )}
@@ -294,7 +371,9 @@ export function ChatPanel({
                 : 'Select a chat tab')
               : (teamMembers.length === 0
                 ? 'No team skills found.\nAdd .md files to skills/ directory.'
-                : 'Select a team member')}
+                : hasOrchestrator
+                  ? 'Describe your task to the orchestrator'
+                  : 'Select a team member')}
           </div>
         ) : (
           <>
@@ -303,12 +382,14 @@ export function ChatPanel({
                 key={idx}
                 message={msg}
                 assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
+                teamMembers={teamMembers}
               />
             ))}
             {activeChat.isStreaming && activeChat.streamBuffer && (
               <MessageBubble
                 message={{ role: 'assistant', content: activeChat.streamBuffer }}
                 assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
+                teamMembers={teamMembers}
                 isStreaming
               />
             )}
@@ -328,7 +409,7 @@ export function ChatPanel({
       </div>
 
       {/* Input area */}
-      {activeChat && (
+      {activeChat && !isInputDisabled && (
         <div style={{
           borderTop: '2px solid var(--pixel-border)',
           padding: '8px',
@@ -340,10 +421,8 @@ export function ChatPanel({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={mode === 'team' && activeTeamMember
-              ? `Message ${activeTeamMember.name}...`
-              : 'Type a message...'}
-            disabled={activeChat.isStreaming}
+            placeholder={getPlaceholder()}
+            disabled={isSendBlocked() && !inputValue.trim()}
             style={{
               flex: 1,
               resize: 'none',
@@ -360,26 +439,40 @@ export function ChatPanel({
           />
           <button
             onClick={handleSend}
-            disabled={activeChat.isStreaming || !inputValue.trim()}
+            disabled={isSendBlocked()}
             style={{
               padding: '6px 12px',
               fontSize: '14px',
               fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               fontWeight: 600,
-              background: activeChat.isStreaming || !inputValue.trim()
+              background: isSendBlocked()
                 ? 'var(--pixel-btn-bg)'
                 : 'var(--pixel-accent)',
-              color: activeChat.isStreaming || !inputValue.trim()
+              color: isSendBlocked()
                 ? 'var(--pixel-text-dim)'
                 : '#fff',
               border: '2px solid var(--pixel-border)',
               borderRadius: 0,
-              cursor: activeChat.isStreaming || !inputValue.trim() ? 'default' : 'pointer',
+              cursor: isSendBlocked() ? 'default' : 'pointer',
               alignSelf: 'flex-end',
             }}
           >
             Send
           </button>
+        </div>
+      )}
+
+      {/* Read-only indicator for sub-agent tabs */}
+      {activeChat && isInputDisabled && (
+        <div style={{
+          borderTop: '2px solid var(--pixel-border)',
+          padding: '8px 12px',
+          fontSize: '12px',
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          color: 'var(--pixel-text-dim)',
+          textAlign: 'center',
+        }}>
+          Tasks are dispatched by {orchestratorMember?.name || 'the orchestrator'}
         </div>
       )}
     </div>
@@ -390,12 +483,42 @@ export function ChatPanel({
 const MESSAGE_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif"
 const CODE_FONT = "'Cascadia Code', 'Fira Code', 'Source Code Pro', Consolas, monospace"
 
-function MessageBubble({ message, assistantName, isStreaming }: {
+/**
+ * Strip [TASK:xxx]...[/TASK] blocks from text and replace with dispatch cards.
+ */
+function stripTaskBlocks(text: string): { cleanText: string; tasks: { skillId: string; description: string }[] } {
+  const tasks: { skillId: string; description: string }[] = []
+  const cleanText = text.replace(
+    /\[TASK:(\w[\w-]*)\]\s*([\s\S]*?)\s*\[\/TASK\]/g,
+    (_match, skillId: string, description: string) => {
+      tasks.push({ skillId, description })
+      return ''
+    },
+  ).trim()
+  return { cleanText, tasks }
+}
+
+function MessageBubble({ message, assistantName, isStreaming, teamMembers }: {
   message: ChatMessage
   assistantName?: string
   isStreaming?: boolean
+  teamMembers?: TeamMemberInfo[]
 }) {
   const isUser = message.role === 'user'
+
+  // Parse TASK blocks in assistant messages
+  const { cleanText, tasks } = !isUser
+    ? stripTaskBlocks(message.content)
+    : { cleanText: message.content, tasks: [] }
+
+  // Check if this is a RESULT message (auto-generated by orchestrator)
+  const isResultFeedback = !isUser && message.content.startsWith('[RESULT:')
+
+  // Skip rendering pure result feedback messages (they're internal)
+  if (isResultFeedback && isUser) return null
+
+  const getMemberName = (skillId: string) =>
+    teamMembers?.find((m) => m.skillId === skillId)?.name || skillId
 
   return (
     <div style={{
@@ -415,84 +538,116 @@ function MessageBubble({ message, assistantName, isStreaming }: {
       }}>
         {isUser ? 'You' : (assistantName || 'Claude')}
       </div>
-      <div
-        className="chat-message-bubble"
-        style={{
-          maxWidth: '90%',
-          padding: '8px 10px',
-          fontSize: '14.5px',
-          lineHeight: 1.6,
-          fontFamily: MESSAGE_FONT,
-          background: isUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
-          color: isUser ? '#fff' : 'var(--pixel-text)',
-          border: `2px solid ${isUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
-          borderRadius: 0,
-          wordBreak: 'break-word',
-          opacity: isStreaming ? 0.9 : 1,
-        }}
-      >
-        {isUser ? (
-          <span style={{ whiteSpace: 'pre-wrap' }}>{message.content.trim()}</span>
-        ) : (
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
-              strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
-              em: ({ children }) => <em>{children}</em>,
-              code: ({ children, className }) => {
-                const isBlock = className?.includes('language-')
-                if (isBlock) {
+
+      {/* Main text content (with TASK blocks stripped) */}
+      {cleanText && (
+        <div
+          className="chat-message-bubble"
+          style={{
+            maxWidth: '90%',
+            padding: '8px 10px',
+            fontSize: '14.5px',
+            lineHeight: 1.6,
+            fontFamily: MESSAGE_FONT,
+            background: isUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
+            color: isUser ? '#fff' : 'var(--pixel-text)',
+            border: `2px solid ${isUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
+            borderRadius: 0,
+            wordBreak: 'break-word',
+            opacity: isStreaming ? 0.9 : 1,
+          }}
+        >
+          {isUser ? (
+            <span style={{ whiteSpace: 'pre-wrap' }}>{cleanText.trim()}</span>
+          ) : (
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
+                strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
+                em: ({ children }) => <em>{children}</em>,
+                code: ({ children, className }) => {
+                  const isBlock = className?.includes('language-')
+                  if (isBlock) {
+                    return (
+                      <code style={{
+                        display: 'block',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '6px 8px',
+                        margin: '4px 0',
+                        fontSize: '13px',
+                        fontFamily: CODE_FONT,
+                        overflowX: 'auto',
+                        whiteSpace: 'pre',
+                      }}>
+                        {children}
+                      </code>
+                    )
+                  }
                   return (
                     <code style={{
-                      display: 'block',
-                      background: 'rgba(0,0,0,0.3)',
-                      padding: '6px 8px',
-                      margin: '4px 0',
+                      background: 'rgba(0,0,0,0.25)',
+                      padding: '1px 4px',
                       fontSize: '13px',
                       fontFamily: CODE_FONT,
-                      overflowX: 'auto',
-                      whiteSpace: 'pre',
                     }}>
                       {children}
                     </code>
                   )
-                }
-                return (
-                  <code style={{
-                    background: 'rgba(0,0,0,0.25)',
-                    padding: '1px 4px',
-                    fontSize: '13px',
-                    fontFamily: CODE_FONT,
+                },
+                pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto' }}>{children}</pre>,
+                ul: ({ children }) => <ul style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ol>,
+                li: ({ children }) => <li style={{ margin: '0.15em 0' }}>{children}</li>,
+                h1: ({ children }) => <div style={{ fontSize: '17px', fontWeight: 700, margin: '0.5em 0 0.3em' }}>{children}</div>,
+                h2: ({ children }) => <div style={{ fontSize: '16px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
+                h3: ({ children }) => <div style={{ fontSize: '15px', fontWeight: 600, margin: '0.3em 0 0.2em' }}>{children}</div>,
+                a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#7ecfff' }}>{children}</a>,
+                blockquote: ({ children }) => (
+                  <blockquote style={{
+                    borderLeft: '3px solid var(--pixel-text-dim)',
+                    margin: '0.3em 0',
+                    paddingLeft: '8px',
+                    opacity: 0.85,
                   }}>
                     {children}
-                  </code>
-                )
-              },
-              pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto' }}>{children}</pre>,
-              ul: ({ children }) => <ul style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ul>,
-              ol: ({ children }) => <ol style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ol>,
-              li: ({ children }) => <li style={{ margin: '0.15em 0' }}>{children}</li>,
-              h1: ({ children }) => <div style={{ fontSize: '17px', fontWeight: 700, margin: '0.5em 0 0.3em' }}>{children}</div>,
-              h2: ({ children }) => <div style={{ fontSize: '16px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
-              h3: ({ children }) => <div style={{ fontSize: '15px', fontWeight: 600, margin: '0.3em 0 0.2em' }}>{children}</div>,
-              a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#7ecfff' }}>{children}</a>,
-              blockquote: ({ children }) => (
-                <blockquote style={{
-                  borderLeft: '3px solid var(--pixel-text-dim)',
-                  margin: '0.3em 0',
-                  paddingLeft: '8px',
-                  opacity: 0.85,
-                }}>
-                  {children}
-                </blockquote>
-              ),
-            }}
-          >
-            {message.content.trim()}
-          </ReactMarkdown>
-        )}
-        {isStreaming && <span className="pixel-agents-pulse">|</span>}
-      </div>
+                  </blockquote>
+                ),
+              }}
+            >
+              {cleanText.trim()}
+            </ReactMarkdown>
+          )}
+          {isStreaming && <span className="pixel-agents-pulse">|</span>}
+        </div>
+      )}
+
+      {/* Task dispatch cards */}
+      {tasks.map((task, i) => (
+        <div key={i} style={{
+          maxWidth: '90%',
+          marginTop: 4,
+          padding: '6px 10px',
+          fontSize: '13px',
+          fontFamily: MESSAGE_FONT,
+          background: 'rgba(90, 140, 255, 0.12)',
+          border: '2px solid rgba(90, 140, 255, 0.3)',
+          borderRadius: 0,
+          color: 'var(--pixel-text)',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 2, color: 'var(--pixel-accent)' }}>
+            Dispatched to {getMemberName(task.skillId)}
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: 'var(--pixel-text-dim)',
+            whiteSpace: 'pre-wrap',
+            maxHeight: 60,
+            overflow: 'hidden',
+          }}>
+            {task.description.slice(0, 150)}{task.description.length > 150 ? '...' : ''}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
