@@ -265,6 +265,8 @@ export function ChatPanel({
           gap: 0,
           borderBottom: '2px solid var(--pixel-border)',
           background: 'var(--pixel-btn-bg)',
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
+          fontSize: '12px',
         }}>
           {/* Orchestrator tab (if exists) — distinct gold accent */}
           {orchestratorMember && (
@@ -274,8 +276,6 @@ export function ChatPanel({
                 alignItems: 'center',
                 gap: 3,
                 padding: '3px 7px',
-                fontSize: '13px',
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
                 cursor: 'pointer',
                 background: orchestratorSkillId === activeSkillId
                   ? 'rgba(218, 165, 32, 0.25)'
@@ -315,8 +315,6 @@ export function ChatPanel({
                   alignItems: 'center',
                   gap: 3,
                   padding: '3px 6px',
-                  fontSize: '13px',
-                  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
                   cursor: 'pointer',
                   background: member.skillId === activeSkillId ? 'var(--pixel-bg)' : 'transparent',
                   color: member.skillId === activeSkillId ? 'var(--pixel-text)' : 'var(--pixel-text-dim)',
