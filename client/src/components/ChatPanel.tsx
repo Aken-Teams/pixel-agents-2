@@ -415,6 +415,28 @@ export function ChatPanel({
                 思考中...
               </div>
             )}
+            {/* Tool activity indicator — show what the agent is doing (reading files, etc.) */}
+            {activeSkillId && teamToolActivities[activeSkillId] && (
+              <div style={{
+                padding: '4px 10px',
+                fontSize: '12px',
+                fontFamily: MESSAGE_FONT,
+                color: 'var(--pixel-text-dim)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                opacity: 0.8,
+              }}>
+                <span style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: 'var(--pixel-status-active)',
+                  animation: 'pixel-agents-pulse 1.5s ease-in-out infinite',
+                }} />
+                <span>{teamToolActivities[activeSkillId]}</span>
+              </div>
+            )}
             {/* Show waiting indicator when orchestrator is busy but not streaming (sub-agent working) */}
             {!activeChat.isStreaming && isActiveOrchestrator && orchestratorBusy && dispatchedTasks.some((t) => !t.completed) && (
               <div style={{

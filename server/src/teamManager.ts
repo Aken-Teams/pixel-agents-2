@@ -199,6 +199,7 @@ function createProjectDir(message: string): string {
 	const folderName = sanitized || `project-${Date.now()}`;
 	const projectDir = path.join(workspaceDir, folderName);
 	fs.mkdirSync(path.join(projectDir, 'docs'), { recursive: true });
+	fs.mkdirSync(path.join(projectDir, 'designs'), { recursive: true });
 	return projectDir;
 }
 
