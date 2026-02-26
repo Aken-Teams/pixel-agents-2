@@ -2008,118 +2008,46 @@
   "furniture": [],
   "staticSeats": [
     {
-      "uid": "conf-l1",
-      "seatCol": 14,
-      "seatRow": 6,
-      "facingDir": 2
-    },
-    {
-      "uid": "conf-l2",
-      "seatCol": 14,
+      "uid": "seat-l1",
+      "seatCol": 17,
       "seatRow": 9,
       "facingDir": 2
     },
     {
-      "uid": "conf-r1",
-      "seatCol": 25,
-      "seatRow": 6,
-      "facingDir": 1
+      "uid": "seat-l2",
+      "seatCol": 17,
+      "seatRow": 11,
+      "facingDir": 2
     },
     {
-      "uid": "conf-r2",
-      "seatCol": 25,
+      "uid": "seat-l3",
+      "seatCol": 17,
+      "seatRow": 13,
+      "facingDir": 2
+    },
+    {
+      "uid": "seat-r1",
+      "seatCol": 22,
       "seatRow": 9,
       "facingDir": 1
     },
     {
-      "uid": "conf-t1",
-      "seatCol": 18,
-      "seatRow": 4,
-      "facingDir": 0
-    },
-    {
-      "uid": "conf-t2",
-      "seatCol": 21,
-      "seatRow": 4,
-      "facingDir": 0
-    },
-    {
-      "uid": "conf-b1",
-      "seatCol": 18,
+      "uid": "seat-r2",
+      "seatCol": 22,
       "seatRow": 11,
-      "facingDir": 3
-    },
-    {
-      "uid": "conf-b2",
-      "seatCol": 21,
-      "seatRow": 11,
-      "facingDir": 3
-    },
-    {
-      "uid": "desk-1",
-      "seatCol": 4,
-      "seatRow": 23,
-      "facingDir": 3
-    },
-    {
-      "uid": "desk-2",
-      "seatCol": 9,
-      "seatRow": 23,
-      "facingDir": 3
-    },
-    {
-      "uid": "desk-3",
-      "seatCol": 15,
-      "seatRow": 23,
-      "facingDir": 3
-    },
-    {
-      "uid": "desk-4",
-      "seatCol": 4,
-      "seatRow": 29,
-      "facingDir": 3
-    },
-    {
-      "uid": "desk-5",
-      "seatCol": 9,
-      "seatRow": 29,
-      "facingDir": 3
-    },
-    {
-      "uid": "desk-6",
-      "seatCol": 15,
-      "seatRow": 29,
-      "facingDir": 3
-    },
-    {
-      "uid": "meet-l",
-      "seatCol": 28,
-      "seatRow": 22,
-      "facingDir": 2
-    },
-    {
-      "uid": "meet-r",
-      "seatCol": 35,
-      "seatRow": 22,
       "facingDir": 1
     },
     {
-      "uid": "meet-t",
-      "seatCol": 31,
-      "seatRow": 20,
+      "uid": "seat-r3",
+      "seatCol": 22,
+      "seatRow": 13,
+      "facingDir": 1
+    },
+    {
+      "uid": "seat-t1",
+      "seatCol": 19.5,
+      "seatRow": 6.8,
       "facingDir": 0
-    },
-    {
-      "uid": "meet-b",
-      "seatCol": 31,
-      "seatRow": 25,
-      "facingDir": 3
-    },
-    {
-      "uid": "office-1",
-      "seatCol": 33,
-      "seatRow": 45,
-      "facingDir": 3
     }
   ]
 }
