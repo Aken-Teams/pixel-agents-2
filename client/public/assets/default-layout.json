@@ -2051,50 +2051,50 @@
     },
     {
       "uid": "seat-d1",
-      "seatCol": 5,
-      "seatRow": 22,
+      "seatCol": 18.5,
+      "seatRow": 27,
       "facingDir": 3
     },
     {
       "uid": "seat-d2",
-      "seatCol": 10,
-      "seatRow": 22,
+      "seatCol": 6.5,
+      "seatRow": 27,
       "facingDir": 3
     },
     {
       "uid": "seat-d3",
-      "seatCol": 15,
-      "seatRow": 22,
+      "seatCol": 12.5,
+      "seatRow": 27,
       "facingDir": 3
     },
     {
       "uid": "seat-d4",
-      "seatCol": 5,
-      "seatRow": 25,
-      "facingDir": 0
+      "seatCol": 6.5,
+      "seatRow": 33,
+      "facingDir": 3
     },
     {
       "uid": "seat-d5",
-      "seatCol": 10,
-      "seatRow": 25,
-      "facingDir": 0
+      "seatCol": 12.5,
+      "seatRow": 33,
+      "facingDir": 3
     },
     {
       "uid": "seat-d6",
-      "seatCol": 15,
-      "seatRow": 25,
-      "facingDir": 0
+      "seatCol": 18.5,
+      "seatRow": 33,
+      "facingDir": 3
     },
     {
       "uid": "seat-m1",
-      "seatCol": 28,
-      "seatRow": 20,
+      "seatCol": 29,
+      "seatRow": 25,
       "facingDir": 2
     },
     {
       "uid": "seat-m2",
-      "seatCol": 28,
-      "seatRow": 22,
+      "seatCol": 29,
+      "seatRow": 29,
       "facingDir": 2
     },
     {

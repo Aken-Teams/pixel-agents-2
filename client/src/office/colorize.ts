@@ -131,8 +131,10 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
  * S slider (-100 to +100): shifts saturation
  * B slider (-100 to 100): shifts lightness
  * C slider (-100 to 100): adjusts contrast around midpoint
+ *
+ * If preserveSkin is true, pixels detected as skin tones are left unchanged.
  */
-export function adjustSprite(sprite: SpriteData, color: FloorColor): SpriteData {
+export function adjustSprite(sprite: SpriteData, color: FloorColor, preserveSkin = false): SpriteData {
   const { h: hShift, s: sShift, b, c } = color
   const result: SpriteData = []
 
@@ -148,6 +150,13 @@ export function adjustSprite(sprite: SpriteData, color: FloorColor): SpriteData 
       const g = parseInt(pixel.slice(3, 5), 16)
       const bv = parseInt(pixel.slice(5, 7), 16)
       const [origH, origS, origL] = rgbToHsl(r, g, bv)
+
+      // Skip skin-toned pixels: warm hue range covering all PNG sprite skin tones,
+      // lightness >= 0.25 excludes dark outlines/hair, saturation < 0.75 excludes vivid shirts
+      if (preserveSkin && origH >= 8 && origH <= 55 && origL >= 0.25 && origS < 0.75) {
+        newRow.push(pixel)
+        continue
+      }
 
       // Shift hue
       const newH = ((origH + hShift) % 360 + 360) % 360
