@@ -11,7 +11,6 @@ import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChat
 import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
 import {
 	initProjectState,
-	saveProjectState,
 	saveProjectStateImmediate,
 	loadProjectState,
 	listProjects,
@@ -191,8 +190,12 @@ function getIdleAgents(): IdleAgent[] {
 	return result;
 }
 
-/** Sync a session's history to project.json */
-function persistHistory(session: TeamSession): void {
+/** Sync a session's history to project.json (immediate write).
+ *  Must use saveProjectStateImmediate instead of debounced saveProjectState,
+ *  because saveProjectStateImmediate reads from disk and cancels pending
+ *  debounced writes — if history was debounced, an immediate task-status
+ *  update would read stale data from disk and overwrite the pending history. */
+function persistHistory(_session: TeamSession): void {
 	if (!currentProjectDir) return;
 	const allHistory: Record<string, ChatMessage[]> = {};
 	for (const [skillId, sess] of teamSessions) {
@@ -200,7 +203,7 @@ function persistHistory(session: TeamSession): void {
 			allHistory[skillId] = sess.history;
 		}
 	}
-	saveProjectState(currentProjectDir, {
+	saveProjectStateImmediate(currentProjectDir, {
 		responseCounter,
 		history: allHistory,
 	});
