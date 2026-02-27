@@ -56,6 +56,10 @@ export function getAssetsRoot(): string {
 	return path.resolve(import.meta.dirname, '..');
 }
 
+export function getWorkspaceRoot(): string {
+	return path.join(os.homedir(), LAYOUT_FILE_DIR, 'workspace');
+}
+
 export function getClientAssetsDir(): string {
 	return path.join(getAssetsRoot(), 'client', 'public', 'assets');
 }

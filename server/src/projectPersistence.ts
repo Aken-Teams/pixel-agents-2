@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { getAssetsRoot } from './config.js';
+import { getWorkspaceRoot } from './config.js';
 import type { ChatMessage } from './types.js';
 
 // ── Types ────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ export function loadProjectState(projectDir: string): ProjectState | null {
  * List all projects under workspace/.
  */
 export function listProjects(): ProjectSummary[] {
-	const workspaceDir = path.join(getAssetsRoot(), 'workspace');
+	const workspaceDir = getWorkspaceRoot();
 	if (!fs.existsSync(workspaceDir)) return [];
 
 	const results: ProjectSummary[] = [];

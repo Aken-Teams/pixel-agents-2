@@ -5,7 +5,7 @@ import type { TeamSession, ChatMessage } from './types.js';
 import type { TeamMemberInfo } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
 import type { SkillDefinition } from './skillLoader.js';
-import { getAssetsRoot } from './config.js';
+import { getWorkspaceRoot } from './config.js';
 import { formatToolStatus } from './transcriptParser.js';
 import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChatManager.js';
 import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
@@ -121,7 +121,7 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[]): string {
 	const langRule = '\n\n## 語言規則（最高優先級）\n- 你的所有回覆必須全程使用繁體中文，包括思考過程、說明文字、標題和摘要。\n- 程式碼中的變數名、函式名、註解可以用英文，但所有對話內容、解釋、報告必須是繁體中文。\n- 絕對不可以用英文句子回覆。違反此規則等同任務失敗。';
 
-	const safetyRule = '\n\n## ⚠️ 安全限制（最高優先級）\n- **絕對禁止**對 port 3000 和 port 5173 執行任何操作（kill、stop、restart、佔用）。這兩個是 pixel-agents 管理系統本身的 port（3000=後端 server、5173=前端 dev server），關閉任一個都會導致整個系統崩潰。\n- **絕對禁止**執行 `kill`、`taskkill`、`pkill`、`killall` 等指令來終止你不認識的 process。\n- **絕對禁止**執行 `lsof -ti :3000 | xargs kill`、`lsof -ti :5173 | xargs kill` 或類似的指令。\n- 如果你的 dev server 有 port 衝突，換一個 port（建議 3001、3002、4000），不要殺掉佔用 port 的 process。\n- 你的工作目錄在 workspace/ 下的專案目錄，不要修改 workspace/ 以外的檔案。';
+	const safetyRule = '\n\n## ⚠️ 安全限制（最高優先級）\n- **絕對禁止**對 port 3000 和 port 5173 執行任何操作（kill、stop、restart、佔用）。這兩個是 pixel-agents 管理系統本身的 port（3000=後端 server、5173=前端 dev server），關閉任一個都會導致整個系統崩潰。\n- **絕對禁止**執行 `kill`、`taskkill`、`pkill`、`killall` 等指令來終止你不認識的 process。\n- **絕對禁止**執行 `lsof -ti :3000 | xargs kill`、`lsof -ti :5173 | xargs kill` 或類似的指令。\n- 如果你的 dev server 有 port 衝突，換一個 port（建議 3001、3002、4000），不要殺掉佔用 port 的 process。\n- 你的工作目錄是一個獨立的專案目錄（位於 ~/.pixel-agents/workspace/ 下），不要修改此專案目錄以外的檔案。';
 
 	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule;
 
@@ -247,7 +247,7 @@ let responseCounter = 0;
  * Sanitizes the message into a valid folder name.
  */
 function createProjectDir(message: string): string {
-	const workspaceDir = path.join(getAssetsRoot(), 'workspace');
+	const workspaceDir = getWorkspaceRoot();
 	// Extract meaningful keywords from the message for the folder name
 	const sanitized = message
 		.replace(/[<>:"/\\|?*]/g, '')
@@ -264,7 +264,7 @@ function createProjectDir(message: string): string {
 /** Get the current working directory for agents */
 function getAgentCwd(): string {
 	if (currentProjectDir) return currentProjectDir;
-	const fallback = path.join(getAssetsRoot(), 'workspace');
+	const fallback = getWorkspaceRoot();
 	fs.mkdirSync(fallback, { recursive: true });
 	return fallback;
 }
