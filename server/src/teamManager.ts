@@ -9,6 +9,7 @@ import { getWorkspaceRoot } from './config.js';
 import { formatToolStatus } from './transcriptParser.js';
 import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChatManager.js';
 import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
+import { findAnswer, RECEPTIONIST_WELCOME_MESSAGES } from './receptionistFAQ.js';
 import {
 	initProjectState,
 	saveProjectStateImmediate,
@@ -34,6 +35,38 @@ let taskIdCounter = 0;
 let currentProjectDir: string | null = null;
 
 const MAX_ORCHESTRATION_DEPTH = 10;
+
+// Receptionist bubble state
+const RECEPTIONIST_SKILL_ID = 'receptionist';
+const RECEPTIONIST_SEAT_ID = 'seat-b4';
+const RECEPTIONIST_BUBBLE_INTERVAL_MS = 25_000;
+let receptionistBubbleTimer: ReturnType<typeof setInterval> | null = null;
+let receptionistBubbleIndex = 0;
+let cachedBroadcastForReceptionist: Broadcast | null = null;
+
+function startReceptionistBubbles(broadcast: Broadcast): void {
+	cachedBroadcastForReceptionist = broadcast;
+	if (receptionistBubbleTimer) return;
+	const session = teamSessions.get(RECEPTIONIST_SKILL_ID);
+	if (!session) return;
+	// Show first message shortly after start
+	const showBubble = () => {
+		const s = teamSessions.get(RECEPTIONIST_SKILL_ID);
+		if (!s) return;
+		const text = RECEPTIONIST_WELCOME_MESSAGES[receptionistBubbleIndex % RECEPTIONIST_WELCOME_MESSAGES.length];
+		broadcast({ type: 'idleChatMessage', agentId: s.agentId, text });
+		receptionistBubbleIndex++;
+	};
+	setTimeout(showBubble, 5_000); // first bubble after 5s
+	receptionistBubbleTimer = setInterval(showBubble, RECEPTIONIST_BUBBLE_INTERVAL_MS);
+}
+
+function stopReceptionistBubbles(): void {
+	if (receptionistBubbleTimer) {
+		clearInterval(receptionistBubbleTimer);
+		receptionistBubbleTimer = null;
+	}
+}
 
 export function initTeamManager(ref: { current: number }): void {
 	nextAgentIdRef = ref;
@@ -93,7 +126,13 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 		teamSessions.set(skill.id, session);
 
 		console.log(`[Team] Added member ${skill.name} (skill ${skill.id}, agent ${agentId}${skill.role === 'orchestrator' ? ', ORCHESTRATOR' : ''})`);
-		broadcast({ type: 'agentCreated', id: agentId, name: skill.name, role: skill.role ?? 'worker' });
+		broadcast({
+			type: 'agentCreated',
+			id: agentId,
+			name: skill.name,
+			role: skill.role ?? 'worker',
+			preferredSeatId: skill.id === RECEPTIONIST_SKILL_ID ? RECEPTIONIST_SEAT_ID : undefined,
+		});
 	}
 
 	// Broadcast full team info
@@ -113,6 +152,12 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 	if (!orchestratorBusy) {
 		startIdleChatScheduler(broadcast, getIdleAgents);
 	}
+
+	// Start receptionist welcome bubbles (independent of team idle chat)
+	if (teamSessions.has(RECEPTIONIST_SKILL_ID)) {
+		stopReceptionistBubbles();
+		startReceptionistBubbles(broadcast);
+	}
 }
 
 /**
@@ -129,8 +174,8 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule + docOutputRule + summaryRule;
 
-	// Build team member list for orchestrator
-	const workers = allSkills.filter((s) => s.id !== skill.id);
+	// Build team member list for orchestrator (exclude receptionist — FAQ-only, not task-capable)
+	const workers = allSkills.filter((s) => s.id !== skill.id && s.id !== RECEPTIONIST_SKILL_ID);
 	const memberList = workers.map((w) => {
 		const desc = w.description || w.systemPrompt.split('\n').find((l) => l.trim() && !l.startsWith('#'))?.trim() || '';
 		return `- **${w.name}** (${w.id}) — ${desc.slice(0, 100)}`;
@@ -175,6 +220,7 @@ function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
 			palette: skill.palette,
 			hueShift: skill.hueShift,
 			role: skill.role,
+			preferredSeatId: skill.id === RECEPTIONIST_SKILL_ID ? RECEPTIONIST_SEAT_ID : undefined,
 		};
 	}).filter((m) => m.agentId >= 0);
 }
@@ -184,10 +230,12 @@ export function getExistingTeamMembers(): TeamMemberInfo[] {
 	return getTeamMemberInfos(cachedSkills);
 }
 
-/** Get idle team agents (not currently running a process) for idle chat */
+/** Get idle team agents (not currently running a process) for idle chat.
+ *  Excludes the receptionist, which has its own independent bubble loop. */
 function getIdleAgents(): IdleAgent[] {
 	const result: IdleAgent[] = [];
 	for (const [skillId, session] of teamSessions) {
+		if (skillId === RECEPTIONIST_SKILL_ID) continue; // Receptionist has its own bubble loop
 		if (!session.activeProcess) {
 			const role = skillId === orchestratorSkillId ? 'orchestrator' as const : 'worker' as const;
 			result.push({ agentId: session.agentId, skillId, name: session.name, role });
@@ -661,14 +709,30 @@ function spawnClaudeForSkill(
  * Used when user manually talks to a sub-agent, or when there's no orchestrator.
  */
 export function sendTeamMessage(skillId: string, message: string, broadcast: Broadcast): void {
-	// Stop idle chat when someone starts working
-	stopIdleChat();
-
 	const session = teamSessions.get(skillId);
 	if (!session) {
 		broadcast({ type: 'teamError', skillId, error: 'Team member not found' });
 		return;
 	}
+
+	// ── Receptionist: FAQ mode — no Claude API call ──────────────
+	if (skillId === RECEPTIONIST_SKILL_ID) {
+		session.history.push({ role: 'user', content: message });
+		const answer = findAnswer(message);
+		// Simulate a short thinking delay before responding
+		const delay = 400 + Math.random() * 600;
+		broadcast({ type: 'teamStreamChunk', skillId, text: '' }); // signal start
+		setTimeout(() => {
+			broadcast({ type: 'teamStreamChunk', skillId, text: answer });
+			session.history.push({ role: 'assistant', content: answer });
+			broadcast({ type: 'teamStreamEnd', skillId, agentId: session.agentId });
+		}, delay);
+		return;
+	}
+
+	// ── Regular team member ──────────────────────────────────────
+	// Stop idle chat when someone starts working
+	stopIdleChat();
 
 	if (session.activeProcess) {
 		broadcast({ type: 'teamError', skillId, error: 'Previous message still processing' });

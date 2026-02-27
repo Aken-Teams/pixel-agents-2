@@ -360,7 +360,7 @@ function handleWebviewReady(): void {
 		const orchSkillId = getOrchestratorSkillId();
 		for (const member of teamMembers) {
 			const role = member.skillId === orchSkillId ? 'orchestrator' as const : 'worker' as const;
-			broadcast({ type: 'agentCreated', id: member.agentId, name: member.name, role });
+			broadcast({ type: 'agentCreated', id: member.agentId, name: member.name, role, preferredSeatId: member.preferredSeatId });
 		}
 	}
 }

@@ -77,7 +77,8 @@ export function ChatPanel({
   }, [mode, activeChatId, activeSkillId])
 
   const isActiveOrchestrator = activeSkillId === orchestratorSkillId
-  const isInputDisabled = mode === 'team' && hasOrchestrator && !isActiveOrchestrator
+  const isReceptionist = activeSkillId === 'receptionist'
+  const isInputDisabled = mode === 'team' && hasOrchestrator && !isActiveOrchestrator && !isReceptionist
 
   const handleSend = useCallback(() => {
     const text = inputValue.trim()

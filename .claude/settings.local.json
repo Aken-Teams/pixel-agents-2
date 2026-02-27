@@ -9,7 +9,10 @@
       "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter \"\"name=''claude.exe''\"\" | Select-Object ProcessId, CreationDate, CommandLine | Format-List\")",
       "Bash(powershell -Command \"Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like ''*-p*--dangerously*'' -or $_.CommandLine -like ''*-p*--no-session*'' } | Select-Object ProcessId, Name, CreationDate, CommandLine | Format-List\")",
       "Bash(python3:*)",
-      "Bash(python -c:*)"
+      "Bash(python -c:*)",
+      "Bash(grep -rn \"seat-b4\\\\|receptionist\\\\|小幫手\" D:/github/pixel-agents-2/server/ --include=\"*.ts\" 2>/dev/null | head -20)",
+      "Bash(grep -rn \"seat\\\\|seatId\\\\|skillId\\\\|skill_id\" D:/github/pixel-agents-2/server/src/ --include=\"*.ts\" 2>/dev/null | grep -i \"assign\\\\|seat\\\\|skill\" | head -20)",
+      "Bash(ls -lt C:/Users/petty/.claude/projects/D--github-pixel-agents-2/*.jsonl 2>/dev/null | head -5)"
     ]
   }
 }

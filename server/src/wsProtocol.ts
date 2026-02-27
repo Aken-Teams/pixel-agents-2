@@ -14,7 +14,7 @@ export interface DocMeta {
 // ── Server → Client Messages ──────────────────────────────────
 
 export type ServerMessage =
-	| { type: 'agentCreated'; id: number; name?: string; role?: 'orchestrator' | 'worker' }
+	| { type: 'agentCreated'; id: number; name?: string; role?: 'orchestrator' | 'worker'; preferredSeatId?: string }
 	| { type: 'agentClosed'; id: number }
 	| { type: 'agentSelected'; id: number }
 	| { type: 'existingAgents'; agents: number[]; agentMeta: Record<string, AgentMeta> }
@@ -107,4 +107,5 @@ export interface TeamMemberInfo {
 	palette?: number;
 	hueShift?: number;
 	role?: 'orchestrator' | 'worker';
+	preferredSeatId?: string;
 }

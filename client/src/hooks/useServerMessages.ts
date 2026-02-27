@@ -179,7 +179,8 @@ export function useServerMessages(
         if (name) {
           setAgentNames((prev) => ({ ...prev, [id]: name }))
         }
-        const preferredSeat = role === 'orchestrator' ? 'seat-b1' : undefined
+        const preferredSeatId = msg.preferredSeatId as string | undefined
+        const preferredSeat = preferredSeatId ?? (role === 'orchestrator' ? 'seat-b1' : undefined)
         os.addAgent(id, undefined, undefined, preferredSeat, undefined, name)
         saveAgentSeats(os)
       } else if (msg.type === 'agentClosed') {
