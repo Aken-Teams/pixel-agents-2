@@ -5,6 +5,12 @@ import type { ChatMessage } from './types.js';
 
 // ── Types ────────────────────────────────────────────────────
 
+export interface TaskRecord {
+	skillId: string;
+	status: 'dispatched' | 'completed' | 'failed';
+	description: string;
+}
+
 export interface ProjectState {
 	name: string;
 	createdAt: string;
@@ -14,6 +20,7 @@ export interface ProjectState {
 	userMessage: string;
 	responseCounter: number;
 	history: Record<string, ChatMessage[]>;
+	tasks: Record<string, TaskRecord>;
 }
 
 export interface ProjectSummary {
@@ -47,6 +54,7 @@ export function initProjectState(projectDir: string, userMessage: string): void 
 		userMessage,
 		responseCounter: 0,
 		history: {},
+		tasks: {},
 	};
 	writeProjectFile(projectDir, state);
 }

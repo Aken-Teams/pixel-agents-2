@@ -17,6 +17,7 @@ import {
 	listProjects,
 	type ProjectState,
 	type ProjectSummary,
+	type TaskRecord,
 } from './projectPersistence.js';
 
 const teamSessions = new Map<string, TeamSession>();
@@ -609,6 +610,14 @@ async function orchestrateStep(
 
 		console.log(`[Orchestrator] Dispatching task ${taskId} to ${targetSession.name}: ${task.description.slice(0, 80)}...`);
 
+		// Persist task as dispatched (immediate write — critical for crash recovery)
+		if (currentProjectDir) {
+			const prev = loadProjectState(currentProjectDir);
+			const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
+			tasks[taskId] = { skillId: task.skillId, status: 'dispatched', description: task.description.slice(0, 200) };
+			saveProjectStateImmediate(currentProjectDir, { tasks });
+		}
+
 		// Track task for boss nagging
 		trackTask(targetSession.agentId, task.skillId, broadcast, getIdleAgents);
 
@@ -635,11 +644,25 @@ async function orchestrateStep(
 			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${resultText}\n[/RESULT]`);
 			broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
 			untrackTask(targetSession.agentId);
+			// Persist task as completed
+			if (currentProjectDir) {
+				const prev = loadProjectState(currentProjectDir);
+				const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
+				if (tasks[taskId]) tasks[taskId] = { ...tasks[taskId], status: 'completed' };
+				saveProjectStateImmediate(currentProjectDir, { tasks });
+			}
 			console.log(`[Orchestrator] Task ${taskId} completed by ${targetSession.name}`);
 		} catch (err) {
 			const errMsg = err instanceof Error ? err.message : String(err);
 			results.push(`[RESULT:${task.skillId}] 錯誤：${errMsg} [/RESULT]`);
 			untrackTask(targetSession.agentId);
+			// Persist task as failed
+			if (currentProjectDir) {
+				const prev = loadProjectState(currentProjectDir);
+				const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
+				if (tasks[taskId]) tasks[taskId] = { ...tasks[taskId], status: 'failed' };
+				saveProjectStateImmediate(currentProjectDir, { tasks });
+			}
 			console.error(`[Orchestrator] Task ${taskId} failed:`, errMsg);
 		}
 	}
@@ -683,6 +706,20 @@ export function resumeProject(projectDir: string, broadcast: Broadcast): boolean
 			console.log(`[Team] Restored ${messages.length} messages for ${session.name}`);
 		} else {
 			console.log(`[Team] Skipping history for unknown skill: ${skillId}`);
+		}
+	}
+
+	// Analyze incomplete tasks and inject summary into orchestrator history
+	const incompleteTasks = Object.entries(state.tasks ?? {})
+		.filter(([, t]) => t.status === 'dispatched')
+		.map(([id, t]) => `- ${id} → ${t.skillId}: ${t.description}（狀態：已派出但未收到回報）`);
+
+	if (incompleteTasks.length > 0 && orchestratorSkillId) {
+		const orchSession = teamSessions.get(orchestratorSkillId);
+		if (orchSession) {
+			const summary = `⚠️ 專案恢復狀態通知：\n以下任務在上次中斷時已派出，但成員尚未回報 [RESULT]，視為**未完成**，必須重新指派：\n${incompleteTasks.join('\n')}\n\n請根據上述資訊判斷哪些工作需要重做，不要僅憑檔案存在就認定任務已完成。`;
+			orchSession.history.push({ role: 'user', content: summary });
+			console.log(`[Team] Injected ${incompleteTasks.length} incomplete task(s) into orchestrator context`);
 		}
 	}
 
