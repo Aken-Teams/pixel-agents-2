@@ -21,6 +21,8 @@ import { ChatPanel } from './components/ChatPanel.js'
 import { AgentLabels } from './components/AgentLabels.js'
 import { ThoughtBubbles } from './components/ThoughtBubbles.js'
 import { InterviewModal } from './components/InterviewModal.js'
+import { CharacterProfileModal } from './components/CharacterProfileModal.js'
+import type { TeamMemberInfo } from './hooks/useServerMessages.js'
 
 // Game state lives outside React — updated imperatively by message handlers
 const officeStateRef = { current: null as OfficeState | null }
@@ -145,6 +147,7 @@ function App() {
   }, [layoutReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isDebugMode, setIsDebugMode] = useState(false)
+  const [profileMember, setProfileMember] = useState<TeamMemberInfo | null>(null)
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), [])
 
@@ -172,12 +175,18 @@ function App() {
   }, [])
 
   const handleClick = useCallback((agentId: number) => {
-    // If clicked agent is a sub-agent, focus the parent's terminal instead
+    // If clicked agent is a sub-agent, resolve to the parent
     const os = getOfficeState()
     const meta = os.subagentMeta.get(agentId)
     const focusId = meta ? meta.parentAgentId : agentId
-    wsClient.postMessage({ type: 'focusAgent', id: focusId })
-  }, [])
+    // Show character profile if team member info is available
+    const member = teamMembers.find((m) => m.agentId === focusId)
+    if (member) {
+      setProfileMember(member)
+    } else {
+      wsClient.postMessage({ type: 'focusAgent', id: focusId })
+    }
+  }, [teamMembers])
 
   const handleCreateChat = useCallback(() => {
     wsClient.postMessage({ type: 'createChat' })
@@ -396,6 +405,16 @@ function App() {
         <InterviewModal
           questions={interviewQuestions}
           onClose={clearInterview}
+        />
+      )}
+      {profileMember && (
+        <CharacterProfileModal
+          member={profileMember}
+          onClose={() => {
+            const focusId = profileMember.agentId
+            setProfileMember(null)
+            wsClient.postMessage({ type: 'focusAgent', id: focusId })
+          }}
         />
       )}
     </div>

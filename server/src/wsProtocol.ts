@@ -107,5 +107,7 @@ export interface TeamMemberInfo {
 	palette?: number;
 	hueShift?: number;
 	role?: 'orchestrator' | 'worker';
+	description?: string;
+	bio?: string;
 	preferredSeatId?: string;
 }

@@ -55,6 +55,8 @@ export interface TeamMemberInfo {
   palette?: number
   hueShift?: number
   role?: 'orchestrator' | 'worker'
+  description?: string
+  bio?: string
 }
 
 export interface DispatchedTask {

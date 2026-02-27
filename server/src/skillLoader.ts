@@ -16,6 +16,8 @@ export interface SkillDefinition {
 	role?: 'orchestrator' | 'worker';
 	/** Short description from frontmatter */
 	description?: string;
+	/** First sentence of system prompt, used as character bio */
+	bio?: string;
 	/** Display order (lower = first) */
 	order?: number;
 	/** The markdown body = system prompt content */
@@ -69,7 +71,10 @@ function parseSkillFile(filePath: string): SkillDefinition | null {
 		}
 
 		if (!body) return null;
-		return { id, name, palette, hueShift, role, description, order, systemPrompt: body };
+		// Extract first sentence as bio (split on 。or . followed by whitespace/newline)
+		const firstSentence = body.split(/。|(?<=\w)\.\s/)[0]?.trim().replace(/^#+\s*/, '') ?? '';
+		const bio = firstSentence.length > 0 && firstSentence.length < 200 ? firstSentence : undefined;
+		return { id, name, palette, hueShift, role, description, bio, order, systemPrompt: body };
 	} catch {
 		return null;
 	}

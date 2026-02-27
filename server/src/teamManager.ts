@@ -223,6 +223,8 @@ function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
 			palette: skill.palette,
 			hueShift: skill.hueShift,
 			role: skill.role,
+			description: skill.description,
+			bio: skill.bio,
 			preferredSeatId: skill.id === RECEPTIONIST_SKILL_ID ? RECEPTIONIST_SEAT_ID : undefined,
 		};
 	}).filter((m) => m.agentId >= 0);
