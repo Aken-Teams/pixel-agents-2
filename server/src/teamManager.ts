@@ -120,7 +120,9 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[]): string {
 	const langRule = '\n\n## 語言規則（最高優先級）\n- 你的所有回覆必須全程使用繁體中文，包括思考過程、說明文字、標題和摘要。\n- 程式碼中的變數名、函式名、註解可以用英文，但所有對話內容、解釋、報告必須是繁體中文。\n- 絕對不可以用英文句子回覆。違反此規則等同任務失敗。';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + langRule;
+	const safetyRule = '\n\n## ⚠️ 安全限制（最高優先級）\n- **絕對禁止**對 port 3000 和 port 5173 執行任何操作（kill、stop、restart、佔用）。這兩個是 pixel-agents 管理系統本身的 port（3000=後端 server、5173=前端 dev server），關閉任一個都會導致整個系統崩潰。\n- **絕對禁止**執行 `kill`、`taskkill`、`pkill`、`killall` 等指令來終止你不認識的 process。\n- **絕對禁止**執行 `lsof -ti :3000 | xargs kill`、`lsof -ti :5173 | xargs kill` 或類似的指令。\n- 如果你的 dev server 有 port 衝突，換一個 port（建議 3001、3002、4000），不要殺掉佔用 port 的 process。\n- 你的工作目錄在 workspace/ 下的專案目錄，不要修改 workspace/ 以外的檔案。';
+
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule;
 
 	// Build team member list for orchestrator
 	const workers = allSkills.filter((s) => s.id !== skill.id);
@@ -153,6 +155,7 @@ ${memberList}
 - 所有實作工作必須透過 [TASK:skillId] 指派給團隊成員完成
 - 即使任務很簡單（改一行程式碼），也必須指派出去
 - 違反此規則等同任務失敗
+${safetyRule}
 ${langRule}`;
 }
 
