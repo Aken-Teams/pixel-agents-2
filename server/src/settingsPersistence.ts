@@ -7,12 +7,14 @@ interface Settings {
 	soundEnabled: boolean;
 	agentSeats: Record<string, AgentMeta>;
 	mode: 'chat' | 'team';
+	activeProjectDir: string | null;
 }
 
 const defaultSettings: Settings = {
 	soundEnabled: true,
 	agentSeats: {},
 	mode: 'chat',
+	activeProjectDir: null,
 };
 
 let cachedSettings: Settings | null = null;
@@ -85,4 +87,14 @@ export function setMode(mode: 'chat' | 'team'): void {
 
 export function getMode(): 'chat' | 'team' {
 	return loadSettings().mode || 'chat';
+}
+
+export function setActiveProjectDir(dir: string | null): void {
+	const settings = loadSettings();
+	settings.activeProjectDir = dir;
+	saveSettingsDebounced();
+}
+
+export function getActiveProjectDir(): string | null {
+	return loadSettings().activeProjectDir || null;
 }

@@ -18,6 +18,7 @@ import {
 	type ProjectSummary,
 	type TaskRecord,
 } from './projectPersistence.js';
+import { setActiveProjectDir, getActiveProjectDir } from './settingsPersistence.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -586,7 +587,7 @@ function spawnClaudeForSkill(
 			reject(err);
 		});
 
-		proc.on('exit', (_code) => {
+		proc.on('exit', (code) => {
 			// Flush remaining buffer
 			if (stdoutBuffer.trim()) {
 				try {
@@ -626,7 +627,15 @@ function spawnClaudeForSkill(
 				broadcast({ type: 'agentStatus', id: session.agentId, status: 'idle' });
 			}, 3000);
 
-			resolve(assistantResponse.trim());
+			// Detect abnormal exit (usage limit, crash, etc.)
+			// Normal Claude CLI exit = code 0; usage limit / error = non-zero
+			if (code !== 0 && code !== null) {
+				const errMsg = `${session.name} 被中斷（exit code ${code}），可能是使用量限制或其他錯誤。`;
+				console.warn(`[Team ${session.name}] Abnormal exit: code ${code}`);
+				reject(new Error(errMsg));
+			} else {
+				resolve(assistantResponse.trim());
+			}
 		});
 	});
 }
@@ -675,12 +684,35 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		return;
 	}
 
-	// Create a project directory from the user's message
+	// Restore or create project directory
 	if (!currentProjectDir) {
-		currentProjectDir = createProjectDir(message);
-		initProjectState(currentProjectDir, message);
-		console.log(`[Orchestrator] Project directory: ${currentProjectDir}`);
+		// Try to restore from persisted setting (survives server restart)
+		const persisted = getActiveProjectDir();
+		if (persisted && fs.existsSync(persisted)) {
+			currentProjectDir = persisted;
+			// Restore counters from project.json so new items don't overwrite old ones
+			const state = loadProjectState(persisted);
+			if (state) {
+				responseCounter = state.responseCounter;
+				// Restore taskIdCounter from existing tasks
+				if (state.tasks) {
+					let maxId = 0;
+					for (const key of Object.keys(state.tasks)) {
+						const m = key.match(/^task-(\d+)$/);
+						if (m) maxId = Math.max(maxId, parseInt(m[1], 10));
+					}
+					if (maxId > taskIdCounter) taskIdCounter = maxId;
+				}
+			}
+			console.log(`[Orchestrator] Restored project directory from settings: ${currentProjectDir}`);
+		} else {
+			currentProjectDir = createProjectDir(message);
+			initProjectState(currentProjectDir, message);
+			console.log(`[Orchestrator] Created project directory: ${currentProjectDir}`);
+		}
 	}
+	// Always persist active project dir so it survives restarts
+	setActiveProjectDir(currentProjectDir);
 
 	// Stop idle chat when work begins
 	stopIdleChat();
@@ -891,6 +923,7 @@ async function orchestrateStep(
 export function resetProject(): void {
 	currentProjectDir = null;
 	responseCounter = 0;
+	setActiveProjectDir(null);
 }
 
 /** List all persisted projects */
@@ -910,6 +943,20 @@ export function resumeProject(projectDir: string, broadcast: Broadcast): boolean
 	// Restore project context
 	currentProjectDir = projectDir;
 	responseCounter = state.responseCounter;
+
+	// Restore taskIdCounter so new tasks don't overwrite existing ones
+	// e.g. if existing tasks are task-1, task-2, task-3 → counter = 3
+	if (state.tasks) {
+		let maxId = 0;
+		for (const key of Object.keys(state.tasks)) {
+			const m = key.match(/^task-(\d+)$/);
+			if (m) maxId = Math.max(maxId, parseInt(m[1], 10));
+		}
+		if (maxId > taskIdCounter) {
+			taskIdCounter = maxId;
+			console.log(`[Team] Restored taskIdCounter to ${taskIdCounter}`);
+		}
+	}
 
 	// Restore conversation history for each team member
 	for (const [skillId, messages] of Object.entries(state.history)) {
@@ -936,8 +983,9 @@ export function resumeProject(projectDir: string, broadcast: Broadcast): boolean
 		}
 	}
 
-	// Mark as running again
+	// Mark as running again and persist active project dir
 	saveProjectStateImmediate(projectDir, { status: 'running' });
+	setActiveProjectDir(projectDir);
 
 	broadcast({
 		type: 'projectLoaded',
@@ -973,4 +1021,5 @@ export function closeTeam(broadcast: Broadcast): void {
 	orchestratorSkillId = null;
 	orchestratorBusy = false;
 	currentProjectDir = null;
+	setActiveProjectDir(null);
 }
