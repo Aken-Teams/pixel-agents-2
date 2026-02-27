@@ -39,6 +39,9 @@ export interface EditorActions {
   handleEditorEraseAction: (col: number, row: number) => void
   handleEditorSelectionChange: () => void
   handleDragMove: (uid: string, newCol: number, newRow: number) => void
+  isPanMode: boolean
+  handleTogglePanMode: () => void
+  handleResetView: () => void
 }
 
 export function useEditorActions(
@@ -49,6 +52,7 @@ export function useEditorActions(
   const [editorTick, setEditorTick] = useState(0)
   const [isDirty, setIsDirty] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [isPanMode, setIsPanMode] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const panRef = useRef({ x: 0, y: 0 })
   const lastSavedLayoutRef = useRef<OfficeLayout | null>(null)
@@ -495,6 +499,18 @@ export function useEditorActions(
     }
   }, [getOfficeState, applyEdit])
 
+  const handleTogglePanMode = useCallback(() => {
+    setIsPanMode((prev) => !prev)
+  }, [])
+
+  const handleResetView = useCallback(() => {
+    panRef.current = { x: 0, y: 0 }
+    setZoom(1)
+    const os = getOfficeState()
+    os.selectedAgentId = null
+    os.cameraFollowId = null
+  }, [getOfficeState])
+
   return {
     isEditMode,
     editorTick,
@@ -523,5 +539,8 @@ export function useEditorActions(
     handleEditorEraseAction,
     handleEditorSelectionChange,
     handleDragMove,
+    isPanMode,
+    handleTogglePanMode,
+    handleResetView,
   }
 }

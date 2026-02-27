@@ -28,9 +28,10 @@ interface OfficeCanvasProps {
   zoom: number
   onZoomChange: (zoom: number) => void
   panRef: React.MutableRefObject<{ x: number; y: number }>
+  isPanMode?: boolean
 }
 
-export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, onEditorTileAction, onEditorEraseAction, onEditorSelectionChange, onDeleteSelected, onRotateSelected, onDragMove, editorTick: _editorTick, zoom, onZoomChange, panRef }: OfficeCanvasProps) {
+export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, onEditorTileAction, onEditorEraseAction, onEditorSelectionChange, onDeleteSelected, onRotateSelected, onDragMove, editorTick: _editorTick, zoom, onZoomChange, panRef, isPanMode = false }: OfficeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const offsetRef = useRef({ x: 0, y: 0 })
@@ -44,6 +45,17 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
   const isEraseDraggingRef = useRef(false)
   // Zoom scroll accumulator for trackpad pinch sensitivity
   const zoomAccumulatorRef = useRef(0)
+
+  // Update canvas cursor when pan mode toggles
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    if (isPanMode) {
+      canvas.style.cursor = 'grab'
+    } else {
+      canvas.style.cursor = isEditMode ? 'crosshair' : 'default'
+    }
+  }, [isPanMode, isEditMode])
 
   // Clamp pan so the map edge can't go past a margin inside the viewport
   const clampPan = useCallback((px: number, py: number): { x: number; y: number } => {
@@ -412,10 +424,9 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       unlockAudio()
-      // Middle mouse button (button 1) starts panning
-      if (e.button === 1) {
+      // Left-click in pan mode OR middle mouse button (button 1) starts panning
+      if (e.button === 1 || (e.button === 0 && isPanMode)) {
         e.preventDefault()
-        // Break camera follow on manual pan
         officeState.cameraFollowId = null
         isPanningRef.current = true
         panStartRef.current = {
@@ -494,15 +505,15 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
         onEditorTileAction(tile.col, tile.row)
       }
     },
-    [officeState, isEditMode, editorState, screenToTile, screenToWorld, onEditorTileAction, onEditorEraseAction, onEditorSelectionChange, onDeleteSelected, onRotateSelected, hitTestDeleteButton, hitTestRotateButton, panRef],
+    [officeState, isEditMode, isPanMode, editorState, screenToTile, screenToWorld, onEditorTileAction, onEditorEraseAction, onEditorSelectionChange, onDeleteSelected, onRotateSelected, hitTestDeleteButton, hitTestRotateButton, panRef],
   )
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
-      if (e.button === 1) {
+      if (e.button === 1 || (e.button === 0 && isPanMode)) {
         isPanningRef.current = false
         const canvas = canvasRef.current
-        if (canvas) canvas.style.cursor = isEditMode ? 'crosshair' : 'default'
+        if (canvas) canvas.style.cursor = isPanMode ? 'grab' : (isEditMode ? 'crosshair' : 'default')
         return
       }
       if (e.button === 2) {
@@ -548,12 +559,13 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
       editorState.isDragging = false
       editorState.wallDragAdding = null
     },
-    [editorState, isEditMode, officeState, onDragMove, onEditorSelectionChange],
+    [editorState, isEditMode, isPanMode, officeState, onDragMove, onEditorSelectionChange],
   )
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (isEditMode) return // handled by mouseDown/mouseUp
+      if (isPanMode) return  // pan mode — no character clicks
       const pos = screenToWorld(e.clientX, e.clientY)
       if (!pos) return
 
@@ -613,7 +625,7 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
         officeState.cameraFollowId = null
       }
     },
-    [officeState, onClick, screenToWorld, screenToTile, isEditMode],
+    [officeState, onClick, screenToWorld, screenToTile, isEditMode, isPanMode],
   )
 
   const handleMouseLeave = useCallback(() => {

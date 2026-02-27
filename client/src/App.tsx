@@ -295,9 +295,16 @@ function App() {
         zoom={editor.zoom}
         onZoomChange={editor.handleZoomChange}
         panRef={editor.panRef}
+        isPanMode={editor.isPanMode}
       />
 
-      <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} />
+      <ZoomControls
+        zoom={editor.zoom}
+        onZoomChange={editor.handleZoomChange}
+        isPanMode={editor.isPanMode}
+        onTogglePanMode={editor.handleTogglePanMode}
+        onResetView={editor.handleResetView}
+      />
 
       {/* Vignette overlay */}
       <div

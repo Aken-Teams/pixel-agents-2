@@ -10,6 +10,9 @@ import {
 interface ZoomControlsProps {
   zoom: number
   onZoomChange: (zoom: number) => void
+  isPanMode: boolean
+  onTogglePanMode: () => void
+  onResetView: () => void
 }
 
 const btnBase: React.CSSProperties = {
@@ -27,8 +30,8 @@ const btnBase: React.CSSProperties = {
   boxShadow: 'var(--pixel-shadow)',
 }
 
-export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
-  const [hovered, setHovered] = useState<'minus' | 'plus' | null>(null)
+export function ZoomControls({ zoom, onZoomChange, isPanMode, onTogglePanMode, onResetView }: ZoomControlsProps) {
+  const [hovered, setHovered] = useState<'minus' | 'plus' | 'pan' | 'reset' | null>(null)
   const [showLevel, setShowLevel] = useState(false)
   const [fadeOut, setFadeOut] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -43,19 +46,16 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
     if (zoom === prevZoomRef.current) return
     prevZoomRef.current = zoom
 
-    // Clear existing timers
     if (timerRef.current) clearTimeout(timerRef.current)
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
 
     setShowLevel(true)
     setFadeOut(false)
 
-    // Start fade after delay
     fadeTimerRef.current = setTimeout(() => {
       setFadeOut(true)
     }, ZOOM_LEVEL_FADE_DELAY_MS)
 
-    // Hide completely after delay
     timerRef.current = setTimeout(() => {
       setShowLevel(false)
       setFadeOut(false)
@@ -95,7 +95,7 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
         </div>
       )}
 
-      {/* Vertically stacked round buttons — top-left */}
+      {/* Vertically stacked buttons — top-left */}
       <div
         style={{
           position: 'absolute',
@@ -107,6 +107,7 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
           gap: 4,
         }}
       >
+        {/* Zoom in */}
         <button
           onClick={() => onZoomChange(zoom + 1)}
           disabled={maxDisabled}
@@ -125,6 +126,8 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
             <line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
+
+        {/* Zoom out */}
         <button
           onClick={() => onZoomChange(zoom - 1)}
           disabled={minDisabled}
@@ -140,6 +143,54 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'var(--pixel-border)', margin: '2px 4px' }} />
+
+        {/* Pan / hand tool */}
+        <button
+          onClick={onTogglePanMode}
+          onMouseEnter={() => setHovered('pan')}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            ...btnBase,
+            background: isPanMode
+              ? 'var(--pixel-accent-dim, rgba(0,180,255,0.18))'
+              : hovered === 'pan' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+            color: isPanMode ? 'var(--pixel-accent, #00c8ff)' : 'var(--pixel-text)',
+            borderColor: isPanMode ? 'var(--pixel-accent, #00c8ff)' : 'var(--pixel-border)',
+          }}
+          title={isPanMode ? 'Exit pan mode (click to deactivate)' : 'Pan view — drag to move'}
+        >
+          {/* Four-directional move icon */}
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <line x1="9" y1="2" x2="9" y2="16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M7 4 L9 2 L11 4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" fill="none" />
+            <path d="M7 14 L9 16 L11 14" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" fill="none" />
+            <path d="M4 7 L2 9 L4 11" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" fill="none" />
+            <path d="M14 7 L16 9 L14 11" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" fill="none" />
+          </svg>
+        </button>
+
+        {/* Reset view — home */}
+        <button
+          onClick={onResetView}
+          onMouseEnter={() => setHovered('reset')}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            ...btnBase,
+            background: hovered === 'reset' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+          }}
+          title="Reset view to default position"
+        >
+          {/* House icon */}
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 10 L9 3 L16 10" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+            <path d="M4 8.5 L4 15 L14 15 L14 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+            <rect x="6.5" y="11" width="5" height="4" rx="0" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </button>
       </div>
