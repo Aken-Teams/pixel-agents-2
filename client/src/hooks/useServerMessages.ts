@@ -563,7 +563,13 @@ export function useServerMessages(
           const next = { ...prev }
           for (const m of members) {
             if (!next[m.skillId]) {
-              next[m.skillId] = { messages: [], isStreaming: false, streamBuffer: '' }
+              const initMessages = m.skillId === 'receptionist'
+                ? [{
+                    role: 'assistant' as const,
+                    content: '你好！我是 AI-Agents Office 的小幫手 👋\n\n你可以問我以下問題：\n• 這個辦公室是什麼？有什麼功能？\n• 怎麼開始使用？\n• 角色/代理人怎麼運作？\n• Team 模式和專案怎麼用？\n• 怎麼編輯辦公室佈局？\n• Skill 定義是什麼？\n\n直接輸入你的問題吧！',
+                  }]
+                : []
+              next[m.skillId] = { messages: initMessages, isStreaming: false, streamBuffer: '' }
             }
           }
           return next
