@@ -18,6 +18,7 @@ import { BottomToolbar } from './components/BottomToolbar.js'
 import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
 import { ChatPanel } from './components/ChatPanel.js'
+import { PixelSpriteAvatar } from './components/PixelSpriteAvatar.js'
 import { AgentLabels } from './components/AgentLabels.js'
 import { ThoughtBubbles } from './components/ThoughtBubbles.js'
 import { InterviewModal } from './components/InterviewModal.js'
@@ -285,8 +286,8 @@ function App() {
 
       {/* VS Code-style collapsed sidebar */}
       {isChatCollapsed && (
-        <div style={{
-          width: 44,
+        <div className="hidden-scrollbar" style={{
+          width: 64,
           flexShrink: 0,
           height: '100%',
           display: 'flex',
@@ -295,7 +296,8 @@ function App() {
           background: 'var(--pixel-bg)',
           borderRight: '2px solid var(--pixel-border)',
           padding: '6px 0',
-          overflow: 'hidden',
+          overflowY: 'auto',
+          overflowX: 'hidden',
           zIndex: 10,
         }}>
           {/* Expand button */}
@@ -303,8 +305,8 @@ function App() {
             onClick={() => setIsChatCollapsed(false)}
             title="Expand panel"
             style={{
-              width: 32,
-              height: 32,
+              width: 36,
+              height: 36,
               padding: 0,
               background: 'rgba(255,255,255,0.06)',
               border: '2px solid var(--pixel-border)',
@@ -315,7 +317,7 @@ function App() {
               justifyContent: 'center',
               color: 'var(--pixel-text-dim)',
               flexShrink: 0,
-              marginBottom: 6,
+              marginBottom: 8,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -325,10 +327,14 @@ function App() {
           </button>
 
           {/* Divider */}
-          <div style={{ width: 28, height: 1, background: 'var(--pixel-border)', marginBottom: 6, flexShrink: 0 }} />
+          <div style={{ width: 44, height: 1, background: 'var(--pixel-border)', marginBottom: 8, flexShrink: 0 }} />
 
-          {/* Agent list with status dots + rotated names */}
-          {enrichedTeamMembers.map((member) => {
+          {/* Agent cards: avatar + status dot + name — orchestrator first */}
+          {[...enrichedTeamMembers].sort((a, b) => {
+            if (a.skillId === orchestratorSkillId) return -1
+            if (b.skillId === orchestratorSkillId) return 1
+            return 0
+          }).map((member) => {
             const isOrchestrator = member.skillId === orchestratorSkillId
             const isOrchestratorActive = isOrchestrator && orchestratorBusy
             const memberChat = teamChats[member.skillId]
@@ -336,6 +342,11 @@ function App() {
             const hasPendingTask = dispatchedTasks.some((t) => t.targetSkillId === member.skillId && !t.completed)
             const hasCompleted = dispatchedTasks.some((t) => t.targetSkillId === member.skillId && t.completed)
             const isActive = isStreaming || hasPendingTask || isOrchestratorActive
+            const statusColor = isActive
+              ? 'var(--pixel-status-active)'
+              : hasCompleted
+                ? 'var(--pixel-green)'
+                : 'rgba(255,255,255,0.2)'
 
             return (
               <div
@@ -349,39 +360,61 @@ function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  padding: '8px 4px',
+                  padding: '6px 4px',
                   cursor: 'pointer',
                   width: '100%',
-                  gap: 5,
+                  gap: 4,
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
                 }}
               >
-                {/* Status dot */}
+                {/* Pixel avatar — clipped to head only */}
                 <div style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                  background: isActive
-                    ? 'var(--pixel-status-active)'
-                    : hasCompleted
-                      ? 'var(--pixel-green)'
-                      : 'rgba(255,255,255,0.2)',
-                  animation: isActive ? 'pixel-agents-pulse 1.5s ease-in-out infinite' : 'none',
-                }} />
-                {/* Rotated name */}
-                <div style={{
-                  writingMode: 'vertical-lr',
-                  transform: 'rotate(180deg)',
-                  fontSize: '11px',
-                  fontFamily: "'FS Pixel Sans', monospace",
-                  color: isOrchestrator ? '#c8a840' : 'var(--pixel-text-dim)',
-                  letterSpacing: '0.04em',
-                  userSelect: 'none',
-                  maxHeight: 90,
+                  width: 32,
+                  height: 22,
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  flexShrink: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  imageRendering: 'pixelated',
                 }}>
-                  {member.name}
+                  <PixelSpriteAvatar
+                    palette={member.palette ?? 0}
+                    hueShift={member.hueShift ?? 0}
+                    zoom={2}
+                    animated={false}
+                  />
+                </div>
+
+                {/* Status dot + name row */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  width: '100%',
+                  justifyContent: 'center',
+                  paddingLeft: 2,
+                  paddingRight: 2,
+                }}>
+                  <div style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: statusColor,
+                    animation: isActive ? 'pixel-agents-pulse 1.5s ease-in-out infinite' : 'none',
+                  }} />
+                  <span style={{
+                    fontSize: '10px',
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
+                    color: isOrchestrator ? '#c8a840' : 'var(--pixel-text-dim)',
+                    userSelect: 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: 44,
+                  }}>
+                    {member.name}
+                  </span>
                 </div>
               </div>
             )
