@@ -125,7 +125,9 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	const summaryRule = '\n\n## 文件摘要規則（必須遵守）\n- 你的回覆最末尾「必須」附上一行摘要，格式為：`[SUMMARY] 這裡寫摘要`\n- 摘要長度：100-200 字，繁體中文\n- 摘要用第一人稱，以你的角色身份簡要介紹這份文件的重點內容和結論\n- 摘要必須是「純文字」，禁止使用任何 Markdown 語法（不要用 ##、**、|表格|、- 列表、``` 等）\n- 摘要寫成一段連貫的文字，不要分行、不要分段、不要用條列\n- 範例：`[SUMMARY] 我完成了 AI 課程報名系統的 PRD，定義了 4 個核心 User Story，包括報名表單填寫、資料驗證、確認頁面和報名成功通知。核心驗收標準涵蓋 Email 格式驗證、手機號碼格式檢查、必填欄位提示等 15 條 AC。功能範圍嚴格限縮為單頁報名流程，後台管理和金流整合列入 Won\'t Do。`\n- [SUMMARY] 必須是回覆的最後一行，後面不可以有其他內容';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule + summaryRule;
+	const docOutputRule = '\n\n## 文件產出規則（必須遵守）\n- 你的文件內容（PRD、架構設計、測試報告、技術文件等）必須直接寫在回覆中，系統會自動存檔並加上 metadata\n- **禁止**使用 Write 工具另外存文件到 `docs/` 目錄（如 `prd.md`、`architecture.md` 等），這會導致文件沒有 metadata、無法追蹤作者\n- 程式碼檔案（如 `.tsx`、`.ts`、`.css`、`.html`）可以用 Write 工具存到適當目錄（如 `src/`、`designs/`）\n- 簡單說：「文件寫在回覆裡，程式碼寫進檔案」';
+
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule + docOutputRule + summaryRule;
 
 	// Build team member list for orchestrator
 	const workers = allSkills.filter((s) => s.id !== skill.id);
