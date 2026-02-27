@@ -20,13 +20,14 @@ interface ChatPanelProps {
   dispatchedTasks: DispatchedTask[]
   onSendOrchestratorMessage: (message: string) => void
   teamToolActivities: Record<string, string | null>
+  onToggleCollapse?: () => void
 }
 
 export function ChatPanel({
   chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit,
   mode, onModeChange, teamMembers, teamChats, onSendTeamMessage,
   orchestratorSkillId, orchestratorBusy, dispatchedTasks, onSendOrchestratorMessage,
-  teamToolActivities,
+  teamToolActivities, onToggleCollapse,
 }: ChatPanelProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null)
@@ -192,25 +193,52 @@ export function ChatPanel({
             Team
           </button>
         </div>
-        {mode === 'chat' && (
-          <button
-            onClick={atCharacterLimit ? undefined : handleCreateChat}
-            disabled={atCharacterLimit}
-            style={{
-              padding: '2px 10px',
-              fontSize: '22px',
-              background: atCharacterLimit ? 'var(--pixel-btn-bg)' : 'var(--pixel-accent)',
-              color: atCharacterLimit ? 'var(--pixel-text-dim)' : '#fff',
-              border: '2px solid rgba(255,255,255,0.2)',
-              borderRadius: 0,
-              cursor: atCharacterLimit ? 'default' : 'pointer',
-              opacity: atCharacterLimit ? 0.5 : 1,
-            }}
-            title={atCharacterLimit ? 'Character limit reached (max 21)' : 'New Chat'}
-          >
-            +
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {mode === 'chat' && (
+            <button
+              onClick={atCharacterLimit ? undefined : handleCreateChat}
+              disabled={atCharacterLimit}
+              style={{
+                padding: '2px 10px',
+                fontSize: '22px',
+                background: atCharacterLimit ? 'var(--pixel-btn-bg)' : 'var(--pixel-accent)',
+                color: atCharacterLimit ? 'var(--pixel-text-dim)' : '#fff',
+                border: '2px solid rgba(255,255,255,0.2)',
+                borderRadius: 0,
+                cursor: atCharacterLimit ? 'default' : 'pointer',
+                opacity: atCharacterLimit ? 0.5 : 1,
+              }}
+              title={atCharacterLimit ? 'Character limit reached (max 21)' : 'New Chat'}
+            >
+              +
+            </button>
+          )}
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              title="Collapse panel"
+              style={{
+                width: 30,
+                height: 30,
+                padding: 0,
+                background: 'rgba(255,255,255,0.06)',
+                color: 'var(--pixel-text-dim)',
+                border: '2px solid var(--pixel-border)',
+                borderRadius: 0,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <polyline points="9,2 4,7 9,12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="11" y1="2" x2="11" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Chat mode: tab bar */}

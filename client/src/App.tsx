@@ -147,6 +147,7 @@ function App() {
   }, [layoutReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isDebugMode, setIsDebugMode] = useState(false)
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false)
   const [profileMember, setProfileMember] = useState<TeamMemberInfo | null>(null)
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), [])
@@ -253,24 +254,140 @@ function App() {
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex' }}>
-      <ChatPanel
-        chatList={chatList}
-        chats={chats}
-        onCreateChat={handleCreateChat}
-        onSendMessage={handleSendChatMessage}
-        onCloseChat={handleCloseChat}
-        atCharacterLimit={agents.length >= MAX_CHARACTERS}
-        mode={mode}
-        onModeChange={handleModeChange}
-        teamMembers={enrichedTeamMembers}
-        teamChats={teamChats}
-        onSendTeamMessage={handleSendTeamMessage}
-        orchestratorSkillId={orchestratorSkillId}
-        orchestratorBusy={orchestratorBusy}
-        dispatchedTasks={dispatchedTasks}
-        onSendOrchestratorMessage={handleSendOrchestratorMessage}
-        teamToolActivities={teamToolActivities}
-      />
+      {/* Chat panel — collapsible */}
+      <div style={{
+        width: isChatCollapsed ? 0 : 340,
+        flexShrink: 0,
+        height: '100%',
+        overflow: 'hidden',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}>
+        <ChatPanel
+          chatList={chatList}
+          chats={chats}
+          onCreateChat={handleCreateChat}
+          onSendMessage={handleSendChatMessage}
+          onCloseChat={handleCloseChat}
+          atCharacterLimit={agents.length >= MAX_CHARACTERS}
+          mode={mode}
+          onModeChange={handleModeChange}
+          teamMembers={enrichedTeamMembers}
+          teamChats={teamChats}
+          onSendTeamMessage={handleSendTeamMessage}
+          orchestratorSkillId={orchestratorSkillId}
+          orchestratorBusy={orchestratorBusy}
+          dispatchedTasks={dispatchedTasks}
+          onSendOrchestratorMessage={handleSendOrchestratorMessage}
+          teamToolActivities={teamToolActivities}
+          onToggleCollapse={() => setIsChatCollapsed(true)}
+        />
+      </div>
+
+      {/* VS Code-style collapsed sidebar */}
+      {isChatCollapsed && (
+        <div style={{
+          width: 44,
+          flexShrink: 0,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          background: 'var(--pixel-bg)',
+          borderRight: '2px solid var(--pixel-border)',
+          padding: '6px 0',
+          overflow: 'hidden',
+          zIndex: 10,
+        }}>
+          {/* Expand button */}
+          <button
+            onClick={() => setIsChatCollapsed(false)}
+            title="Expand panel"
+            style={{
+              width: 32,
+              height: 32,
+              padding: 0,
+              background: 'rgba(255,255,255,0.06)',
+              border: '2px solid var(--pixel-border)',
+              borderRadius: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--pixel-text-dim)',
+              flexShrink: 0,
+              marginBottom: 6,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <polyline points="5,2 10,7 5,12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="3" y1="2" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+
+          {/* Divider */}
+          <div style={{ width: 28, height: 1, background: 'var(--pixel-border)', marginBottom: 6, flexShrink: 0 }} />
+
+          {/* Agent list with status dots + rotated names */}
+          {enrichedTeamMembers.map((member) => {
+            const isOrchestrator = member.skillId === orchestratorSkillId
+            const isOrchestratorActive = isOrchestrator && orchestratorBusy
+            const memberChat = teamChats[member.skillId]
+            const isStreaming = memberChat?.isStreaming
+            const hasPendingTask = dispatchedTasks.some((t) => t.targetSkillId === member.skillId && !t.completed)
+            const hasCompleted = dispatchedTasks.some((t) => t.targetSkillId === member.skillId && t.completed)
+            const isActive = isStreaming || hasPendingTask || isOrchestratorActive
+
+            return (
+              <div
+                key={member.skillId}
+                title={member.name}
+                onClick={() => {
+                  setIsChatCollapsed(false)
+                  handleModeChange('team')
+                }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '8px 4px',
+                  cursor: 'pointer',
+                  width: '100%',
+                  gap: 5,
+                }}
+              >
+                {/* Status dot */}
+                <div style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  background: isActive
+                    ? 'var(--pixel-status-active)'
+                    : hasCompleted
+                      ? 'var(--pixel-green)'
+                      : 'rgba(255,255,255,0.2)',
+                  animation: isActive ? 'pixel-agents-pulse 1.5s ease-in-out infinite' : 'none',
+                }} />
+                {/* Rotated name */}
+                <div style={{
+                  writingMode: 'vertical-lr',
+                  transform: 'rotate(180deg)',
+                  fontSize: '11px',
+                  fontFamily: "'FS Pixel Sans', monospace",
+                  color: isOrchestrator ? '#c8a840' : 'var(--pixel-text-dim)',
+                  letterSpacing: '0.04em',
+                  userSelect: 'none',
+                  maxHeight: 90,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {member.name}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
       <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @keyframes pixel-agents-pulse {
