@@ -182,7 +182,13 @@ function App() {
     // Show character profile if team member info is available
     const member = teamMembers.find((m) => m.agentId === focusId)
     if (member) {
-      setProfileMember(member)
+      // Use the actual palette/hueShift from the game character (may differ from skill file)
+      const ch = os.characters.get(focusId)
+      setProfileMember({
+        ...member,
+        palette: ch?.palette ?? member.palette,
+        hueShift: ch?.hueShift ?? member.hueShift,
+      })
     } else {
       wsClient.postMessage({ type: 'focusAgent', id: focusId })
     }
