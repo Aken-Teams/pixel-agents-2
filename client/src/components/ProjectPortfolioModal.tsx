@@ -115,8 +115,10 @@ function escapeHtml(text: string): string {
 }
 
 function renderMarkdown(raw: string): string {
+  // Normalize line endings (Windows CRLF → LF) and strip BOM
+  const normalized = raw.replace(/\uFEFF/g, '').replace(/\r\n?/g, '\n')
   // Strip metadata header
-  const text = raw.replace(/^(<!--[\s\S]*?-->\s*\n?)+/, '').trimStart()
+  const text = normalized.replace(/^(<!--[\s\S]*?-->\s*\n)+/, '').trimStart()
 
   const lines = text.split('\n')
   const html: string[] = []
@@ -776,6 +778,8 @@ function DocPreviewView({
             palette={member.palette ?? 0}
             hueShift={member.hueShift ?? 0}
             zoom={5}
+            animated
+            interactive
             style={{ width: 80, height: 120 }}
           />
         ) : (
