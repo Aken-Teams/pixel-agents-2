@@ -566,7 +566,12 @@ export function useServerMessages(
               const initMessages = m.skillId === 'receptionist'
                 ? [{
                     role: 'assistant' as const,
-                    content: '你好！我是 AI-Agents Office 的小幫手 👋\n\n你可以問我以下問題：\n• 這個辦公室是什麼？有什麼功能？\n• 怎麼開始使用？\n• 角色/代理人怎麼運作？\n• Team 模式和專案怎麼用？\n• 怎麼編輯辦公室佈局？\n• Skill 定義是什麼？\n\n直接輸入你的問題吧！',
+                    content: '你好！我是 AI-Agents Office 的小幫手 👋\n\n你可以問我以下問題：\n\n- 這個辦公室是什麼？有什麼特色？\n- 怎麼開始使用？\n- Chat 和 Team 模式有什麼差別？\n- AI 團隊能幫我做什麼任務？\n- 辦公室裡有哪些 AI 成員？\n- Team 模式怎麼運作？\n\n直接輸入你的問題吧！',
+                  }]
+                : m.role === 'orchestrator'
+                ? [{
+                    role: 'assistant' as const,
+                    content: '你好！我是技術長，AI-Agents Office 的專案指揮官 🎯\n\n**我的職責**：分析你的需求，拆解任務，並協調前端、後端、設計師、QA 等專業成員協作完成。\n\n**怎麼開始**：直接告訴我你想做什麼，例如：\n\n- 「幫我建立一個待辦清單 App」\n- 「設計一個使用者登入系統」\n- 「優化這段程式碼的效能」\n- 「幫我規劃這個功能的架構」\n\n我會拆解需求，依序派任務給各專業成員，最後整合成果回覆給你。',
                   }]
                 : []
               next[m.skillId] = { messages: initMessages, isStreaming: false, streamBuffer: '' }
