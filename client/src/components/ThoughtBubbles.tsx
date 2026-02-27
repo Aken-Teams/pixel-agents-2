@@ -46,6 +46,26 @@ interface ThoughtBubblesProps {
   thoughtData: Record<number, ThoughtData>
 }
 
+/** Strip markdown syntax markers so thought bubble text reads cleanly */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/#{1,6}\s/g, '')           // headings
+    .replace(/\*\*(.+?)\*\*/g, '$1')    // bold **
+    .replace(/__(.+?)__/g, '$1')         // bold __
+    .replace(/\*(.+?)\*/g, '$1')         // italic *
+    .replace(/_(.+?)_/g, '$1')           // italic _
+    .replace(/~~(.+?)~~/g, '$1')         // strikethrough
+    .replace(/`{1,3}(.+?)`{1,3}/g, '$1') // inline code
+    .replace(/^\s*[-*+]\s/gm, '')        // list markers
+    .replace(/^\s*>\s?/gm, '')           // blockquotes
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1')  // links [text](url)
+    .replace(/!\[.*?\]\(.+?\)/g, '')     // images
+    .replace(/\|/g, ' ')                 // table pipes
+    .replace(/---+/g, '')                // horizontal rules
+    .replace(/\s+/g, ' ')               // collapse whitespace
+    .trim()
+}
+
 /** Extract the last meaningful sentence/fragment from streaming text */
 function extractLatestSnippet(text: string, maxLen: number): string {
   const trimmed = text.trim()
@@ -276,7 +296,7 @@ export function ThoughtBubbles({
           useTypewriter = true
         } else if (data.text) {
           // Live streaming text — show latest snippet without typewriter
-          displayText = extractLatestSnippet(data.text, MAX_DISPLAY_CHARS)
+          displayText = extractLatestSnippet(stripMarkdown(data.text), MAX_DISPLAY_CHARS)
         } else {
           // Working but no text yet — show idle message with typewriter
           displayText = idleMessages[agentId] || IDLE_MESSAGES[0]

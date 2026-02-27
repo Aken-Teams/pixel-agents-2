@@ -623,8 +623,8 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
                 strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
                 em: ({ children }) => <em>{children}</em>,
                 code: ({ children, className }) => {
-                  const isBlock = className?.includes('language-')
-                  if (isBlock) {
+                  // Fenced code block: has className (language-xxx) or is inside pre
+                  if (className) {
                     return (
                       <code style={{
                         display: 'block',
@@ -640,6 +640,7 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
                       </code>
                     )
                   }
+                  // Inline code
                   return (
                     <code style={{
                       background: 'rgba(0,0,0,0.25)',
@@ -651,7 +652,20 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
                     </code>
                   )
                 },
-                pre: ({ children }) => <pre style={{ margin: '4px 0', overflow: 'auto' }}>{children}</pre>,
+                pre: ({ children }) => (
+                  <pre style={{
+                    margin: '4px 0',
+                    overflow: 'auto',
+                    background: 'rgba(0,0,0,0.3)',
+                    padding: '6px 8px',
+                    fontSize: '13px',
+                    fontFamily: CODE_FONT,
+                    whiteSpace: 'pre',
+                  }}>
+                    {children}
+                  </pre>
+                ),
+                hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.6em 0' }} />,
                 ul: ({ children }) => <ul style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ul>,
                 ol: ({ children }) => <ol style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ol>,
                 li: ({ children }) => <li style={{ margin: '0.15em 0' }}>{children}</li>,

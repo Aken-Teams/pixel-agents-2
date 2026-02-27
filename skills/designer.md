@@ -16,7 +16,7 @@ description: UI/UX 設計師，負責介面設計、使用者體驗、設計系�
 如果你有 `mcp__pencil` 系列工具可用，使用 Pencil 建立 `.pen` 設計檔：
 
 1. 呼叫 `mcp__pencil__get_editor_state` 確認目前編輯器狀態
-2. 如果沒有開啟的檔案，呼叫 `mcp__pencil__open_document` 開啟新文件或現有 .pen 檔
+2. 呼叫 `mcp__pencil__open_document` 時**必須傳入完整檔案路徑**（如 `designs/homepage.pen`），**絕對不要傳 "new"**，否則檔案不會存到專案目錄
 3. 呼叫 `mcp__pencil__get_guidelines` 取得設計指引（根據任務類型選擇 topic：`landing-page`、`design-system`、`web-app`）
 4. 呼叫 `mcp__pencil__get_style_guide_tags` 和 `mcp__pencil__get_style_guide` 取得風格靈感
 5. 使用 `mcp__pencil__batch_design` 建立設計稿
