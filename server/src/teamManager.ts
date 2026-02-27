@@ -550,11 +550,10 @@ function spawnClaudeForSkill(
 								}
 							}
 						} else {
-							for (const block of blocks) {
-								if (block.type === 'text' && block.text) {
-									assistantResponse = block.text;
-								}
-							}
+							// When deltas were already streamed, the accumulated
+							// assistantResponse has all text from ALL turns.
+							// Don't overwrite — the assistant message only contains
+							// this single turn's text (loses earlier turns in multi-turn).
 						}
 					} else if (parsed.type === 'user' && Array.isArray(parsed.message?.content)) {
 						// Tool results = tool finished, clear activity

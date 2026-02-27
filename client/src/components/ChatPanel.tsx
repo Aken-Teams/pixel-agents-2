@@ -548,15 +548,15 @@ const MESSAGE_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans 
 const CODE_FONT = "'Cascadia Code', 'Fira Code', 'Source Code Pro', Consolas, monospace"
 
 /**
- * Strip all internal protocol blocks from text:
- * - [TASK:xxx]...[/TASK] → extracted as dispatch cards
- * - [INTERVIEW]...[/INTERVIEW] → hidden (handled by modal)
- * - [RESULT:xxx]...[/RESULT] → hidden (internal orchestrator feedback)
+ * Strip internal protocol TAG MARKERS from text (keep content between them visible):
+ * - [TASK:xxx]...[/TASK] → extract for dispatch cards, keep content visible
+ * - [INTERVIEW], [/INTERVIEW] → remove markers only
+ * - [RESULT:xxx], [/RESULT] → remove markers only
  */
 function stripInternalBlocks(text: string): { cleanText: string; tasks: { skillId: string; description: string }[] } {
   const tasks: { skillId: string; description: string }[] = []
   let cleaned = text
-    // Strip TASK blocks (extract for dispatch cards)
+    // Extract TASK blocks for dispatch cards (remove markers, keep content)
     .replace(
       /\[TASK:(\w[\w-]*)\]\s*([\s\S]*?)\s*\[\/TASK\]/g,
       (_match, skillId: string, description: string) => {
@@ -564,14 +564,14 @@ function stripInternalBlocks(text: string): { cleanText: string; tasks: { skillI
         return ''
       },
     )
-    // Strip INTERVIEW blocks
-    .replace(/\[INTERVIEW\]\s*[\s\S]*?\s*\[\/INTERVIEW\]/g, '')
-    // Strip RESULT blocks
-    .replace(/\[RESULT:[\w-]*\]\s*[\s\S]*?\s*\[\/RESULT\]/g, '')
-    // Strip orphaned opening tags (streaming may cut off before closing tag)
-    .replace(/\[INTERVIEW\]\s*[\s\S]*$/g, '')
-    .replace(/\[TASK:\w[\w-]*\]\s*[\s\S]*$/g, '')
-    .replace(/\[RESULT:[\w-]*\]\s*[\s\S]*$/g, '')
+    // Remove tag markers only (keep content between them)
+    .replace(/\[INTERVIEW\]/g, '')
+    .replace(/\[\/INTERVIEW\]/g, '')
+    .replace(/\[RESULT:[\w-]*\]/g, '')
+    .replace(/\[\/RESULT\]/g, '')
+    // Remove orphaned opening TASK tags during streaming
+    .replace(/\[TASK:\w[\w-]*\]/g, '')
+    .replace(/\[\/TASK\]/g, '')
   return { cleanText: cleaned.trim(), tasks }
 }
 
