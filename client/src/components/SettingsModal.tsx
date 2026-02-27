@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { wsClient } from '../wsClient.js'
 import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js'
+import { ProjectListModal } from './ProjectListModal.js'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -24,50 +25,12 @@ const menuItemBase: React.CSSProperties = {
   textAlign: 'left',
 }
 
-export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled)
+  const [showProjects, setShowProjects] = useState(false)
 
   if (!isOpen) return null
-
-  const handleExportLayout = () => {
-    // Fetch current layout from server and trigger download
-    fetch('/api/layout')
-      .then((res) => res.json())
-      .then((layout) => {
-        const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'pixel-agents-layout.json'
-        a.click()
-        URL.revokeObjectURL(url)
-      })
-      .catch((err) => console.error('Export failed:', err))
-    onClose()
-  }
-
-  const handleImportLayout = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = () => {
-      const file = input.files?.[0]
-      if (!file) return
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const layout = JSON.parse(reader.result as string)
-          wsClient.postMessage({ type: 'importLayout', layout })
-        } catch (err) {
-          console.error('Import failed:', err)
-        }
-      }
-      reader.readAsText(file)
-    }
-    input.click()
-    onClose()
-  }
 
   return (
     <>
@@ -132,26 +95,18 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode 
         </div>
         {/* Menu items */}
         <button
-          onClick={handleExportLayout}
-          onMouseEnter={() => setHovered('export')}
+          onClick={() => {
+            setShowProjects(true)
+            wsClient.postMessage({ type: 'listProjects' })
+          }}
+          onMouseEnter={() => setHovered('projects')}
           onMouseLeave={() => setHovered(null)}
           style={{
             ...menuItemBase,
-            background: hovered === 'export' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'projects' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
           }}
         >
-          Export Layout
-        </button>
-        <button
-          onClick={handleImportLayout}
-          onMouseEnter={() => setHovered('import')}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            ...menuItemBase,
-            background: hovered === 'import' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-          }}
-        >
-          Import Layout
+          Load Project
         </button>
         <button
           onClick={() => {
@@ -187,29 +142,16 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode 
             {soundLocal ? 'X' : ''}
           </span>
         </button>
-        <button
-          onClick={onToggleDebugMode}
-          onMouseEnter={() => setHovered('debug')}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            ...menuItemBase,
-            background: hovered === 'debug' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-          }}
-        >
-          <span>Debug View</span>
-          {isDebugMode && (
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: 'rgba(90, 140, 255, 0.8)',
-                flexShrink: 0,
-              }}
-            />
-          )}
-        </button>
       </div>
+      {showProjects && (
+        <ProjectListModal
+          onClose={() => setShowProjects(false)}
+          onProjectClose={() => {
+            setShowProjects(false)
+            onClose()
+          }}
+        />
+      )}
     </>
   )
 }

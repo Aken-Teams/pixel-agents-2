@@ -290,7 +290,6 @@ function App() {
 
       <BottomToolbar
         isEditMode={editor.isEditMode}
-        onOpenClaude={editor.handleOpenClaude}
         onToggleEditMode={editor.handleToggleEditMode}
         isStaticBackground={isStaticBackgroundLayout(officeState.getLayout())}
         isDebugMode={isDebugMode}
