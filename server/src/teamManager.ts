@@ -865,7 +865,7 @@ async function orchestrateStep(
 		if (currentProjectDir) {
 			const prev = loadProjectState(currentProjectDir);
 			const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
-			tasks[taskId] = { skillId: task.skillId, status: 'dispatched', description: task.description.slice(0, 200) };
+			tasks[taskId] = { skillId: task.skillId, status: 'dispatched', description: task.description.slice(0, 200), phase: prev?.currentPhase ?? 0 };
 			saveProjectStateImmediate(currentProjectDir, { tasks });
 		}
 

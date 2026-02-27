@@ -9,6 +9,7 @@ export interface TaskRecord {
 	skillId: string;
 	status: 'dispatched' | 'completed' | 'failed';
 	description: string;
+	phase?: number;
 }
 
 export interface ProjectState {

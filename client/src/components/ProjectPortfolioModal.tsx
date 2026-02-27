@@ -23,6 +23,7 @@ interface TaskRecord {
   skillId: string
   status: 'dispatched' | 'completed' | 'failed'
   description: string
+  phase?: number
 }
 
 interface DocMeta {
@@ -482,6 +483,20 @@ function ProjectDetailView({
 
   const completedCount = taskEntries.filter(([, t]) => t.status === 'completed').length
 
+  // Group tasks by phase
+  const phaseGroups: { phase: number; tasks: [string, TaskRecord][] }[] = []
+  for (const entry of taskEntries) {
+    const phase = entry[1].phase ?? 0
+    let group = phaseGroups.find(g => g.phase === phase)
+    if (!group) {
+      group = { phase, tasks: [] }
+      phaseGroups.push(group)
+    }
+    group.tasks.push(entry)
+  }
+  phaseGroups.sort((a, b) => a.phase - b.phase)
+  const showPhaseHeaders = phaseGroups.length > 1
+
   return (
     <div style={{ display: 'flex', height: '100%' }}>
       {/* Left: Task Timeline */}
@@ -503,65 +518,92 @@ function ProjectDetailView({
           Tasks: {completedCount}/{taskEntries.length}
         </div>
 
-        {/* Tasks */}
-        {taskEntries.map(([taskId, task]) => {
-          const member = findMember(task.skillId)
+        {/* Tasks grouped by phase */}
+        {phaseGroups.map(({ phase, tasks: phaseTasks }) => {
+          const phaseCompleted = phaseTasks.filter(([, t]) => t.status === 'completed').length
           return (
-            <div
-              key={taskId}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 12px',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
-              }}
-            >
-              {/* Timeline dot + line */}
-              <div style={{
-                width: 10,
-                height: 10,
-                borderRadius: 0,
-                background: TASK_STATUS_COLORS[task.status] ?? '#94a3b8',
-                flexShrink: 0,
-                border: '1px solid rgba(0,0,0,0.3)',
-              }} />
-
-              {/* Agent avatar */}
-              {member && (
-                <PixelSpriteAvatar
-                  palette={member.palette ?? 0}
-                  hueShift={member.hueShift ?? 0}
-                  zoom={1}
-                  style={{ width: 16, height: 24, flexShrink: 0 }}
-                />
+            <div key={`phase-${phase}`}>
+              {/* Phase header (only shown when multiple phases exist) */}
+              {showPhaseHeaders && (
+                <div style={{
+                  padding: '8px 12px 4px',
+                  fontSize: '15px',
+                  color: 'rgba(255,255,255,0.6)',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  marginTop: phase > 0 ? 8 : 0,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <span style={{ fontWeight: 'bold' }}>Phase {phase}</span>
+                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>
+                    {phaseCompleted}/{phaseTasks.length}
+                  </span>
+                </div>
               )}
 
-              {/* Task info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.8)', display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>{taskId}</span>
-                  <span>{SKILL_ROLE_NAMES[task.skillId] ?? member?.name ?? task.skillId}</span>
-                </div>
-                <div style={{
-                  fontSize: '13px',
-                  color: 'rgba(255,255,255,0.35)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {task.description.slice(0, 80)}
-                </div>
-              </div>
+              {/* Phase tasks */}
+              {phaseTasks.map(([taskId, task]) => {
+                const member = findMember(task.skillId)
+                return (
+                  <div
+                    key={taskId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 12px',
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    }}
+                  >
+                    {/* Timeline dot */}
+                    <div style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 0,
+                      background: TASK_STATUS_COLORS[task.status] ?? '#94a3b8',
+                      flexShrink: 0,
+                      border: '1px solid rgba(0,0,0,0.3)',
+                    }} />
 
-              {/* Status */}
-              <span style={{
-                fontSize: '13px',
-                color: TASK_STATUS_COLORS[task.status] ?? '#94a3b8',
-                flexShrink: 0,
-              }}>
-                {task.status}
-              </span>
+                    {/* Agent avatar */}
+                    {member && (
+                      <PixelSpriteAvatar
+                        palette={member.palette ?? 0}
+                        hueShift={member.hueShift ?? 0}
+                        zoom={1}
+                        style={{ width: 16, height: 24, flexShrink: 0 }}
+                      />
+                    )}
+
+                    {/* Task info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.8)', display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>{taskId}</span>
+                        <span>{SKILL_ROLE_NAMES[task.skillId] ?? member?.name ?? task.skillId}</span>
+                      </div>
+                      <div style={{
+                        fontSize: '13px',
+                        color: 'rgba(255,255,255,0.35)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {task.description.slice(0, 80)}
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <span style={{
+                      fontSize: '13px',
+                      color: TASK_STATUS_COLORS[task.status] ?? '#94a3b8',
+                      flexShrink: 0,
+                    }}>
+                      {task.status}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )
         })}
