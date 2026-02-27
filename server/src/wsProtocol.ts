@@ -1,3 +1,5 @@
+import type { ProjectSummary } from './projectPersistence.js';
+
 // ── Server → Client Messages ──────────────────────────────────
 
 export type ServerMessage =
@@ -42,7 +44,10 @@ export type ServerMessage =
 	| { type: 'teamToolActivity'; skillId: string; status: string | null }
 	// Idle chat
 	| { type: 'idleChatMessage'; agentId: number; text: string }
-	| { type: 'idleChatEnd'; agentId: number };
+	| { type: 'idleChatEnd'; agentId: number }
+	// Project persistence
+	| { type: 'projectList'; projects: ProjectSummary[] }
+	| { type: 'projectLoaded'; projectDir: string; name: string; status: string };
 
 // ── Client → Server Messages ──────────────────────────────────
 
@@ -62,7 +67,10 @@ export type ClientMessage =
 	| { type: 'sendTeamMessage'; skillId: string; message: string }
 	| { type: 'setMode'; mode: 'chat' | 'team' }
 	// Orchestrator
-	| { type: 'sendOrchestratorMessage'; message: string };
+	| { type: 'sendOrchestratorMessage'; message: string }
+	// Project persistence
+	| { type: 'listProjects' }
+	| { type: 'resumeProject'; projectDir: string };
 
 export interface AgentMeta {
 	palette?: number;

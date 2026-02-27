@@ -9,6 +9,15 @@ import { getAssetsRoot } from './config.js';
 import { formatToolStatus } from './transcriptParser.js';
 import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChatManager.js';
 import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
+import {
+	initProjectState,
+	saveProjectState,
+	saveProjectStateImmediate,
+	loadProjectState,
+	listProjects,
+	type ProjectState,
+	type ProjectSummary,
+} from './projectPersistence.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -167,6 +176,21 @@ function getIdleAgents(): IdleAgent[] {
 		}
 	}
 	return result;
+}
+
+/** Sync a session's history to project.json */
+function persistHistory(session: TeamSession): void {
+	if (!currentProjectDir) return;
+	const allHistory: Record<string, ChatMessage[]> = {};
+	for (const [skillId, sess] of teamSessions) {
+		if (sess.history.length > 0) {
+			allHistory[skillId] = sess.history;
+		}
+	}
+	saveProjectState(currentProjectDir, {
+		responseCounter,
+		history: allHistory,
+	});
 }
 
 function buildPromptWithHistory(history: ChatMessage[], newMessage: string): string {
@@ -393,6 +417,8 @@ function spawnClaudeForSkill(
 				session.history.push({ role: 'assistant', content: assistantResponse.trim() });
 				// Save agent response as document in workspace/docs/{skillId}/
 				saveAgentResponse(session, assistantResponse.trim());
+				// Persist history to project.json
+				persistHistory(session);
 			}
 
 			session.activeProcess = null;
@@ -455,6 +481,7 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	// Create a project directory from the user's message
 	if (!currentProjectDir) {
 		currentProjectDir = createProjectDir(message);
+		initProjectState(currentProjectDir, message);
 		console.log(`[Orchestrator] Project directory: ${currentProjectDir}`);
 	}
 
@@ -468,6 +495,10 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		orchestratorBusy = false;
 		stopAllNagging();
 		broadcast({ type: 'orchestratorBusy', busy: false });
+		// Mark project as paused (waiting for user's next message)
+		if (currentProjectDir) {
+			saveProjectStateImmediate(currentProjectDir, { status: 'paused' });
+		}
 		// Resume idle chat when work is done
 		startIdleChatScheduler(broadcast, getIdleAgents);
 	});
@@ -608,6 +639,49 @@ async function orchestrateStep(
 export function resetProject(): void {
 	currentProjectDir = null;
 	responseCounter = 0;
+}
+
+/** List all persisted projects */
+export { listProjects } from './projectPersistence.js';
+
+/**
+ * Resume a previously saved project. Restores conversation history
+ * from project.json into the in-memory TeamSession objects.
+ */
+export function resumeProject(projectDir: string, broadcast: Broadcast): boolean {
+	const state = loadProjectState(projectDir);
+	if (!state) {
+		console.error(`[Team] Cannot resume: no project.json in ${projectDir}`);
+		return false;
+	}
+
+	// Restore project context
+	currentProjectDir = projectDir;
+	responseCounter = state.responseCounter;
+
+	// Restore conversation history for each team member
+	for (const [skillId, messages] of Object.entries(state.history)) {
+		const session = teamSessions.get(skillId);
+		if (session) {
+			session.history = [...messages];
+			console.log(`[Team] Restored ${messages.length} messages for ${session.name}`);
+		} else {
+			console.log(`[Team] Skipping history for unknown skill: ${skillId}`);
+		}
+	}
+
+	// Mark as running again
+	saveProjectStateImmediate(projectDir, { status: 'running' });
+
+	broadcast({
+		type: 'projectLoaded',
+		projectDir,
+		name: state.name,
+		status: 'running',
+	});
+
+	console.log(`[Team] Resumed project: ${state.name} (phase ${state.currentPhase}, ${responseCounter} responses)`);
+	return true;
 }
 
 export function getTeamAgentIds(): number[] {

@@ -54,6 +54,8 @@ import {
 	getTeamAgentIds,
 	getExistingTeamMembers,
 	getOrchestratorSkillId,
+	listProjects,
+	resumeProject,
 } from './teamManager.js';
 
 // ── State ────────────────────────────────────────────────────
@@ -229,6 +231,14 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 		case 'setMode':
 			setMode(message.mode);
 			broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: message.mode });
+			break;
+
+		case 'listProjects':
+			broadcast({ type: 'projectList', projects: listProjects() });
+			break;
+
+		case 'resumeProject':
+			resumeProject(message.projectDir, broadcast);
 			break;
 	}
 }
