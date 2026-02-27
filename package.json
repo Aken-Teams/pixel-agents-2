@@ -1,8 +1,8 @@
 {
-  "name": "pixel-agents-web",
+  "name": "ai-agents-office",
   "version": "1.0.0",
   "private": true,
-  "description": "Pixel art office that visualizes Claude Code agents as animated characters - Web Edition",
+  "description": "AI-Agents Office — 像素風格虛擬辦公室，將 Claude Code AI 代理視覺化為動畫角色",
   "type": "module",
   "workspaces": [
     "server",
