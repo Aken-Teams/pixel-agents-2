@@ -148,31 +148,18 @@ function App() {
   }, [layoutReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isDebugMode, setIsDebugMode] = useState(false)
-  const [isChatCollapsed, setIsChatCollapsed] = useState(false)
+  const [isChatCollapsed, setIsChatCollapsed] = useState(
+    () => localStorage.getItem('chatPanelCollapsed') === 'true'
+  )
+  const setChatCollapsed = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
+    setIsChatCollapsed((prev) => {
+      const next = typeof v === 'function' ? v(prev) : v
+      localStorage.setItem('chatPanelCollapsed', String(next))
+      return next
+    })
+  }, [])
   const [profileMember, setProfileMember] = useState<TeamMemberInfo | null>(null)
-  const [viewedSkillIds, setViewedSkillIds] = useState<Set<string>>(new Set())
   const [hoveredSidebarSkillId, setHoveredSidebarSkillId] = useState<string | null>(null)
-  const prevMsgCountsRef = useRef<Record<string, number>>({})
-
-  // Clear "viewed" when new assistant messages arrive for an agent
-  useEffect(() => {
-    const prev = prevMsgCountsRef.current
-    const toUnview: string[] = []
-    for (const skillId of Object.keys(teamChats)) {
-      const count = teamChats[skillId]?.messages.filter((m) => m.role === 'assistant').length ?? 0
-      if (count > (prev[skillId] ?? 0)) {
-        toUnview.push(skillId)
-        prev[skillId] = count
-      }
-    }
-    if (toUnview.length > 0) {
-      setViewedSkillIds((s) => {
-        const next = new Set(s)
-        toUnview.forEach((id) => next.delete(id))
-        return next
-      })
-    }
-  }, [teamChats])
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), [])
 
@@ -303,7 +290,7 @@ function App() {
           dispatchedTasks={dispatchedTasks}
           onSendOrchestratorMessage={handleSendOrchestratorMessage}
           teamToolActivities={teamToolActivities}
-          onToggleCollapse={() => setIsChatCollapsed(true)}
+          onToggleCollapse={() => setChatCollapsed(true)}
         />
       </div>
 
@@ -325,7 +312,7 @@ function App() {
         }}>
           {/* Expand button */}
           <button
-            onClick={() => setIsChatCollapsed(false)}
+            onClick={() => setChatCollapsed(false)}
             title="Expand panel"
             style={{
               width: 36,
@@ -370,8 +357,6 @@ function App() {
               : hasCompleted
                 ? 'var(--pixel-green)'
                 : 'rgba(255,255,255,0.2)'
-            const hasReply = (memberChat?.messages ?? []).some((m) => m.role === 'assistant')
-            const showBadge = hasReply && !viewedSkillIds.has(member.skillId)
             const isHovered = hoveredSidebarSkillId === member.skillId
 
             return (
@@ -379,9 +364,8 @@ function App() {
                 key={member.skillId}
                 title={member.name}
                 onClick={() => {
-                  setIsChatCollapsed(false)
+                  setChatCollapsed(false)
                   handleModeChange('team')
-                  setViewedSkillIds((s) => new Set([...s, member.skillId]))
                 }}
                 onMouseEnter={() => setHoveredSidebarSkillId(member.skillId)}
                 onMouseLeave={() => setHoveredSidebarSkillId(null)}
@@ -419,19 +403,6 @@ function App() {
                       animated={isHovered}
                     />
                   </div>
-                  {/* Red notification badge — new reply not yet seen */}
-                  {showBadge && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      right: -5,
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      background: '#ff4444',
-                      border: '1px solid var(--pixel-bg)',
-                    }} />
-                  )}
                 </div>
 
                 {/* Status dot + name row */}
