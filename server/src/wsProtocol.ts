@@ -47,7 +47,8 @@ export type ServerMessage =
 	| { type: 'idleChatEnd'; agentId: number }
 	// Project persistence
 	| { type: 'projectList'; projects: ProjectSummary[] }
-	| { type: 'projectLoaded'; projectDir: string; name: string; status: string };
+	| { type: 'projectLoaded'; projectDir: string; name: string; status: string }
+	| { type: 'projectHistoryRestored'; history: Record<string, { role: string; content: string }[]> };
 
 // ── Client → Server Messages ──────────────────────────────────
 

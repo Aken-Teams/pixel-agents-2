@@ -725,6 +725,20 @@ export function useServerMessages(
             }
           })
         }
+      // ── Project History Restore ──
+      } else if (msg.type === 'projectHistoryRestored') {
+        const history = msg.history as Record<string, { role: string; content: string }[]>
+        setTeamChats((prev) => {
+          const next = { ...prev }
+          for (const [skillId, messages] of Object.entries(history)) {
+            next[skillId] = {
+              messages: messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+              isStreaming: false,
+              streamBuffer: '',
+            }
+          }
+          return next
+        })
       // ── Idle Chat ──
       } else if (msg.type === 'idleChatMessage') {
         const agentId = msg.agentId as number

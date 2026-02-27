@@ -144,6 +144,15 @@ ${memberList}
 - 不需要所有成員都參與，根據任務需要選擇
 - 當所有任務完成，直接回覆用戶總結成果（不要用 [TASK] 標記）
 - 如果需要討論，可以把上一個成員的結果作為下一個成員的上下文
+
+## ⚠️ 嚴禁自己實作（最高優先級）
+你是調度者和審核者，絕對不可以自己寫程式碼、建立設計稿、修改檔案或執行部署。
+- **禁止** 使用 Write、Edit 工具建立或修改程式碼/設計稿/設定檔
+- **禁止** 使用 Bash 工具執行 npm、npx、node 等開發指令
+- **允許** 使用 Read、Glob、Grep、Bash(ls) 來驗證成員的產出是否存在
+- 所有實作工作必須透過 [TASK:skillId] 指派給團隊成員完成
+- 即使任務很簡單（改一行程式碼），也必須指派出去
+- 違反此規則等同任務失敗
 ${langRule}`;
 }
 
@@ -495,9 +504,13 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		orchestratorBusy = false;
 		stopAllNagging();
 		broadcast({ type: 'orchestratorBusy', busy: false });
-		// Mark project as paused (waiting for user's next message)
+		// Mark project as paused and advance phase counter
 		if (currentProjectDir) {
-			saveProjectStateImmediate(currentProjectDir, { status: 'paused' });
+			const prev = loadProjectState(currentProjectDir);
+			saveProjectStateImmediate(currentProjectDir, {
+				status: 'paused',
+				currentPhase: (prev?.currentPhase ?? 0) + 1,
+			});
 		}
 		// Resume idle chat when work is done
 		startIdleChatScheduler(broadcast, getIdleAgents);
@@ -678,6 +691,12 @@ export function resumeProject(projectDir: string, broadcast: Broadcast): boolean
 		projectDir,
 		name: state.name,
 		status: 'running',
+	});
+
+	// Send conversation history to client so chat panels can be populated
+	broadcast({
+		type: 'projectHistoryRestored',
+		history: state.history,
 	});
 
 	console.log(`[Team] Resumed project: ${state.name} (phase ${state.currentPhase}, ${responseCounter} responses)`);
