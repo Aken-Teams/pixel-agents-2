@@ -88,7 +88,7 @@ export interface ServerMessageState {
   addOrchestratorUserMessage: (content: string) => void
   teamToolActivities: Record<string, string | null>
   thoughtData: Record<number, ThoughtData>
-  interviewQuestions: string | null
+  interviewQuestions: { id: string; question: string }[] | null
   clearInterview: () => void
 }
 
@@ -125,7 +125,7 @@ export function useServerMessages(
   const [dispatchedTasks, setDispatchedTasks] = useState<DispatchedTask[]>([])
   const [teamToolActivities, setTeamToolActivities] = useState<Record<string, string | null>>({})
   const [thoughtData, setThoughtData] = useState<Record<number, ThoughtData>>({})
-  const [interviewQuestions, setInterviewQuestions] = useState<string | null>(null)
+  const [interviewQuestions, setInterviewQuestions] = useState<{ id: string; question: string }[] | null>(null)
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -730,8 +730,7 @@ export function useServerMessages(
         }
       // ── Interview ──
       } else if (msg.type === 'interviewRequest') {
-        const questions = msg.questions as string
-        setInterviewQuestions(questions)
+        setInterviewQuestions(msg.questions as { id: string; question: string }[])
       // ── Project History Restore ──
       } else if (msg.type === 'projectHistoryRestored') {
         const history = msg.history as Record<string, { role: string; content: string }[]>

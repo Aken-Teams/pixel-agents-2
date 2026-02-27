@@ -361,6 +361,25 @@ function parseInterviewBlock(text: string): { cleanText: string; interview: stri
 	return { cleanText, interview };
 }
 
+/**
+ * Parse interview markdown into individual numbered questions.
+ * Extracts lines matching "N. question text" pattern.
+ */
+function parseInterviewQuestions(markdown: string): { id: string; question: string }[] {
+	const questions: { id: string; question: string }[] = [];
+	for (const line of markdown.split('\n')) {
+		const m = line.match(/^\s*(\d+)\.\s+(.+)/);
+		if (m) {
+			questions.push({ id: `q${m[1]}`, question: m[2].trim() });
+		}
+	}
+	// Fallback: if no numbered questions found, treat entire block as one question
+	if (questions.length === 0 && markdown.trim()) {
+		questions.push({ id: 'q1', question: markdown.trim() });
+	}
+	return questions;
+}
+
 // Interview response resolver — set when waiting for user, resolved by submitInterviewResponse
 let interviewResolver: ((response: string) => void) | null = null;
 
@@ -745,7 +764,8 @@ async function orchestrateStep(
 	const { cleanText: afterInterview, interview } = parseInterviewBlock(response);
 	if (interview) {
 		console.log(`[Orchestrator] Interview block detected — waiting for user response`);
-		broadcast({ type: 'interviewRequest', questions: interview });
+		const parsedQuestions = parseInterviewQuestions(interview);
+		broadcast({ type: 'interviewRequest', questions: parsedQuestions });
 
 		// Pause orchestration until user responds via the modal
 		const userResponse = await new Promise<string>((resolve) => {

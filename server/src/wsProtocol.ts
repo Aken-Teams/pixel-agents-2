@@ -43,7 +43,7 @@ export type ServerMessage =
 	| { type: 'orchestratorBusy'; busy: boolean }
 	| { type: 'teamToolActivity'; skillId: string; status: string | null }
 	// Interview (pre-development questionnaire)
-	| { type: 'interviewRequest'; questions: string }
+	| { type: 'interviewRequest'; questions: { id: string; question: string }[] }
 	// Idle chat
 	| { type: 'idleChatMessage'; agentId: number; text: string }
 	| { type: 'idleChatEnd'; agentId: number }

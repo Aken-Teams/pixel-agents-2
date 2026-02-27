@@ -1,31 +1,81 @@
 import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { wsClient } from '../wsClient.js'
 
+export interface InterviewQuestion {
+  id: string
+  question: string
+}
+
 interface InterviewModalProps {
-  questions: string
+  questions: InterviewQuestion[]
   onClose: () => void
 }
 
+/** Split "**title** hint" into { title, hint }. Falls back to whole text as title. */
+function parseQuestionParts(q: string): { title: string; hint: string } {
+  const match = q.match(/\*\*(.+?)\*\*\s*(.*)/)
+  if (match) return { title: match[1], hint: match[2] }
+  return { title: q, hint: '' }
+}
+
 export function InterviewModal({ questions, onClose }: InterviewModalProps) {
-  const [response, setResponse] = useState('')
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [currentAnswer, setCurrentAnswer] = useState('')
   const [hovered, setHovered] = useState<string | null>(null)
 
-  const handleSubmit = () => {
-    if (!response.trim()) return
-    wsClient.postMessage({ type: 'submitInterviewResponse', response: response.trim() })
+  const current = questions[currentIndex]
+  const isLast = currentIndex === questions.length - 1
+  const { title, hint } = parseQuestionParts(current.question)
+
+  const finishInterview = (allAnswers: Record<string, string>) => {
+    const responseLines: string[] = []
+    for (const q of questions) {
+      if (allAnswers[q.id]) {
+        const { title: qTitle } = parseQuestionParts(q.question)
+        responseLines.push(`${qTitle}\n→ ${allAnswers[q.id]}`)
+      }
+    }
+    if (responseLines.length === 0) {
+      wsClient.postMessage({ type: 'submitInterviewResponse', response: '跳過，直接開始開發。' })
+    } else {
+      wsClient.postMessage({ type: 'submitInterviewResponse', response: responseLines.join('\n\n') })
+    }
     onClose()
   }
 
+  const handleNext = () => {
+    const trimmed = currentAnswer.trim()
+    const newAnswers = { ...answers }
+    if (trimmed) {
+      newAnswers[current.id] = trimmed
+    }
+    setAnswers(newAnswers)
+
+    if (isLast) {
+      finishInterview(newAnswers)
+    } else {
+      setCurrentAnswer('')
+      setCurrentIndex((i) => i + 1)
+    }
+  }
+
   const handleSkip = () => {
-    wsClient.postMessage({ type: 'submitInterviewResponse', response: '跳過，直接開始開發。' })
-    onClose()
+    if (isLast) {
+      finishInterview(answers)
+    } else {
+      setCurrentAnswer('')
+      setCurrentIndex((i) => i + 1)
+    }
+  }
+
+  const handleSkipAll = () => {
+    finishInterview(answers)
   }
 
   return (
     <>
-      {/* Dark backdrop */}
+      {/* Backdrop */}
       <div
         style={{
           position: 'fixed',
@@ -39,6 +89,7 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
       />
       {/* Modal */}
       <div
+        className="interview-modal"
         style={{
           position: 'fixed',
           top: '50%',
@@ -47,11 +98,9 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
           zIndex: 70,
           background: 'var(--pixel-bg)',
           border: '2px solid var(--pixel-border)',
-          borderRadius: 0,
           padding: '4px',
           boxShadow: 'var(--pixel-shadow)',
           width: 520,
-          maxHeight: '80vh',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -62,44 +111,61 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '6px 10px',
+            padding: '8px 12px',
             borderBottom: '1px solid var(--pixel-border)',
             marginBottom: '4px',
           }}
         >
-          <span style={{ fontSize: '22px', color: 'rgba(255, 255, 255, 0.9)' }}>
-            Requirement Interview
+          <span style={{ fontSize: '16px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>
+            需求訪談
+          </span>
+          <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.45)' }}>
+            {currentIndex + 1} / {questions.length}
           </span>
         </div>
 
-        {/* Questions (markdown rendered) */}
-        <div
-          style={{
-            padding: '8px 12px',
-            overflowY: 'auto',
-            flex: 1,
-            fontSize: '18px',
-            color: 'rgba(255, 255, 255, 0.85)',
-            lineHeight: 1.5,
-          }}
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{questions}</ReactMarkdown>
+        {/* Question */}
+        <div style={{ padding: '16px 16px 8px' }}>
+          <div
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'rgba(255, 255, 255, 0.95)',
+              lineHeight: 1.6,
+              marginBottom: hint ? '6px' : '14px',
+            }}
+          >
+            {title}
+          </div>
+          {hint && (
+            <div
+              style={{
+                fontSize: '13px',
+                color: 'rgba(255, 255, 255, 0.45)',
+                lineHeight: 1.5,
+                marginBottom: '14px',
+              }}
+            >
+              {hint}
+            </div>
+          )}
         </div>
 
-        {/* Response textarea */}
-        <div style={{ padding: '8px 12px' }}>
+        {/* Input */}
+        <div style={{ padding: '0 16px 14px' }}>
           <textarea
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
-            placeholder="Please enter your answers..."
+            value={currentAnswer}
+            onChange={(e) => setCurrentAnswer(e.target.value)}
+            placeholder="請輸入您的回答，或跳過此題..."
+            autoFocus
             style={{
               width: '100%',
-              minHeight: 120,
-              padding: '8px',
-              fontSize: '18px',
+              minHeight: 80,
+              padding: '8px 10px',
+              fontSize: '14px',
+              lineHeight: 1.5,
               background: 'rgba(0, 0, 0, 0.3)',
               border: '1px solid var(--pixel-border)',
-              borderRadius: 0,
               color: 'rgba(255, 255, 255, 0.9)',
               resize: 'vertical',
               outline: 'none',
@@ -108,49 +174,66 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
           />
         </div>
 
-        {/* Action buttons */}
+        {/* Footer */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 8,
-            padding: '6px 12px 8px',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 16px 10px',
             borderTop: '1px solid var(--pixel-border)',
           }}
         >
           <button
-            onClick={handleSkip}
-            onMouseEnter={() => setHovered('skip')}
+            onClick={handleSkipAll}
+            onMouseEnter={() => setHovered('skipAll')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              padding: '6px 16px',
-              fontSize: '20px',
-              background: hovered === 'skip' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
-              color: 'rgba(255, 255, 255, 0.6)',
-              border: '1px solid var(--pixel-border)',
-              borderRadius: 0,
+              padding: '4px 8px',
+              fontSize: '12px',
+              background: 'transparent',
+              color: hovered === 'skipAll' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.3)',
+              border: 'none',
               cursor: 'pointer',
+              textDecoration: 'underline',
             }}
           >
-            Skip
+            全部跳過，直接開始
           </button>
-          <button
-            onClick={handleSubmit}
-            onMouseEnter={() => setHovered('submit')}
-            onMouseLeave={() => setHovered(null)}
-            style={{
-              padding: '6px 16px',
-              fontSize: '20px',
-              background: hovered === 'submit' ? 'rgba(90, 140, 255, 0.9)' : 'rgba(90, 140, 255, 0.7)',
-              color: '#fff',
-              border: '1px solid rgba(90, 140, 255, 0.5)',
-              borderRadius: 0,
-              cursor: response.trim() ? 'pointer' : 'default',
-              opacity: response.trim() ? 1 : 0.5,
-            }}
-          >
-            Submit
-          </button>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleSkip}
+              onMouseEnter={() => setHovered('skip')}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                padding: '6px 16px',
+                fontSize: '14px',
+                background: hovered === 'skip' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.6)',
+                border: '1px solid var(--pixel-border)',
+                cursor: 'pointer',
+              }}
+            >
+              跳過
+            </button>
+            <button
+              onClick={handleNext}
+              onMouseEnter={() => setHovered('next')}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                padding: '6px 16px',
+                fontSize: '14px',
+                background: hovered === 'next' ? 'rgba(90, 140, 255, 0.9)' : 'rgba(90, 140, 255, 0.7)',
+                color: '#fff',
+                border: '1px solid rgba(90, 140, 255, 0.5)',
+                cursor: currentAnswer.trim() ? 'pointer' : 'default',
+                opacity: currentAnswer.trim() ? 1 : 0.5,
+              }}
+            >
+              {isLast ? '完成' : '下一題 →'}
+            </button>
+          </div>
         </div>
       </div>
     </>
