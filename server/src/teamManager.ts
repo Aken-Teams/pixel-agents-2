@@ -261,6 +261,88 @@ function truncateResultForOrchestrator(result: string, maxChars = 2000): string 
 		result.slice(-tail);
 }
 
+// ── Auto-Verification ───────────────────────────────────────
+
+interface FileSnapshot {
+	path: string;
+	size: number;
+	mtimeMs: number;
+}
+
+/**
+ * Recursively scan a directory and return file metadata.
+ * Skips node_modules, .git, and other heavy directories.
+ */
+function scanDirectory(dir: string, baseDir: string): FileSnapshot[] {
+	const results: FileSnapshot[] = [];
+	const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', '.cache', '.turbo']);
+	try {
+		const entries = fs.readdirSync(dir, { withFileTypes: true });
+		for (const entry of entries) {
+			const fullPath = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
+				if (SKIP_DIRS.has(entry.name)) continue;
+				results.push(...scanDirectory(fullPath, baseDir));
+			} else {
+				try {
+					const stat = fs.statSync(fullPath);
+					results.push({
+						path: path.relative(baseDir, fullPath).replace(/\\/g, '/'),
+						size: stat.size,
+						mtimeMs: stat.mtimeMs,
+					});
+				} catch { /* skip unreadable files */ }
+			}
+		}
+	} catch { /* dir not readable */ }
+	return results;
+}
+
+/**
+ * Compare before/after snapshots and produce a verification report.
+ */
+function buildVerificationReport(
+	before: FileSnapshot[],
+	after: FileSnapshot[],
+): string {
+	const beforeMap = new Map(before.map(f => [f.path, f]));
+	const afterMap = new Map(after.map(f => [f.path, f]));
+
+	const created: string[] = [];
+	const modified: string[] = [];
+	const deleted: string[] = [];
+
+	for (const [filePath, afterFile] of afterMap) {
+		const beforeFile = beforeMap.get(filePath);
+		if (!beforeFile) {
+			created.push(`  ✅ ${filePath} (${formatSize(afterFile.size)})`);
+		} else if (afterFile.mtimeMs > beforeFile.mtimeMs) {
+			modified.push(`  📝 ${filePath} (${formatSize(afterFile.size)})`);
+		}
+	}
+	for (const filePath of beforeMap.keys()) {
+		if (!afterMap.has(filePath)) {
+			deleted.push(`  ❌ ${filePath} (已刪除)`);
+		}
+	}
+
+	if (created.length === 0 && modified.length === 0 && deleted.length === 0) {
+		return '\n⚠️ 系統自動驗證：未偵測到任何檔案變更。該成員可能未實際產出檔案。';
+	}
+
+	const lines = ['\n📋 系統自動驗證（檔案變更報告）：'];
+	if (created.length > 0) lines.push(`新增 ${created.length} 個檔案：`, ...created);
+	if (modified.length > 0) lines.push(`修改 ${modified.length} 個檔案：`, ...modified);
+	if (deleted.length > 0) lines.push(`刪除 ${deleted.length} 個檔案：`, ...deleted);
+	return lines.join('\n');
+}
+
+function formatSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes}B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
 // ── Interview Block Parsing ─────────────────────────────────
 
 /**
@@ -733,6 +815,10 @@ async function orchestrateStep(
 			});
 		}
 
+		// Snapshot project directory before task runs (for auto-verification)
+		const projectDir = getAgentCwd();
+		const snapshotBefore = scanDirectory(projectDir, projectDir);
+
 		// Send to sub-agent and wait for result
 		const subPrompt = buildPromptWithHistory(targetSession.history, task.description);
 		targetSession.history.push({ role: 'user', content: task.description });
@@ -740,8 +826,13 @@ async function orchestrateStep(
 		try {
 			const result = await spawnClaudeForSkill(targetSession, subPrompt, broadcast);
 			const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
+
+			// Auto-verify: compare file changes after task completion
+			const snapshotAfter = scanDirectory(projectDir, projectDir);
+			const verificationReport = buildVerificationReport(snapshotBefore, snapshotAfter);
+
 			const truncated = truncateResultForOrchestrator(resultText);
-			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${truncated}\n[/RESULT]`);
+			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${truncated}${verificationReport}\n[/RESULT]`);
 			broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
 			untrackTask(targetSession.agentId);
 			// Persist task as completed
