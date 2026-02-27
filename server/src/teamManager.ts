@@ -8,6 +8,7 @@ import type { SkillDefinition } from './skillLoader.js';
 import { getAssetsRoot } from './config.js';
 import { formatToolStatus } from './transcriptParser.js';
 import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChatManager.js';
+import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -94,6 +95,8 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 
 	if (orchestratorSkillId) {
 		console.log(`[Team] Orchestrator identified: ${orchestratorSkillId}`);
+		const orchSession = teamSessions.get(orchestratorSkillId);
+		if (orchSession) setBossAgent(orchSession.agentId);
 	}
 
 	// Start idle chat when team is loaded and not busy
@@ -463,6 +466,7 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 
 	orchestrateStep(orchestratorSkillId, message, broadcast, 0).finally(() => {
 		orchestratorBusy = false;
+		stopAllNagging();
 		broadcast({ type: 'orchestratorBusy', busy: false });
 		// Resume idle chat when work is done
 		startIdleChatScheduler(broadcast, getIdleAgents);
@@ -558,6 +562,9 @@ async function orchestrateStep(
 
 		console.log(`[Orchestrator] Dispatching task ${taskId} to ${targetSession.name}: ${task.description.slice(0, 80)}...`);
 
+		// Track task for boss nagging
+		trackTask(targetSession.agentId, task.skillId, broadcast, getIdleAgents);
+
 		// Wait if sub-agent is still busy from a previous task
 		if (targetSession.activeProcess) {
 			console.log(`[Orchestrator] Waiting for ${targetSession.name}'s active process to finish...`);
@@ -580,10 +587,12 @@ async function orchestrateStep(
 			const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
 			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${resultText}\n[/RESULT]`);
 			broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
+			untrackTask(targetSession.agentId);
 			console.log(`[Orchestrator] Task ${taskId} completed by ${targetSession.name}`);
 		} catch (err) {
 			const errMsg = err instanceof Error ? err.message : String(err);
 			results.push(`[RESULT:${task.skillId}] 錯誤：${errMsg} [/RESULT]`);
+			untrackTask(targetSession.agentId);
 			console.error(`[Orchestrator] Task ${taskId} failed:`, errMsg);
 		}
 	}
@@ -607,6 +616,7 @@ export function getTeamAgentIds(): number[] {
 
 export function closeTeam(broadcast: Broadcast): void {
 	stopIdleChat();
+	stopAllNagging();
 	for (const session of teamSessions.values()) {
 		if (session.activeProcess) {
 			try { session.activeProcess.kill('SIGTERM'); } catch { /* */ }
