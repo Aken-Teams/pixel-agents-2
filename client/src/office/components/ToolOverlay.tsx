@@ -117,6 +117,9 @@ export function ToolOverlay({
           activityText = getActivityText(id, agentTools, ch.isActive)
         }
 
+        // Don't show overlay when idle (no useful info to display)
+        if (activityText === 'Idle') return null
+
         // Determine dot color
         const tools = agentTools[id]
         const hasPermission = subHasPermission || tools?.some((t) => t.permissionWait && !t.done)
