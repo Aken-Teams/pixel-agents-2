@@ -701,8 +701,9 @@ export function useServerMessages(
       } else if (msg.type === 'orchestratorBusy') {
         setOrchestratorBusy(msg.busy as boolean)
         if (!(msg.busy as boolean)) {
-          // Clear dispatched tasks, tool activities, and thought data when orchestration finishes
-          setDispatchedTasks([])
+          // Clear transient data when orchestration finishes
+          // Keep dispatchedTasks so green "completed" dots remain visible
+          // (they get cleared on next user message via addOrchestratorUserMessage)
           setTeamToolActivities({})
           setThoughtData({})
         }
