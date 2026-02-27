@@ -88,6 +88,8 @@ export interface ServerMessageState {
   addOrchestratorUserMessage: (content: string) => void
   teamToolActivities: Record<string, string | null>
   thoughtData: Record<number, ThoughtData>
+  interviewQuestions: string | null
+  clearInterview: () => void
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -123,6 +125,7 @@ export function useServerMessages(
   const [dispatchedTasks, setDispatchedTasks] = useState<DispatchedTask[]>([])
   const [teamToolActivities, setTeamToolActivities] = useState<Record<string, string | null>>({})
   const [thoughtData, setThoughtData] = useState<Record<number, ThoughtData>>({})
+  const [interviewQuestions, setInterviewQuestions] = useState<string | null>(null)
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -725,6 +728,10 @@ export function useServerMessages(
             }
           })
         }
+      // ── Interview ──
+      } else if (msg.type === 'interviewRequest') {
+        const questions = msg.questions as string
+        setInterviewQuestions(questions)
       // ── Project History Restore ──
       } else if (msg.type === 'projectHistoryRestored') {
         const history = msg.history as Record<string, { role: string; content: string }[]>
@@ -810,6 +817,10 @@ export function useServerMessages(
     })
   }, [])
 
+  const clearInterview = useCallback(() => {
+    setInterviewQuestions(null)
+  }, [])
+
   const addOrchestratorUserMessage = useCallback((content: string) => {
     // In orchestrator mode, user messages go to the orchestrator's chat
     if (!orchestratorSkillId) return
@@ -835,5 +846,6 @@ export function useServerMessages(
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
     teamToolActivities, thoughtData,
+    interviewQuestions, clearInterview,
   }
 }

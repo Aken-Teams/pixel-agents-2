@@ -43,15 +43,46 @@ export function createChat(cwd: string, broadcast: Broadcast): string {
 	return chatId;
 }
 
+const MAX_HISTORY_CHARS = 14000; // ~4,000 tokens — sliding window budget
+
 /**
  * Build a prompt that includes conversation history for context.
+ * Uses a sliding window to keep prompt size bounded.
  * The current user message should NOT yet be in session.history when this is called.
  */
 function buildPromptWithHistory(history: Array<{ role: string; content: string }>, newMessage: string): string {
 	if (history.length === 0) {
 		return newMessage;
 	}
-	const lines = history.map((m) =>
+
+	let charBudget = MAX_HISTORY_CHARS;
+	const selected: Array<{ role: string; content: string }> = [];
+
+	// Always keep the first user message (original context)
+	if (history.length > 2 && history[0].role === 'user') {
+		selected.push(history[0]);
+		charBudget -= history[0].content.length;
+	}
+
+	// Walk backwards from newest, adding messages until budget exhausted
+	const startIdx = selected.length > 0 ? 1 : 0;
+	const recent: Array<{ role: string; content: string }> = [];
+	for (let i = history.length - 1; i >= startIdx; i--) {
+		const msg = history[i];
+		if (msg.content.length > charBudget) {
+			recent.unshift({
+				role: msg.role,
+				content: msg.content.slice(0, Math.max(500, charBudget)) + '\n...(截斷)',
+			});
+			break;
+		}
+		charBudget -= msg.content.length;
+		recent.unshift(msg);
+		if (charBudget <= 0) break;
+	}
+
+	const all = [...selected, ...recent];
+	const lines = all.map((m) =>
 		m.role === 'user' ? `Human: ${m.content}` : `Assistant: ${m.content}`,
 	);
 	return `${lines.join('\n')}\nHuman: ${newMessage}\n\nContinue the conversation above. Respond to the latest Human message only.`;

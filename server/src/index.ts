@@ -51,6 +51,7 @@ import {
 	loadTeam,
 	sendTeamMessage,
 	sendOrchestratorMessage,
+	handleInterviewResponse,
 	getTeamAgentIds,
 	getExistingTeamMembers,
 	getOrchestratorSkillId,
@@ -231,6 +232,10 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 		case 'setMode':
 			setMode(message.mode);
 			broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: message.mode });
+			break;
+
+		case 'submitInterviewResponse':
+			handleInterviewResponse(message.response);
 			break;
 
 		case 'listProjects':

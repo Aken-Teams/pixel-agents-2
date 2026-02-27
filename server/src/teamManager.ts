@@ -206,12 +206,93 @@ function persistHistory(session: TeamSession): void {
 	});
 }
 
+const MAX_HISTORY_CHARS = 14000; // ~4,000 tokens — sliding window budget
+
 function buildPromptWithHistory(history: ChatMessage[], newMessage: string): string {
 	if (history.length === 0) return newMessage;
-	const lines = history.map((m) =>
+
+	let charBudget = MAX_HISTORY_CHARS;
+	const selected: ChatMessage[] = [];
+
+	// Always keep the first user message (original requirement / context)
+	if (history.length > 2 && history[0].role === 'user') {
+		selected.push(history[0]);
+		charBudget -= history[0].content.length;
+	}
+
+	// Walk backwards from newest, adding messages until budget exhausted
+	const startIdx = selected.length > 0 ? 1 : 0;
+	const recent: ChatMessage[] = [];
+	for (let i = history.length - 1; i >= startIdx; i--) {
+		const msg = history[i];
+		if (msg.content.length > charBudget) {
+			// Partially include this message (at least 500 chars)
+			recent.unshift({
+				role: msg.role,
+				content: msg.content.slice(0, Math.max(500, charBudget)) + '\n...(截斷)',
+			});
+			break;
+		}
+		charBudget -= msg.content.length;
+		recent.unshift(msg);
+		if (charBudget <= 0) break;
+	}
+
+	const all = [...selected, ...recent];
+	const lines = all.map((m) =>
 		m.role === 'user' ? `Human: ${m.content}` : `Assistant: ${m.content}`,
 	);
 	return `${lines.join('\n')}\nHuman: ${newMessage}\n\nContinue the conversation above. Respond to the latest Human message only.`;
+}
+
+// ── Result Truncation ───────────────────────────────────────
+
+/**
+ * Truncate a sub-agent result before feeding it back to the orchestrator.
+ * Full content is already saved in docs/ — the orchestrator only needs
+ * enough context to make decisions (head + tail).
+ */
+function truncateResultForOrchestrator(result: string, maxChars = 2000): string {
+	if (result.length <= maxChars) return result;
+	const head = Math.floor(maxChars * 0.7);
+	const tail = Math.floor(maxChars * 0.25);
+	return result.slice(0, head) +
+		'\n\n...(中間內容已省略，完整內容已儲存在 docs/)...\n\n' +
+		result.slice(-tail);
+}
+
+// ── Interview Block Parsing ─────────────────────────────────
+
+/**
+ * Parse [INTERVIEW]...[/INTERVIEW] blocks from orchestrator output.
+ * Returns the clean text and extracted interview questions (markdown).
+ */
+function parseInterviewBlock(text: string): { cleanText: string; interview: string | null } {
+	let interview: string | null = null;
+	const cleanText = text.replace(
+		/\[INTERVIEW\]\s*([\s\S]*?)\s*\[\/INTERVIEW\]/g,
+		(_match, content: string) => {
+			interview = content.trim();
+			return '';
+		},
+	).trim();
+	return { cleanText, interview };
+}
+
+// Interview response resolver — set when waiting for user, resolved by submitInterviewResponse
+let interviewResolver: ((response: string) => void) | null = null;
+
+/**
+ * Called by index.ts when the client submits an interview response.
+ */
+export function handleInterviewResponse(response: string): void {
+	if (interviewResolver) {
+		const resolve = interviewResolver;
+		interviewResolver = null;
+		resolve(response);
+	} else {
+		console.log('[Orchestrator] Received interview response but no pending interview');
+	}
 }
 
 // ── Task Block Parsing ──────────────────────────────────────
@@ -578,6 +659,24 @@ async function orchestrateStep(
 		response = '（該成員已完成工作但未產出文字回覆，可能全部是工具操作。）';
 	}
 
+	// Check for interview blocks first (pre-development questionnaire)
+	const { cleanText: afterInterview, interview } = parseInterviewBlock(response);
+	if (interview) {
+		console.log(`[Orchestrator] Interview block detected — waiting for user response`);
+		broadcast({ type: 'interviewRequest', questions: interview });
+
+		// Pause orchestration until user responds via the modal
+		const userResponse = await new Promise<string>((resolve) => {
+			interviewResolver = resolve;
+		});
+
+		console.log(`[Orchestrator] Interview response received — continuing orchestration`);
+		// Feed user's interview response back to the orchestrator
+		const feedbackMsg = `用戶的回覆：\n${userResponse}`;
+		await orchestrateStep(orchSkillId, feedbackMsg, broadcast, depth + 1);
+		return;
+	}
+
 	// Parse for task blocks
 	const { tasks } = parseTaskBlocks(response);
 
@@ -641,7 +740,8 @@ async function orchestrateStep(
 		try {
 			const result = await spawnClaudeForSkill(targetSession, subPrompt, broadcast);
 			const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
-			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${resultText}\n[/RESULT]`);
+			const truncated = truncateResultForOrchestrator(resultText);
+			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${truncated}\n[/RESULT]`);
 			broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
 			untrackTask(targetSession.agentId);
 			// Persist task as completed

@@ -42,6 +42,8 @@ export type ServerMessage =
 	| { type: 'taskCompleted'; taskId: string; targetSkillId: string }
 	| { type: 'orchestratorBusy'; busy: boolean }
 	| { type: 'teamToolActivity'; skillId: string; status: string | null }
+	// Interview (pre-development questionnaire)
+	| { type: 'interviewRequest'; questions: string }
 	// Idle chat
 	| { type: 'idleChatMessage'; agentId: number; text: string }
 	| { type: 'idleChatEnd'; agentId: number }
@@ -69,6 +71,8 @@ export type ClientMessage =
 	| { type: 'setMode'; mode: 'chat' | 'team' }
 	// Orchestrator
 	| { type: 'sendOrchestratorMessage'; message: string }
+	// Interview response
+	| { type: 'submitInterviewResponse'; response: string }
 	// Project persistence
 	| { type: 'listProjects' }
 	| { type: 'resumeProject'; projectDir: string };
