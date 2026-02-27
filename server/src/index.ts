@@ -4,7 +4,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { AgentState } from './types.js';
-import type { ClientMessage } from './wsProtocol.js';
+import type { ClientMessage, DocMeta } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
 import { HTTP_PORT, MAX_CHARACTERS, getAssetsRoot, getClientAssetsDir } from './config.js';
 import {
@@ -46,6 +46,7 @@ import {
 	initChatManager,
 } from './chatManager.js';
 import { loadSkills, watchSkills } from './skillLoader.js';
+import { loadProjectState } from './projectPersistence.js';
 import {
 	initTeamManager,
 	loadTeam,
@@ -151,6 +152,47 @@ wss.on('connection', (ws) => {
 	});
 });
 
+function loadDocsMeta(docsDir: string): DocMeta[] {
+	if (!fs.existsSync(docsDir)) return [];
+	let files: string[];
+	try {
+		files = fs.readdirSync(docsDir).filter(f => f.endsWith('.md')).sort();
+	} catch { return []; }
+
+	return files.map(fileName => {
+		const filePath = path.join(docsDir, fileName);
+		let stat: fs.Stats;
+		try { stat = fs.statSync(filePath); } catch { return null; }
+
+		// Read only first 1KB for header parsing
+		let head = '';
+		try {
+			const fd = fs.openSync(filePath, 'r');
+			const buf = Buffer.alloc(1024);
+			const bytesRead = fs.readSync(fd, buf, 0, 1024, 0);
+			fs.closeSync(fd);
+			head = buf.subarray(0, bytesRead).toString('utf-8');
+		} catch { /* ignore */ }
+
+		const agentMatch = head.match(/<!-- Agent: (.+?) \((.+?)\) -->/);
+		const timeMatch = head.match(/<!-- Time: (.+?) -->/);
+		const summaryMatch = head.match(/<!-- Summary: (.+?) -->/);
+
+		const agentName = agentMatch?.[1] ?? '';
+		const skillId = agentMatch?.[2] ?? '';
+		const time = timeMatch?.[1] ?? '';
+
+		let summary = summaryMatch?.[1] ?? '';
+		if (!summary) {
+			// Fallback: first 200 chars of body after stripping header
+			const body = head.replace(/^(<!--[\s\S]*?-->\s*\n?)+/, '').trimStart();
+			summary = body.slice(0, 200).replace(/\s+/g, ' ').trim();
+		}
+
+		return { fileName, agentName, skillId, time, summary, sizeBytes: stat.size };
+	}).filter((d): d is DocMeta => d !== null);
+}
+
 function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 	switch (message.type) {
 		case 'webviewReady':
@@ -245,6 +287,34 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 		case 'resumeProject':
 			resumeProject(message.projectDir, broadcast);
 			break;
+
+		case 'getProjectDetail': {
+			const state = loadProjectState(message.projectDir);
+			if (!state) break;
+			const docs = loadDocsMeta(path.join(message.projectDir, 'docs'));
+			broadcast({
+				type: 'projectDetail',
+				projectDir: message.projectDir,
+				name: state.name,
+				status: state.status,
+				currentPhase: state.currentPhase,
+				userMessage: state.userMessage,
+				tasks: state.tasks ?? {},
+				docs,
+			});
+			break;
+		}
+
+		case 'getDocContent': {
+			const safe = !message.fileName.includes('..') && !message.fileName.includes('/') && !message.fileName.includes('\\');
+			if (!safe) break;
+			const filePath = path.join(message.projectDir, 'docs', message.fileName);
+			try {
+				const content = fs.readFileSync(filePath, 'utf-8');
+				broadcast({ type: 'docContent', projectDir: message.projectDir, fileName: message.fileName, content });
+			} catch { /* file not readable */ }
+			break;
+		}
 	}
 }
 

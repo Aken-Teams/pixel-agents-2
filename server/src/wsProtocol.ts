@@ -1,4 +1,15 @@
-import type { ProjectSummary } from './projectPersistence.js';
+import type { ProjectSummary, TaskRecord } from './projectPersistence.js';
+
+// ── Shared interfaces ────────────────────────────────────────
+
+export interface DocMeta {
+	fileName: string;
+	agentName: string;
+	skillId: string;
+	time: string;
+	summary: string;
+	sizeBytes: number;
+}
 
 // ── Server → Client Messages ──────────────────────────────────
 
@@ -50,7 +61,10 @@ export type ServerMessage =
 	// Project persistence
 	| { type: 'projectList'; projects: ProjectSummary[] }
 	| { type: 'projectLoaded'; projectDir: string; name: string; status: string }
-	| { type: 'projectHistoryRestored'; history: Record<string, { role: string; content: string }[]> };
+	| { type: 'projectHistoryRestored'; history: Record<string, { role: string; content: string }[]> }
+	// Portfolio
+	| { type: 'projectDetail'; projectDir: string; name: string; status: string; currentPhase: number; userMessage: string; tasks: Record<string, TaskRecord>; docs: DocMeta[] }
+	| { type: 'docContent'; projectDir: string; fileName: string; content: string };
 
 // ── Client → Server Messages ──────────────────────────────────
 
@@ -75,7 +89,10 @@ export type ClientMessage =
 	| { type: 'submitInterviewResponse'; response: string }
 	// Project persistence
 	| { type: 'listProjects' }
-	| { type: 'resumeProject'; projectDir: string };
+	| { type: 'resumeProject'; projectDir: string }
+	// Portfolio
+	| { type: 'getProjectDetail'; projectDir: string }
+	| { type: 'getDocContent'; projectDir: string; fileName: string };
 
 export interface AgentMeta {
 	palette?: number;

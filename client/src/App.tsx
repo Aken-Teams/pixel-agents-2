@@ -296,6 +296,7 @@ function App() {
         isStaticBackground={isStaticBackgroundLayout(officeState.getLayout())}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
+        teamMembers={teamMembers}
       />
 
       {editor.isEditMode && editor.isDirty && (

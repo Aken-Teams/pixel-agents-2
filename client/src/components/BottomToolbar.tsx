@@ -1,5 +1,15 @@
 import { useState } from 'react'
 import { SettingsModal } from './SettingsModal.js'
+import { ProjectPortfolioModal } from './ProjectPortfolioModal.js'
+
+interface TeamMemberInfo {
+  skillId: string
+  name: string
+  agentId: number
+  palette?: number
+  hueShift?: number
+  role?: 'orchestrator' | 'worker'
+}
 
 interface BottomToolbarProps {
   isEditMode: boolean
@@ -7,6 +17,7 @@ interface BottomToolbarProps {
   isStaticBackground?: boolean
   isDebugMode: boolean
   onToggleDebugMode: () => void
+  teamMembers: TeamMemberInfo[]
 }
 
 const panelStyle: React.CSSProperties = {
@@ -47,9 +58,11 @@ export function BottomToolbar({
   isStaticBackground,
   isDebugMode,
   onToggleDebugMode,
+  teamMembers,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isPortfolioOpen, setIsPortfolioOpen] = useState(false)
 
   return (
     <div style={panelStyle}>
@@ -71,6 +84,22 @@ export function BottomToolbar({
           Layout
         </button>
       )}
+      <button
+        onClick={() => setIsPortfolioOpen(true)}
+        onMouseEnter={() => setHovered('portfolio')}
+        onMouseLeave={() => setHovered(null)}
+        style={
+          isPortfolioOpen
+            ? { ...btnActive }
+            : {
+                ...btnBase,
+                background: hovered === 'portfolio' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+              }
+        }
+        title="View project portfolio"
+      >
+        Portfolio
+      </button>
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setIsSettingsOpen((v) => !v)}
@@ -95,6 +124,12 @@ export function BottomToolbar({
           onToggleDebugMode={onToggleDebugMode}
         />
       </div>
+      {isPortfolioOpen && (
+        <ProjectPortfolioModal
+          onClose={() => setIsPortfolioOpen(false)}
+          teamMembers={teamMembers}
+        />
+      )}
     </div>
   )
 }
