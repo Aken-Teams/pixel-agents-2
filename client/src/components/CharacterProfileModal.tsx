@@ -217,7 +217,7 @@ export function CharacterProfileModal({ member, onClose }: CharacterProfileModal
             </div>
             {/* Pose label */}
             <div style={{
-              fontSize: '10px', color: `${accent}cc`,
+              fontSize: '10px', color: 'rgba(255, 255, 255, 0.65)',
               letterSpacing: '0.5px', textAlign: 'center',
               userSelect: 'none',
             }}>

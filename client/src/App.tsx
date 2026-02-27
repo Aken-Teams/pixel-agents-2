@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { OfficeState } from './office/engine/officeState.js'
 import { OfficeCanvas } from './office/components/OfficeCanvas.js'
 import { ToolOverlay } from './office/components/ToolOverlay.js'
@@ -174,25 +174,32 @@ function App() {
     wsClient.postMessage({ type: 'closeAgent', id })
   }, [])
 
+  const officeState = getOfficeState()
+
+  // Enrich teamMembers with actual palette/hueShift from the live game characters
+  // (skill file values may differ from what was randomly assigned at addAgent time)
+  const enrichedTeamMembers = useMemo(() => {
+    return teamMembers.map((m) => {
+      const ch = officeState.characters.get(m.agentId)
+      if (!ch) return m
+      return { ...m, palette: ch.palette, hueShift: ch.hueShift }
+    })
+  }, [teamMembers, officeState])
+
   const handleClick = useCallback((agentId: number) => {
     // If clicked agent is a sub-agent, resolve to the parent
     const os = getOfficeState()
     const meta = os.subagentMeta.get(agentId)
     const focusId = meta ? meta.parentAgentId : agentId
     // Show character profile if team member info is available
-    const member = teamMembers.find((m) => m.agentId === focusId)
+    // enrichedTeamMembers already has actual palette/hueShift from officeState
+    const member = enrichedTeamMembers.find((m) => m.agentId === focusId)
     if (member) {
-      // Use the actual palette/hueShift from the game character (may differ from skill file)
-      const ch = os.characters.get(focusId)
-      setProfileMember({
-        ...member,
-        palette: ch?.palette ?? member.palette,
-        hueShift: ch?.hueShift ?? member.hueShift,
-      })
+      setProfileMember(member)
     } else {
       wsClient.postMessage({ type: 'focusAgent', id: focusId })
     }
-  }, [teamMembers])
+  }, [enrichedTeamMembers])
 
   const handleCreateChat = useCallback(() => {
     wsClient.postMessage({ type: 'createChat' })
@@ -220,8 +227,6 @@ function App() {
     addOrchestratorUserMessage(message)
     wsClient.postMessage({ type: 'sendOrchestratorMessage', message })
   }, [addOrchestratorUserMessage])
-
-  const officeState = getOfficeState()
 
   // Force dependency on editorTickForKeyboard to propagate keyboard-triggered re-renders
   void editorTickForKeyboard
@@ -257,7 +262,7 @@ function App() {
         atCharacterLimit={agents.length >= MAX_CHARACTERS}
         mode={mode}
         onModeChange={handleModeChange}
-        teamMembers={teamMembers}
+        teamMembers={enrichedTeamMembers}
         teamChats={teamChats}
         onSendTeamMessage={handleSendTeamMessage}
         orchestratorSkillId={orchestratorSkillId}
@@ -311,7 +316,7 @@ function App() {
         isStaticBackground={isStaticBackgroundLayout(officeState.getLayout())}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
-        teamMembers={teamMembers}
+        teamMembers={enrichedTeamMembers}
       />
 
       {editor.isEditMode && editor.isDirty && (
