@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { OfficeState } from '../office/engine/officeState.js'
 import { TILE_SIZE, CharacterState } from '../office/types.js'
+import { CHARACTER_RENDER_SCALE, CHARACTER_SITTING_OFFSET_PX } from '../constants.js'
 
 interface AgentLabelsProps {
   officeState: OfficeState
@@ -49,9 +50,13 @@ export function AgentLabels({
   const deviceOffsetX = Math.floor((canvasW - mapW) / 2) + Math.round(panRef.current.x)
   const deviceOffsetY = Math.floor((canvasH - mapH) / 2) + Math.round(panRef.current.y)
 
-  const sittingOffset = ch.state === CharacterState.TYPE ? 6 : 0
+  // Use same positioning formula as ThoughtBubbles / renderer
+  const sittingOffset = ch.state === CharacterState.TYPE
+    ? Math.round(CHARACTER_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
   const screenX = (deviceOffsetX + ch.x * zoom) / dpr
-  const screenY = (deviceOffsetY + (ch.y + sittingOffset - 24) * zoom) / dpr
+  const screenY = (deviceOffsetY + (ch.y + sittingOffset) * zoom) / dpr
+  const charZoom = Math.round(zoom * CHARACTER_RENDER_SCALE)
+  const charHeight = 24 * charZoom / dpr
 
   // Status dot color
   let dotColor: string | null = null
@@ -66,8 +71,8 @@ export function AgentLabels({
       style={{
         position: 'absolute',
         left: screenX,
-        top: screenY - 20,
-        transform: 'translateX(-50%)',
+        top: screenY - charHeight - 4,
+        transform: 'translate(-50%, -100%)',
         pointerEvents: 'none',
         zIndex: 40,
       }}
@@ -76,23 +81,30 @@ export function AgentLabels({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 4,
-          fontSize: '18px',
-          color: 'var(--pixel-text)',
-          background: 'rgba(30,30,46,0.8)',
-          padding: '1px 6px',
-          borderRadius: 2,
+          gap: 3,
+          fontSize: '11px',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif',
+          fontWeight: 500,
+          letterSpacing: '0.3px',
+          color: 'rgba(255,255,255,0.9)',
+          background: 'rgba(15, 15, 25, 0.85)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          padding: '2px 7px',
+          borderRadius: 3,
           whiteSpace: 'nowrap',
+          backdropFilter: 'blur(4px)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
         }}
       >
         {dotColor && (
           <span
             style={{
-              width: 6,
-              height: 6,
+              width: 5,
+              height: 5,
               borderRadius: '50%',
               background: dotColor,
               flexShrink: 0,
+              boxShadow: `0 0 4px ${dotColor === 'var(--pixel-status-permission)' ? 'rgba(255,180,50,0.5)' : 'rgba(50,220,100,0.5)'}`,
             }}
           />
         )}
