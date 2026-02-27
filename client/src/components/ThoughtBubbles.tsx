@@ -304,14 +304,17 @@ export function ThoughtBubbles({
           useTypewriter = true
         }
 
-        // Position: above the character, higher than the existing bubble sprites
+        // Position: above the character's head
         const sittingOffset = ch.state === CharacterState.TYPE
           ? Math.round(CHARACTER_SITTING_OFFSET_PX * CHARACTER_RENDER_SCALE) : 0
         const screenX = (deviceOffsetX + ch.x * zoom) / dpr
         const screenY = (deviceOffsetY + (ch.y + sittingOffset) * zoom) / dpr
-        // Place above the character head (character is ~36px tall at 1.5x scale)
-        const charHeight = 24 * CHARACTER_RENDER_SCALE * zoom / dpr
-        const bubbleOffset = charHeight + 20
+        // Use same charZoom rounding as the renderer for accurate character height
+        const charZoom = Math.round(zoom * CHARACTER_RENDER_SCALE)
+        const charHeight = 24 * charZoom / dpr
+        // Anchor bubble BOTTOM at character head position (translateY(-100%) shifts up by bubble height)
+        // The tail extends 5px below the container, so tail tip ≈ head - 3px
+        const headY = screenY - charHeight - 8
 
         return (
           <div
@@ -319,8 +322,8 @@ export function ThoughtBubbles({
             style={{
               position: 'absolute',
               left: screenX,
-              top: screenY - bubbleOffset,
-              transform: 'translateX(-50%)',
+              top: headY,
+              transform: 'translate(-50%, -100%)',
               pointerEvents: 'none',
               zIndex: 45,
             }}
