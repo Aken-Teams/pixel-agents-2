@@ -182,12 +182,7 @@ function loadDocsMeta(docsDir: string): DocMeta[] {
 		const skillId = agentMatch?.[2] ?? '';
 		const time = timeMatch?.[1] ?? '';
 
-		let summary = summaryMatch?.[1] ?? '';
-		if (!summary) {
-			// Fallback: first 200 chars of body after stripping header
-			const body = head.replace(/^(<!--[\s\S]*?-->\s*\n?)+/, '').trimStart();
-			summary = body.slice(0, 200).replace(/\s+/g, ' ').trim();
-		}
+		const summary = summaryMatch?.[1] ?? '';
 
 		return { fileName, agentName, skillId, time, summary, sizeBytes: stat.size };
 	}).filter((d): d is DocMeta => d !== null);

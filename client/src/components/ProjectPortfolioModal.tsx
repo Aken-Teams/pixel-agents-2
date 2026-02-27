@@ -67,6 +67,24 @@ const TASK_STATUS_COLORS: Record<string, string> = {
   failed: '#f87171',
 }
 
+const SKILL_ROLE_NAMES: Record<string, string> = {
+  techlead: '技術長',
+  pm: '產品經理',
+  architect: '架構師',
+  designer: '設計師',
+  frontend: '前端工程師',
+  backend: '後端工程師',
+  qa: 'QA 工程師',
+  security: '資安工程師',
+  devops: '維運工程師',
+  dba: '資料庫管理師',
+  reviewer: '程式碼審查員',
+  'technical-writer': '技術文件撰寫師',
+  sre: 'SRE 工程師',
+  data: '資料工程師',
+  mobile: '行動端工程師',
+}
+
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso)
@@ -132,6 +150,14 @@ function renderMarkdown(raw: string): string {
       if (inList) { html.push('</ul>'); inList = false }
       if (inTable) { html.push('</table>'); inTable = false }
       html.push('<div style="height:8px"></div>')
+      continue
+    }
+
+    // Horizontal rule (---, ***, ___)
+    if (/^[-*_]{3,}\s*$/.test(line.trim())) {
+      if (inList) { html.push('</ul>'); inList = false }
+      if (inTable) { html.push('</table>'); inTable = false }
+      html.push('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0" />')
       continue
     }
 
@@ -515,7 +541,7 @@ function ProjectDetailView({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.8)', display: 'flex', gap: 6, alignItems: 'center' }}>
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>{taskId}</span>
-                  <span>{task.skillId}</span>
+                  <span>{SKILL_ROLE_NAMES[task.skillId] ?? member?.name ?? task.skillId}</span>
                 </div>
                 <div style={{
                   fontSize: '13px',
@@ -585,7 +611,7 @@ function ProjectDetailView({
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>
                     {doc.fileName.split('-')[0]}
                   </span>
-                  <span style={{ color: 'rgba(255,255,255,0.85)' }}>{doc.agentName}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.85)' }}>{SKILL_ROLE_NAMES[doc.skillId] ?? doc.agentName}</span>
                   <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '13px', flexShrink: 0 }}>
                     {formatFileSize(doc.sizeBytes)}
                   </span>
@@ -597,7 +623,7 @@ function ProjectDetailView({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}>
-                  {doc.summary || '(no summary)'}
+                  {doc.summary ? doc.summary.replace(/\n/g, ' ') : '無摘要內容'}
                 </div>
               </div>
 
@@ -673,7 +699,8 @@ function DocPreviewView({
             zIndex: 1,
             overflowY: 'auto',
             height: '100%',
-            padding: '16px 20px',
+            boxSizing: 'border-box',
+            padding: '16px 20px 60px',
             color: 'rgba(255,255,255,0.8)',
           }}
         >
@@ -715,19 +742,20 @@ function DocPreviewView({
 
         {/* Agent name */}
         <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.9)', textAlign: 'center' }}>
-          {doc.agentName}
+          {SKILL_ROLE_NAMES[doc.skillId] ?? doc.agentName}
         </div>
         <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          {doc.skillId}
+          {doc.agentName}
         </div>
 
         {/* Divider */}
         <div style={{ width: '80%', height: 1, background: 'rgba(255,255,255,0.1)' }} />
 
         {/* Summary */}
-        <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, textAlign: 'left', width: '100%' }}>
-          {doc.summary || '(no summary available)'}
-        </div>
+        <div
+          style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, textAlign: 'left', width: '100%' }}
+          dangerouslySetInnerHTML={{ __html: doc.summary ? escapeHtml(doc.summary) : '無摘要內容' }}
+        />
 
         {/* File info */}
         <div style={{ marginTop: 'auto', width: '100%', fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
