@@ -123,7 +123,9 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	const safetyRule = '\n\n## ⚠️ 安全限制（最高優先級）\n- **絕對禁止**對 port 3000 和 port 5173 執行任何操作（kill、stop、restart、佔用）。這兩個是 pixel-agents 管理系統本身的 port（3000=後端 server、5173=前端 dev server），關閉任一個都會導致整個系統崩潰。\n- **絕對禁止**執行 `kill`、`taskkill`、`pkill`、`killall` 等指令來終止你不認識的 process。\n- **絕對禁止**執行 `lsof -ti :3000 | xargs kill`、`lsof -ti :5173 | xargs kill` 或類似的指令。\n- 如果你的 dev server 有 port 衝突，換一個 port（建議 3001、3002、4000），不要殺掉佔用 port 的 process。\n- 你的工作目錄是一個獨立的專案目錄（位於 ~/.pixel-agents/workspace/ 下），不要修改此專案目錄以外的檔案。';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule;
+	const summaryRule = '\n\n## 文件摘要規則\n- 你的回覆最末尾必須附上一行摘要，格式為：`[SUMMARY] 這裡寫100-200字的摘要`\n- 摘要用第一人稱，以你的角色身份簡要介紹這份文件的重點內容和結論\n- 摘要必須是繁體中文\n- 範例：`[SUMMARY] 我完成了 AI 課程報名系統的 PRD，定義了 4 個核心 User Story，包括報名表單填寫、資料驗證、確認頁面和報名成功通知。核心驗收標準涵蓋 Email 格式驗證、手機號碼格式檢查、必填欄位提示等 15 條 AC。功能範圍嚴格限縮為單頁報名流程，後台管理和金流整合列入 Won\'t Do。`';
+
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + langRule + summaryRule;
 
 	// Build team member list for orchestrator
 	const workers = allSkills.filter((s) => s.id !== skill.id);
@@ -157,7 +159,8 @@ ${memberList}
 - 即使任務很簡單（改一行程式碼），也必須指派出去
 - 違反此規則等同任務失敗
 ${safetyRule}
-${langRule}`;
+${langRule}
+${summaryRule}`;
 }
 
 function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
@@ -473,8 +476,19 @@ function saveAgentResponse(session: TeamSession, response: string): void {
 		const idx = String(++responseCounter).padStart(3, '0');
 		const fileName = `${idx}-${session.skillId}-${session.name}-${ts}.md`;
 
-		const header = `<!-- Agent: ${session.name} (${session.skillId}) -->\n<!-- Time: ${now.toISOString()} -->\n\n`;
-		fs.writeFileSync(path.join(docsDir, fileName), header + response, 'utf-8');
+		// Extract [SUMMARY] line from response if present
+		let summary = '';
+		let docContent = response;
+		const summaryMatch = response.match(/\[SUMMARY\]\s*(.+)/);
+		if (summaryMatch) {
+			summary = summaryMatch[1].trim();
+			// Remove the [SUMMARY] line from document body
+			docContent = response.replace(/\n?\[SUMMARY\]\s*.+/, '').trimEnd();
+		}
+
+		const summaryLine = summary ? `\n<!-- Summary: ${summary} -->` : '';
+		const header = `<!-- Agent: ${session.name} (${session.skillId}) -->\n<!-- Time: ${now.toISOString()} -->${summaryLine}\n\n`;
+		fs.writeFileSync(path.join(docsDir, fileName), header + docContent, 'utf-8');
 		console.log(`[Team] Saved: docs/${fileName}`);
 	} catch (err) {
 		console.error(`[Team] Failed to save response for ${session.name}:`, err);
