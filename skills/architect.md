@@ -1,6 +1,6 @@
 ---
 name: 阿奇
-palette: 3
+palette: 7
 order: 2
 description: 軟體架構師，負責系統設計、技術選型、API 規範和架構決策
 ---

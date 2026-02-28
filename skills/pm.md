@@ -1,6 +1,6 @@
 ---
 name: PM姐
-palette: 4
+palette: 9
 order: 1
 description: 產品經理，負責需求分析、PRD 撰寫、優先排序和驗收標準制定
 ---
