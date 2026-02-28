@@ -501,20 +501,26 @@ export function handleInterviewResponse(response: string): void {
 }
 
 /**
- * Reset orchestrator state — call when client reconnects to clear any dangling state.
- * Aborts all active generations and clears the busy flag.
+ * Reset orchestrator state — call when client reconnects (page refresh).
+ * Clears project context, conversation history, and any dangling state
+ * so the user starts fresh unless they explicitly resume a project.
  */
 export function resetOrchestratorState(broadcast: Broadcast): void {
-	if (!orchestratorBusy) return;
+	console.log('[Orchestrator] Resetting state on client reconnect');
 
-	console.log('[Orchestrator] Resetting stuck orchestrator state');
+	// Clear project state — user must explicitly resume a project
+	currentProjectDir = null;
+	pendingProjectMessage = null;
+	responseCounter = 0;
+	setActiveProjectDir(null);
 
-	// Abort all active generations
+	// Abort all active generations and clear history
 	for (const session of teamSessions.values()) {
 		if (session.activeGeneration) {
 			try { session.activeGeneration.abort(); } catch { /* */ }
 			session.activeGeneration = null;
 		}
+		session.history = [];
 	}
 
 	// Clear pending interview
@@ -525,6 +531,7 @@ export function resetOrchestratorState(broadcast: Broadcast): void {
 	orchestratorBusy = false;
 	stopAllNagging();
 	broadcast({ type: 'orchestratorBusy', busy: false });
+	broadcast({ type: 'projectCleared' });
 }
 
 // ── Task Block Parsing ──────────────────────────────────────
@@ -917,6 +924,8 @@ async function orchestrateStep(
 		setActiveProjectDir(currentProjectDir);
 		pendingProjectMessage = null;
 		console.log(`[Orchestrator] Created project directory (lazy): ${currentProjectDir}`);
+		const projName = path.basename(currentProjectDir);
+		broadcast({ type: 'projectLoaded', projectDir: currentProjectDir, name: projName, status: 'running' });
 	}
 
 	// Process tasks sequentially
@@ -1018,8 +1027,13 @@ async function orchestrateStep(
 /** Reset current project so next orchestrator message creates a new one */
 export function resetProject(): void {
 	currentProjectDir = null;
+	pendingProjectMessage = null;
 	responseCounter = 0;
 	setActiveProjectDir(null);
+	// Clear conversation history so orchestrator doesn't remember old context
+	for (const session of teamSessions.values()) {
+		session.history = [];
+	}
 }
 
 /** List all persisted projects */

@@ -16,8 +16,8 @@ export function ConnectionStatus() {
     <div
       style={{
         position: 'absolute',
-        top: 8,
-        right: 8,
+        top: 44,
+        right: 10,
         zIndex: 60,
         background: 'rgba(200, 50, 50, 0.85)',
         color: '#fff',

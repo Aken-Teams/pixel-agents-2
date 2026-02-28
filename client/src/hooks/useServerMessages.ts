@@ -94,6 +94,7 @@ export interface ServerMessageState {
   clearInterview: () => void
   aiProvider: string
   deepseekModel: string
+  currentProject: { name: string; status: string; dir: string } | null
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -132,6 +133,7 @@ export function useServerMessages(
   const [interviewQuestions, setInterviewQuestions] = useState<{ id: string; question: string }[] | null>(null)
   const [aiProvider, setAIProvider] = useState<string>('claude-cli')
   const [deepseekModel, setDeepseekModel] = useState<string>('deepseek-chat')
+  const [currentProject, setCurrentProject] = useState<{ name: string; status: string; dir: string } | null>(null)
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -770,6 +772,15 @@ export function useServerMessages(
           }
           return next
         })
+      // ── Project State ──
+      } else if (msg.type === 'projectLoaded') {
+        setCurrentProject({
+          name: msg.name as string,
+          status: msg.status as string,
+          dir: msg.projectDir as string,
+        })
+      } else if (msg.type === 'projectCleared') {
+        setCurrentProject(null)
       // ── Idle Chat ──
       } else if (msg.type === 'idleChatMessage') {
         const agentId = msg.agentId as number
@@ -872,5 +883,6 @@ export function useServerMessages(
     teamToolActivities, thoughtData,
     interviewQuestions, clearInterview,
     aiProvider, deepseekModel,
+    currentProject,
   }
 }

@@ -90,6 +90,7 @@ export type ClientMessage =
 	// Project persistence
 	| { type: 'listProjects' }
 	| { type: 'resumeProject'; projectDir: string }
+	| { type: 'resetProject' }
 	// Portfolio
 	| { type: 'getProjectDetail'; projectDir: string }
 	| { type: 'getDocContent'; projectDir: string; fileName: string }

@@ -63,6 +63,7 @@ import {
 	getOrchestratorSkillId,
 	listProjects,
 	resumeProject,
+	resetProject,
 	resetOrchestratorState,
 } from './teamManager.js';
 
@@ -297,6 +298,11 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 
 		case 'resumeProject':
 			resumeProject(message.projectDir, broadcast);
+			break;
+
+		case 'resetProject':
+			resetProject();
+			broadcast({ type: 'projectCleared' });
 			break;
 
 		case 'getProjectDetail': {

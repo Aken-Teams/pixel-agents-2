@@ -1,0 +1,183 @@
+import { useState } from 'react'
+import { wsClient } from '../wsClient.js'
+
+interface ProjectStatusBarProps {
+  currentProject: { name: string; status: string; dir: string } | null
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  running: '進行中',
+  paused: '已暫停',
+  completed: '已完成',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  running: '#4ade80',
+  paused: '#facc15',
+  completed: '#94a3b8',
+}
+
+export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('projectStatusCollapsed') === 'true' } catch { return false }
+  })
+  const [hovered, setHovered] = useState<string | null>(null)
+
+  const toggleCollapse = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    try { localStorage.setItem('projectStatusCollapsed', String(next)) } catch { /* */ }
+  }
+
+  const handleUnload = () => {
+    wsClient.postMessage({ type: 'resetProject' })
+  }
+
+  const statusColor = currentProject ? (STATUS_COLORS[currentProject.status] ?? '#94a3b8') : undefined
+
+  // ── Collapsed: single square button (same size as ZoomControls) ──
+  if (collapsed) {
+    return (
+      <button
+        onClick={toggleCollapse}
+        title={currentProject ? `${currentProject.name}（${STATUS_LABELS[currentProject.status] ?? currentProject.status}）` : '目前無載入專案'}
+        onMouseEnter={() => setHovered('collapsed')}
+        onMouseLeave={() => setHovered(null)}
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          zIndex: 50,
+          width: 40,
+          height: 40,
+          padding: 0,
+          background: hovered === 'collapsed' ? 'var(--pixel-btn-hover-bg)' : 'var(--pixel-bg)',
+          border: '2px solid var(--pixel-border)',
+          borderRadius: 0,
+          cursor: 'pointer',
+          boxShadow: 'var(--pixel-shadow)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: currentProject ? 'var(--pixel-text)' : 'var(--pixel-text-dim)',
+        }}
+      >
+        {/* Folder icon 18x18 */}
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ position: 'relative' }}>
+          <path d="M2 5v9h14V8H9.5L7.5 6H2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          {currentProject && (
+            <circle cx="14" cy="12" r="2.5" fill={statusColor} stroke="var(--pixel-bg)" strokeWidth="1.2" />
+          )}
+        </svg>
+      </button>
+    )
+  }
+
+  const statusLabel = currentProject ? (STATUS_LABELS[currentProject.status] ?? currentProject.status) : null
+
+  // ── Expanded: status bar ──
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        zIndex: 50,
+        background: 'var(--pixel-bg)',
+        border: '2px solid var(--pixel-border)',
+        borderRadius: 0,
+        padding: '5px 8px',
+        boxShadow: 'var(--pixel-shadow)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        maxWidth: 340,
+      }}
+    >
+      {/* Folder icon */}
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0, color: currentProject ? 'var(--pixel-text)' : 'var(--pixel-text-dim)' }}>
+        <path d="M2 5v9h14V8H9.5L7.5 6H2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+
+      {/* Status dot */}
+      {statusColor && (
+        <span style={{
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: statusColor,
+          flexShrink: 0,
+        }} />
+      )}
+
+      {/* Project info */}
+      <span style={{
+        fontSize: '16px',
+        color: currentProject ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
+        userSelect: 'none',
+      }}>
+        {currentProject
+          ? (<>{currentProject.name} <span style={{ color: statusColor, fontSize: '14px' }}>({statusLabel})</span></>)
+          : '目前無載入專案'
+        }
+      </span>
+
+      {/* Unload button */}
+      {currentProject && (
+        <button
+          onClick={handleUnload}
+          onMouseEnter={() => setHovered('unload')}
+          onMouseLeave={() => setHovered(null)}
+          title="卸載專案"
+          style={{
+            background: hovered === 'unload' ? 'rgba(255,255,255,0.12)' : 'transparent',
+            border: 'none',
+            borderRadius: 0,
+            color: hovered === 'unload' ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
+            cursor: 'pointer',
+            padding: '2px',
+            lineHeight: 1,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
+
+      {/* Collapse button */}
+      <button
+        onClick={toggleCollapse}
+        onMouseEnter={() => setHovered('collapse')}
+        onMouseLeave={() => setHovered(null)}
+        title="收合"
+        style={{
+          background: hovered === 'collapse' ? 'rgba(255,255,255,0.12)' : 'transparent',
+          border: 'none',
+          borderRadius: 0,
+          color: hovered === 'collapse' ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
+          cursor: 'pointer',
+          padding: '2px',
+          lineHeight: 1,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <polyline points="2,8 6,4 10,8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+      </button>
+    </div>
+  )
+}

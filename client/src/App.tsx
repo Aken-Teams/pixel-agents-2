@@ -17,6 +17,7 @@ import { ZoomControls } from './components/ZoomControls.js'
 import { BottomToolbar } from './components/BottomToolbar.js'
 import { DebugView } from './components/DebugView.js'
 import { ConnectionStatus } from './components/ConnectionStatus.js'
+import { ProjectStatusBar } from './components/ProjectStatusBar.js'
 import { ChatPanel } from './components/ChatPanel.js'
 import { PixelSpriteAvatar } from './components/PixelSpriteAvatar.js'
 import { AgentLabels } from './components/AgentLabels.js'
@@ -139,6 +140,7 @@ function App() {
     teamToolActivities, thoughtData,
     interviewQuestions, clearInterview,
     aiProvider, deepseekModel,
+    currentProject,
   } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
@@ -603,6 +605,7 @@ function App() {
         />
       )}
 
+      <ProjectStatusBar currentProject={currentProject} />
       <ConnectionStatus />
       </div>
       {interviewQuestions && (
