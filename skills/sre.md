@@ -1,5 +1,5 @@
 ---
-name: 穩定哥
+name: 小定
 palette: 15
 order: 10
 description: SRE 工程師，負責系統可靠性、SLO 管理、監控告警和事件應變

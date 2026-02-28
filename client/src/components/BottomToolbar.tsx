@@ -23,6 +23,8 @@ interface BottomToolbarProps {
   isDebugMode: boolean
   onToggleDebugMode: () => void
   teamMembers: TeamMemberInfo[]
+  aiProvider: string
+  deepseekModel: string
 }
 
 const panelStyle: React.CSSProperties = {
@@ -66,6 +68,8 @@ export function BottomToolbar({
   isDebugMode,
   onToggleDebugMode,
   teamMembers,
+  aiProvider,
+  deepseekModel,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -155,6 +159,8 @@ export function BottomToolbar({
           onClose={() => setIsSettingsOpen(false)}
           isDebugMode={isDebugMode}
           onToggleDebugMode={onToggleDebugMode}
+          aiProvider={aiProvider}
+          deepseekModel={deepseekModel}
         />
       </div>
       {isPortfolioOpen && (

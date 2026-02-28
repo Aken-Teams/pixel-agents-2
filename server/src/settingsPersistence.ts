@@ -8,6 +8,9 @@ interface Settings {
 	agentSeats: Record<string, AgentMeta>;
 	mode: 'chat' | 'team';
 	activeProjectDir: string | null;
+	aiProvider: 'claude-cli' | 'deepseek';
+	deepseekApiKey: string;
+	deepseekModel: string;
 }
 
 const defaultSettings: Settings = {
@@ -15,6 +18,9 @@ const defaultSettings: Settings = {
 	agentSeats: {},
 	mode: 'chat',
 	activeProjectDir: null,
+	aiProvider: 'claude-cli',
+	deepseekApiKey: '',
+	deepseekModel: 'deepseek-chat',
 };
 
 let cachedSettings: Settings | null = null;
@@ -97,4 +103,34 @@ export function setActiveProjectDir(dir: string | null): void {
 
 export function getActiveProjectDir(): string | null {
 	return loadSettings().activeProjectDir || null;
+}
+
+export function setAIProvider(provider: 'claude-cli' | 'deepseek'): void {
+	const settings = loadSettings();
+	settings.aiProvider = provider;
+	saveSettingsDebounced();
+}
+
+export function getAIProvider(): 'claude-cli' | 'deepseek' {
+	return loadSettings().aiProvider || 'claude-cli';
+}
+
+export function setDeepseekApiKey(apiKey: string): void {
+	const settings = loadSettings();
+	settings.deepseekApiKey = apiKey;
+	saveSettingsDebounced();
+}
+
+export function getDeepseekApiKey(): string {
+	return loadSettings().deepseekApiKey || '';
+}
+
+export function setDeepseekModel(model: string): void {
+	const settings = loadSettings();
+	settings.deepseekModel = model;
+	saveSettingsDebounced();
+}
+
+export function getDeepseekModel(): string {
+	return loadSettings().deepseekModel || 'deepseek-chat';
 }

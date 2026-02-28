@@ -1,5 +1,5 @@
 ---
-name: 文件姐
+name: 文文
 palette: 1
 order: 14
 description: 技術文件工程師，負責 API 文件、開發指南、README 和知識庫管理

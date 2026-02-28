@@ -1,5 +1,5 @@
 ---
-name: 數據姐
+name: 數數
 palette: 10
 order: 8
 description: 數據工程師，負責 ETL 管道、數據分析、報表建置和數據品質管理

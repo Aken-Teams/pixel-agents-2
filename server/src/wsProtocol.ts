@@ -33,7 +33,7 @@ export type ServerMessage =
 	| { type: 'floorTilesLoaded'; sprites: string[][][] }
 	| { type: 'wallTilesLoaded'; sprites: string[][][] }
 	| { type: 'layoutLoaded'; layout: Record<string, unknown> | null }
-	| { type: 'settingsLoaded'; soundEnabled: boolean; mode?: 'chat' | 'team' }
+	| { type: 'settingsLoaded'; soundEnabled: boolean; mode?: 'chat' | 'team'; aiProvider?: string; deepseekModel?: string }
 	| { type: 'chatCreated'; chatId: string; agentId: number }
 	| { type: 'chatClosed'; chatId: string }
 	| { type: 'chatStreamChunk'; chatId: string; text: string }
@@ -92,7 +92,9 @@ export type ClientMessage =
 	| { type: 'resumeProject'; projectDir: string }
 	// Portfolio
 	| { type: 'getProjectDetail'; projectDir: string }
-	| { type: 'getDocContent'; projectDir: string; fileName: string };
+	| { type: 'getDocContent'; projectDir: string; fileName: string }
+	// AI Provider
+	| { type: 'setAIProvider'; provider: string; apiKey?: string; model?: string };
 
 export interface AgentMeta {
 	palette?: number;

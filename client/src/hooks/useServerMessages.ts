@@ -92,6 +92,8 @@ export interface ServerMessageState {
   thoughtData: Record<number, ThoughtData>
   interviewQuestions: { id: string; question: string }[] | null
   clearInterview: () => void
+  aiProvider: string
+  deepseekModel: string
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -128,6 +130,8 @@ export function useServerMessages(
   const [teamToolActivities, setTeamToolActivities] = useState<Record<string, string | null>>({})
   const [thoughtData, setThoughtData] = useState<Record<number, ThoughtData>>({})
   const [interviewQuestions, setInterviewQuestions] = useState<{ id: string; question: string }[] | null>(null)
+  const [aiProvider, setAIProvider] = useState<string>('claude-cli')
+  const [deepseekModel, setDeepseekModel] = useState<string>('deepseek-chat')
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -415,6 +419,12 @@ export function useServerMessages(
         setSoundEnabled(soundOn)
         if (msg.mode) {
           setMode(msg.mode as 'chat' | 'team')
+        }
+        if (msg.aiProvider) {
+          setAIProvider(msg.aiProvider as string)
+        }
+        if (msg.deepseekModel) {
+          setDeepseekModel(msg.deepseekModel as string)
         }
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
@@ -861,5 +871,6 @@ export function useServerMessages(
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
     teamToolActivities, thoughtData,
     interviewQuestions, clearInterview,
+    aiProvider, deepseekModel,
   }
 }

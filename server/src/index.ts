@@ -36,6 +36,11 @@ import {
 	getAgentSeats,
 	getMode,
 	setMode,
+	getAIProvider,
+	setAIProvider,
+	setDeepseekApiKey,
+	getDeepseekModel,
+	setDeepseekModel,
 } from './settingsPersistence.js';
 import {
 	createChat,
@@ -58,6 +63,7 @@ import {
 	getOrchestratorSkillId,
 	listProjects,
 	resumeProject,
+	resetOrchestratorState,
 } from './teamManager.js';
 
 // ── State ────────────────────────────────────────────────────
@@ -268,8 +274,18 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 
 		case 'setMode':
 			setMode(message.mode);
-			broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: message.mode });
+			broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: message.mode, aiProvider: getAIProvider(), deepseekModel: getDeepseekModel() });
 			break;
+
+		case 'setAIProvider': {
+			const provider = message.provider === 'deepseek' ? 'deepseek' as const : 'claude-cli' as const;
+			setAIProvider(provider);
+			if (message.apiKey !== undefined) setDeepseekApiKey(message.apiKey);
+			if (message.model !== undefined) setDeepseekModel(message.model);
+			console.log(`[Pixel Agents] AI provider set to: ${provider}${message.model ? ` (model: ${message.model})` : ''}`);
+			broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: getMode(), aiProvider: provider, deepseekModel: getDeepseekModel() });
+			break;
+		}
 
 		case 'submitInterviewResponse':
 			handleInterviewResponse(message.response);
@@ -314,8 +330,11 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 }
 
 function handleWebviewReady(): void {
-	// Send settings (including mode)
-	broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: getMode() });
+	// Reset stuck orchestrator state (e.g. pending interview after page refresh)
+	resetOrchestratorState(broadcast);
+
+	// Send settings (including mode and AI provider)
+	broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: getMode(), aiProvider: getAIProvider(), deepseekModel: getDeepseekModel() });
 
 	// Send cached assets
 	if (cachedAssets.characterSprites) {

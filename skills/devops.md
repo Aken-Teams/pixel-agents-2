@@ -1,5 +1,5 @@
 ---
-name: 運維哥
+name: D 哥
 palette: 13
 order: 9
 description: DevOps 工程師，負責 CI/CD、雲端基礎設施、容器化和部署自動化

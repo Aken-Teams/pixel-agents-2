@@ -1,5 +1,9 @@
 import type { ChildProcess } from 'child_process';
 
+export interface ActiveGeneration {
+	abort: () => void;
+}
+
 export interface AgentState {
 	id: number;
 	processHandle: ChildProcess | null; // null for monitored (not launched) sessions
@@ -34,6 +38,7 @@ export interface ChatSession {
 	chatId: string;
 	cwd: string;
 	activeProcess: ChildProcess | null; // null when idle (between messages)
+	activeGeneration: ActiveGeneration | null;
 	history: ChatMessage[]; // conversation history for context
 }
 
@@ -42,6 +47,7 @@ export interface TeamSession {
 	name: string;
 	agentId: number;
 	activeProcess: ChildProcess | null;
+	activeGeneration: ActiveGeneration | null;
 	history: ChatMessage[];
 	systemPrompt: string;
 }

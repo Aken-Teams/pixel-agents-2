@@ -1,6 +1,7 @@
-import { spawn } from 'child_process';
 import type { ChatSession } from './types.js';
 import type { Broadcast } from './timerManager.js';
+import { getProvider, getProviderIdentityNote } from './aiProvider.js';
+import type { AIMessage } from './aiProvider.js';
 
 const chatSessions = new Map<string, ChatSession>();
 let chatCounter = 0;
@@ -28,6 +29,7 @@ export function createChat(cwd: string, broadcast: Broadcast): string {
 		chatId,
 		cwd,
 		activeProcess: null,
+		activeGeneration: null,
 		history: [],
 	};
 
@@ -45,15 +47,9 @@ export function createChat(cwd: string, broadcast: Broadcast): string {
 
 const MAX_HISTORY_CHARS = 14000; // ~4,000 tokens — sliding window budget
 
-/**
- * Build a prompt that includes conversation history for context.
- * Uses a sliding window to keep prompt size bounded.
- * The current user message should NOT yet be in session.history when this is called.
- */
-function buildPromptWithHistory(history: Array<{ role: string; content: string }>, newMessage: string): string {
-	if (history.length === 0) {
-		return newMessage;
-	}
+/** Truncate history with a sliding-window character budget. */
+function truncateHistory(history: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
+	if (history.length === 0) return [];
 
 	let charBudget = MAX_HISTORY_CHARS;
 	const selected: Array<{ role: string; content: string }> = [];
@@ -64,7 +60,6 @@ function buildPromptWithHistory(history: Array<{ role: string; content: string }
 		charBudget -= history[0].content.length;
 	}
 
-	// Walk backwards from newest, adding messages until budget exhausted
 	const startIdx = selected.length > 0 ? 1 : 0;
 	const recent: Array<{ role: string; content: string }> = [];
 	for (let i = history.length - 1; i >= startIdx; i--) {
@@ -81,11 +76,7 @@ function buildPromptWithHistory(history: Array<{ role: string; content: string }
 		if (charBudget <= 0) break;
 	}
 
-	const all = [...selected, ...recent];
-	const lines = all.map((m) =>
-		m.role === 'user' ? `Human: ${m.content}` : `Assistant: ${m.content}`,
-	);
-	return `${lines.join('\n')}\nHuman: ${newMessage}\n\nContinue the conversation above. Respond to the latest Human message only.`;
+	return [...selected, ...recent];
 }
 
 export function sendMessage(chatId: string, message: string, broadcast: Broadcast): void {
@@ -95,42 +86,25 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 		return;
 	}
 
-	if (session.activeProcess) {
+	if (session.activeGeneration) {
 		broadcast({ type: 'chatError', chatId, error: 'Previous message still processing' });
 		return;
 	}
 
-	// Build prompt BEFORE adding to history (to avoid duplication)
-	const fullPrompt = buildPromptWithHistory(session.history, message);
+	// Build structured messages with truncated history BEFORE adding new message
+	const identityNote = getProviderIdentityNote();
+	const messages: AIMessage[] = [];
+	if (identityNote) {
+		messages.push({ role: 'system', content: identityNote.trim() });
+	}
+	const truncated = truncateHistory(session.history);
+	for (const msg of truncated) {
+		messages.push({ role: msg.role, content: msg.content });
+	}
+	messages.push({ role: 'user', content: message });
 
-	// Now record user message in history
+	// Record user message in history
 	session.history.push({ role: 'user', content: message });
-
-	// Strip CLAUDECODE env var to avoid "cannot be launched inside another Claude Code session" error
-	const cleanEnv = { ...process.env };
-	delete cleanEnv.CLAUDECODE;
-
-	// Spawn claude in print mode, reading prompt from stdin to avoid shell escaping issues
-	// --no-session-persistence: don't write session files (avoids session locks)
-	// --verbose is required for --output-format stream-json with -p
-	// stdin is 'pipe' — we write the prompt and immediately close it
-	const proc = spawn('claude', [
-		'-p',
-		'--no-session-persistence',
-		'--output-format', 'stream-json',
-		'--verbose',
-	], {
-		cwd: session.cwd,
-		shell: true,
-		stdio: ['pipe', 'pipe', 'pipe'],
-		env: cleanEnv,
-	});
-
-	// Write prompt via stdin and close — avoids Windows shell escaping issues with Unicode
-	proc.stdin.write(fullPrompt);
-	proc.stdin.end();
-
-	session.activeProcess = proc;
 
 	// Update agent status to "active" and show alert bubble
 	const agentId = chatAgentIds.get(chatId);
@@ -139,118 +113,51 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 		broadcast({ type: 'chatAlertBubble', chatId, agentId });
 	}
 
-	let stdoutBuffer = '';
-	let sentFromDeltas = false;
-	let assistantResponse = '';
+	// Throttle stream chunks to avoid overwhelming the UI (especially with fast SSE providers)
+	let chunkBuffer = '';
+	let chunkTimer: ReturnType<typeof setTimeout> | null = null;
+	const CHUNK_INTERVAL = 80; // ms
+	const flushChunks = () => {
+		if (chunkBuffer) {
+			broadcast({ type: 'chatStreamChunk', chatId, text: chunkBuffer });
+			chunkBuffer = '';
+		}
+		chunkTimer = null;
+	};
 
-	proc.stdout.on('data', (data: Buffer) => {
-		stdoutBuffer += data.toString();
-
-		// Process complete lines (stream-json outputs one JSON per line)
-		const lines = stdoutBuffer.split('\n');
-		stdoutBuffer = lines.pop() || ''; // Keep incomplete line in buffer
-
-		for (const line of lines) {
-			if (!line.trim()) continue;
-			try {
-				const parsed = JSON.parse(line);
-
-				// Track the session ID so fileWatcher can exclude chat-generated JSONL files
-				if (parsed.type === 'system' && parsed.session_id) {
-					chatSessionIds.add(parsed.session_id);
-				}
-
-				// stream-json format emits multiple message types:
-				// - content_block_delta: incremental text/thinking chunks (streaming)
-				// - assistant: complete message with all content blocks
-				// - result: final summary (duplicates assistant text, skip to avoid double-send)
-
-				// Parse thinking deltas (Claude's extended thinking)
-				if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'thinking_delta' && parsed.delta?.thinking) {
-					if (agentId !== undefined) {
-						broadcast({ type: 'chatThinkingChunk', chatId, agentId, text: parsed.delta.thinking });
-					}
-				}
-
-				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-					const text = parsed.delta.text;
-					broadcast({ type: 'chatStreamChunk', chatId, text });
-					assistantResponse += text;
-					sentFromDeltas = true;
-				} else if (parsed.type === 'assistant' && parsed.message?.content) {
-					if (!sentFromDeltas) {
-						for (const block of parsed.message.content) {
-							if (block.type === 'text' && block.text) {
-								broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
-								assistantResponse += block.text;
-							}
-						}
-					} else {
-						// Extract full text for history even if we already streamed deltas
-						for (const block of parsed.message.content) {
-							if (block.type === 'text' && block.text) {
-								assistantResponse = block.text;
-							}
-						}
-					}
-				}
-				// Skip 'result' type — it duplicates the assistant message text
-			} catch {
-				// Not valid JSON, might be raw text — send as-is
-				broadcast({ type: 'chatStreamChunk', chatId, text: line });
-				assistantResponse += line;
+	const provider = getProvider();
+	const handle = provider.generate(messages, {
+		onTextChunk: (text) => {
+			chunkBuffer += text;
+			if (!chunkTimer) {
+				chunkTimer = setTimeout(flushChunks, CHUNK_INTERVAL);
 			}
-		}
+		},
+		onThinkingChunk: (text) => {
+			if (agentId !== undefined) {
+				broadcast({ type: 'chatThinkingChunk', chatId, agentId, text });
+			}
+		},
+	}, {
+		cwd: session.cwd,
 	});
 
-	proc.stderr.on('data', (data: Buffer) => {
-		const text = data.toString();
-		if (text.trim()) {
-			console.log(`[Chat ${chatId}] stderr: ${text.trim()}`);
-		}
-	});
+	session.activeGeneration = handle;
 
-	proc.on('error', (err) => {
-		console.error(`[Chat ${chatId}] Process error:`, err.message);
-		session.activeProcess = null;
+	handle.done.then((response) => {
+		if (response) {
+			session.history.push({ role: 'assistant', content: response });
+		}
+	}).catch((err) => {
+		console.error(`[Chat ${chatId}] Error:`, err.message);
 		broadcast({ type: 'chatError', chatId, error: err.message });
-	});
+	}).finally(() => {
+		// Flush any remaining throttled chunks
+		if (chunkTimer) clearTimeout(chunkTimer);
+		flushChunks();
 
-	proc.on('exit', (code) => {
-		// Flush any remaining buffer
-		if (stdoutBuffer.trim()) {
-			try {
-				const parsed = JSON.parse(stdoutBuffer);
-				if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-					broadcast({ type: 'chatStreamChunk', chatId, text: parsed.delta.text });
-					assistantResponse += parsed.delta.text;
-				} else if (parsed.type === 'assistant' && parsed.message?.content && !sentFromDeltas) {
-					for (const block of parsed.message.content) {
-						if (block.type === 'text' && block.text) {
-							broadcast({ type: 'chatStreamChunk', chatId, text: block.text });
-							assistantResponse += block.text;
-						}
-					}
-				}
-			} catch {
-				if (stdoutBuffer.trim()) {
-					broadcast({ type: 'chatStreamChunk', chatId, text: stdoutBuffer });
-					assistantResponse += stdoutBuffer;
-				}
-			}
-		}
+		session.activeGeneration = null;
 
-		// Save assistant response to history for future context
-		if (assistantResponse.trim()) {
-			session.history.push({ role: 'assistant', content: assistantResponse.trim() });
-		}
-
-		session.activeProcess = null;
-		if (code !== 0 && code !== null) {
-			console.log(`[Chat ${chatId}] Process exited with code ${code}`);
-		}
-
-		// Show waiting/checkmark bubble, then go idle
 		const agId = chatAgentIds.get(chatId);
 		if (agId !== undefined) {
 			broadcast({ type: 'agentStatus', id: agId, status: 'waiting' });
@@ -268,10 +175,10 @@ export function closeChat(chatId: string, broadcast: Broadcast): void {
 	const session = chatSessions.get(chatId);
 	if (!session) return;
 
-	if (session.activeProcess) {
+	if (session.activeGeneration) {
 		try {
-			session.activeProcess.kill('SIGTERM');
-		} catch { /* process may already be dead */ }
+			session.activeGeneration.abort();
+		} catch { /* generation may already be done */ }
 	}
 
 	// Remove the pixel character from the map

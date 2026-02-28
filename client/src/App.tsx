@@ -138,6 +138,7 @@ function App() {
     orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
     teamToolActivities, thoughtData,
     interviewQuestions, clearInterview,
+    aiProvider, deepseekModel,
   } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
@@ -507,6 +508,8 @@ function App() {
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
         teamMembers={enrichedTeamMembers}
+        aiProvider={aiProvider}
+        deepseekModel={deepseekModel}
       />
 
       {editor.isEditMode && editor.isDirty && (
