@@ -62,11 +62,11 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
           color: currentProject ? 'var(--pixel-text)' : 'var(--pixel-text-dim)',
         }}
       >
-        {/* Folder icon 18x18 */}
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ position: 'relative' }}>
-          <path d="M2 5v9h14V8H9.5L7.5 6H2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        {/* Lucide-style folder icon 20x20 */}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           {currentProject && (
-            <circle cx="14" cy="12" r="2.5" fill={statusColor} stroke="var(--pixel-bg)" strokeWidth="1.2" />
+            <circle cx="20" cy="16" r="5.5" fill={statusColor} stroke="var(--pixel-bg)" strokeWidth="2" />
           )}
         </svg>
       </button>
@@ -94,9 +94,9 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
         maxWidth: 340,
       }}
     >
-      {/* Folder icon */}
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0, color: currentProject ? 'var(--pixel-text)' : 'var(--pixel-text-dim)' }}>
-        <path d="M2 5v9h14V8H9.5L7.5 6H2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      {/* Lucide-style folder icon */}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, color: currentProject ? 'var(--pixel-text)' : 'var(--pixel-text-dim)' }}>
+        <path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
 
       {/* Status dot */}
@@ -147,9 +147,9 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
             justifyContent: 'center',
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
       )}
@@ -174,8 +174,8 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
           justifyContent: 'center',
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <polyline points="2,8 6,4 10,8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <polyline points="6,15 12,9 18,15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         </svg>
       </button>
     </div>
