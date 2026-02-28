@@ -7,7 +7,7 @@ import type { SkillDefinition } from './skillLoader.js';
 import { getWorkspaceRoot } from './config.js';
 import { getProvider, getProviderIdentityNote } from './aiProvider.js';
 import type { AIMessage } from './aiProvider.js';
-import { startIdleChatScheduler, stopIdleChat, type IdleAgent } from './idleChatManager.js';
+import { startIdleChatScheduler, stopIdleChat, triggerEasterEgg, type IdleAgent } from './idleChatManager.js';
 import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
 import { findAnswer, RECEPTIONIST_WELCOME_MESSAGES } from './receptionistFAQ.js';
 import {
@@ -738,6 +738,24 @@ export function sendTeamMessage(skillId: string, message: string, broadcast: Bro
 	});
 }
 
+// ── Easter egg keyword matching ────────────────────────────
+
+const EASTER_EGG_KEYWORDS: [string, string[]][] = [
+	['raise', ['加薪', '調薪', '漲薪']],
+	['vacation', ['放假', '休假', '連假']],
+	['overtime', ['加班', '趕工', 'deadline']],
+	['food', ['點外賣', '訂飲料', '下午茶', '團購']],
+	['party', ['尾牙', '聚餐', '團建', 'team building']],
+];
+
+function matchEasterEgg(message: string): string | null {
+	const msg = message.toLowerCase();
+	for (const [id, keywords] of EASTER_EGG_KEYWORDS) {
+		if (keywords.some((kw) => msg.includes(kw))) return id;
+	}
+	return null;
+}
+
 // ── Orchestrator: Main entry point ─────────────────────────
 
 /**
@@ -753,6 +771,25 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	if (orchestratorBusy) {
 		broadcast({ type: 'teamError', skillId: orchestratorSkillId, error: 'Orchestrator is still processing' });
 		return;
+	}
+
+	// ── Easter egg intercept ──
+	const eggId = matchEasterEgg(message);
+	if (eggId) {
+		const success = triggerEasterEgg(eggId, broadcast, getIdleAgents);
+		if (success) {
+			const responses: Record<string, string> = {
+				raise: '好的！我這就跟大家宣布這個好消息！',
+				vacation: '放假的事就交給我來通知大家吧！',
+				overtime: '唉…好吧，我來跟大家說一聲。',
+				food: '下午茶時間到！我來幫大家開單！',
+				party: '好！團建的事我來安排！',
+			};
+			const reply = responses[eggId] ?? '收到！';
+			broadcast({ type: 'teamStreamChunk', skillId: orchestratorSkillId, text: reply });
+			broadcast({ type: 'teamStreamEnd', skillId: orchestratorSkillId });
+			return;
+		}
 	}
 
 	// Restore or create project directory

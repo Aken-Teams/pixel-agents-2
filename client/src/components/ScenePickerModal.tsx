@@ -43,7 +43,7 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
           padding: '4px',
           boxShadow: 'var(--pixel-shadow)',
           minWidth: 360,
-          maxWidth: 600,
+          maxWidth: 560,
         }}
       >
         {/* Header */}
@@ -80,8 +80,9 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
         {/* Scene grid */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${SCENE_DEFINITIONS.length}, 1fr)`,
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
             gap: 8,
             padding: '4px 8px 8px',
           }}
@@ -110,6 +111,8 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
                   background: isHovered && !isActive ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
                   padding: 4,
                   transition: 'border-color 0.15s, background 0.15s',
+                  width: 160,
+                  flexShrink: 0,
                 }}
               >
                 {/* Thumbnail */}
@@ -136,11 +139,12 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
                 {/* Label */}
                 <div
                   style={{
-                    fontSize: '20px',
+                    fontSize: '18px',
                     color: isActive ? 'var(--pixel-accent)' : 'rgba(255, 255, 255, 0.8)',
                     textAlign: 'center',
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
                     userSelect: 'none',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {scene.name}
