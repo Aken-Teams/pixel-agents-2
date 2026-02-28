@@ -226,11 +226,34 @@ export class OfficeState {
       hueShift = pick.hueShift
     }
 
-    // Try preferred seat first, then any free seat
+    // Try preferred seat first, evicting non-preferred occupants if needed
     let seatId: string | null = null
     if (preferredSeatId && this.seats.has(preferredSeatId)) {
       const seat = this.seats.get(preferredSeatId)!
       if (!seat.assigned) {
+        seatId = preferredSeatId
+      } else {
+        // Seat is taken — evict the occupant (e.g. chat agent) to a free seat
+        for (const occupant of this.characters.values()) {
+          if (occupant.seatId === preferredSeatId) {
+            const freeSeat = this.findFreeSeat()
+            if (freeSeat) {
+              const newSeat = this.seats.get(freeSeat)!
+              newSeat.assigned = true
+              occupant.seatId = freeSeat
+              occupant.tileCol = newSeat.seatCol
+              occupant.tileRow = newSeat.seatRow
+              occupant.x = newSeat.seatCol * TILE_SIZE + TILE_SIZE / 2
+              occupant.y = newSeat.seatRow * TILE_SIZE + TILE_SIZE / 2
+              occupant.dir = newSeat.facingDir
+              occupant.defaultAction = newSeat.defaultAction
+            } else {
+              seat.assigned = false
+              occupant.seatId = null
+            }
+            break
+          }
+        }
         seatId = preferredSeatId
       }
     }

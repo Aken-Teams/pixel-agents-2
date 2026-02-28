@@ -80,12 +80,12 @@ const level5Seats: StaticSeat[] = [
   { uid: 'seat-d5', seatCol: 12.8, seatRow: 31, facingDir: 3 },
   { uid: 'seat-d6', seatCol: 18.8, seatRow: 31, facingDir: 3 },
   { uid: 'seat-m1', seatCol: 18.8, seatRow: 24.8, facingDir: 3 },
-  { uid: 'seat-m2', seatCol: 28, seatRow: 19, facingDir: 2 },
-  { uid: 'seat-m3', seatCol: 60, seatRow: 14, facingDir: 1 },
-  { uid: 'seat-m4', seatCol: 60, seatRow: 18, facingDir: 1 },
+  { uid: 'seat-m2', seatCol: 29.3, seatRow: 18.8, facingDir: 2 },
+  { uid: 'seat-m3', seatCol: 35, seatRow: 18.8, facingDir: 1 },
+  { uid: 'seat-m4', seatCol: 29.3, seatRow: 25, facingDir: 2 },
   { uid: 'seat-b1', seatCol: 47.5, seatRow: 35.5, facingDir: 0, defaultAction: 'reading'},  // CTO (技術長)
-  { uid: 'seat-b2', seatCol: 63, seatRow: 36, facingDir: 2 },
-  { uid: 'seat-b3', seatCol: 74, seatRow: 36, facingDir: 1 },
+  { uid: 'seat-b2', seatCol: 35, seatRow: 25, facingDir: 1 },
+  { uid: 'seat-b3', seatCol: 51, seatRow: 20, facingDir: 1 },
   { uid: 'seat-b4', seatCol: 31.2, seatRow: 43, facingDir: 3 },  // 小幫手
 ]
 

@@ -240,7 +240,12 @@ function App() {
     wsClient.postMessage({ type: 'sendOrchestratorMessage', message })
   }, [addOrchestratorUserMessage])
 
+  // Track background image locally for instant scene picker feedback
+  const [activeBackgroundImage, setActiveBackgroundImage] = useState<string | undefined>(undefined)
+  const currentBackgroundImage = activeBackgroundImage ?? officeState.getLayout().backgroundImage
+
   const handleSwitchScene = useCallback((layout: import('./office/types.js').OfficeLayout, defaultZoom: number) => {
+    setActiveBackgroundImage(layout.backgroundImage)
     wsClient.postMessage({ type: 'importLayout', layout: layout as unknown as Record<string, unknown> })
     editor.handleZoomChange(defaultZoom)
     editor.panRef.current = { x: 0, y: 0 }
@@ -497,7 +502,7 @@ function App() {
         isEditMode={editor.isEditMode}
         onToggleEditMode={editor.handleToggleEditMode}
         isStaticBackground={isStaticBackgroundLayout(officeState.getLayout())}
-        currentBackgroundImage={officeState.getLayout().backgroundImage}
+        currentBackgroundImage={currentBackgroundImage}
         onSwitchScene={handleSwitchScene}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
