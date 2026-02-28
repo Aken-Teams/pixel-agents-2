@@ -12,7 +12,8 @@
       "Bash(python -c:*)",
       "Bash(grep -rn \"seat-b4\\\\|receptionist\\\\|小幫手\" D:/github/pixel-agents-2/server/ --include=\"*.ts\" 2>/dev/null | head -20)",
       "Bash(grep -rn \"seat\\\\|seatId\\\\|skillId\\\\|skill_id\" D:/github/pixel-agents-2/server/src/ --include=\"*.ts\" 2>/dev/null | grep -i \"assign\\\\|seat\\\\|skill\" | head -20)",
-      "Bash(ls -lt C:/Users/petty/.claude/projects/D--github-pixel-agents-2/*.jsonl 2>/dev/null | head -5)"
+      "Bash(ls -lt C:/Users/petty/.claude/projects/D--github-pixel-agents-2/*.jsonl 2>/dev/null | head -5)",
+      "Bash(wc:*)"
     ]
   }
 }
