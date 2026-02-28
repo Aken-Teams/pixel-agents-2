@@ -240,6 +240,12 @@ function App() {
     wsClient.postMessage({ type: 'sendOrchestratorMessage', message })
   }, [addOrchestratorUserMessage])
 
+  const handleSwitchScene = useCallback((layout: import('./office/types.js').OfficeLayout, defaultZoom: number) => {
+    wsClient.postMessage({ type: 'importLayout', layout: layout as unknown as Record<string, unknown> })
+    editor.handleZoomChange(defaultZoom)
+    editor.panRef.current = { x: 0, y: 0 }
+  }, [editor.handleZoomChange, editor.panRef])
+
   // Force dependency on editorTickForKeyboard to propagate keyboard-triggered re-renders
   void editorTickForKeyboard
 
@@ -491,6 +497,8 @@ function App() {
         isEditMode={editor.isEditMode}
         onToggleEditMode={editor.handleToggleEditMode}
         isStaticBackground={isStaticBackgroundLayout(officeState.getLayout())}
+        currentBackgroundImage={officeState.getLayout().backgroundImage}
+        onSwitchScene={handleSwitchScene}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
         teamMembers={enrichedTeamMembers}

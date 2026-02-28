@@ -109,7 +109,7 @@ export function ZoomControls({ zoom, onZoomChange, isPanMode, onTogglePanMode, o
       >
         {/* Zoom in */}
         <button
-          onClick={() => onZoomChange(zoom + 1)}
+          onClick={() => onZoomChange(zoom + (zoom < 1 ? 0.5 : 1))}
           disabled={maxDisabled}
           onMouseEnter={() => setHovered('plus')}
           onMouseLeave={() => setHovered(null)}
@@ -129,7 +129,7 @@ export function ZoomControls({ zoom, onZoomChange, isPanMode, onTogglePanMode, o
 
         {/* Zoom out */}
         <button
-          onClick={() => onZoomChange(zoom - 1)}
+          onClick={() => onZoomChange(zoom - (zoom <= 1 ? 0.5 : 1))}
           disabled={minDisabled}
           onMouseEnter={() => setHovered('minus')}
           onMouseLeave={() => setHovered(null)}

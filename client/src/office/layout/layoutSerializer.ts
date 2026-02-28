@@ -18,6 +18,7 @@ export function staticSeatsToMap(staticSeats: StaticSeat[]): Map<string, Seat> {
       seatRow: s.seatRow,
       facingDir: s.facingDir,
       assigned: false,
+      defaultAction: s.defaultAction,
     })
   }
   return seats

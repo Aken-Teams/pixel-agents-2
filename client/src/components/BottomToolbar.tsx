@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { SettingsModal } from './SettingsModal.js'
 import { ProjectPortfolioModal } from './ProjectPortfolioModal.js'
+import { ScenePickerModal } from './ScenePickerModal.js'
+import { wsClient } from '../wsClient.js'
+import type { OfficeLayout } from '../office/types.js'
 
 interface TeamMemberInfo {
   skillId: string
@@ -15,6 +18,8 @@ interface BottomToolbarProps {
   isEditMode: boolean
   onToggleEditMode: () => void
   isStaticBackground?: boolean
+  currentBackgroundImage?: string
+  onSwitchScene?: (layout: OfficeLayout, defaultZoom: number) => void
   isDebugMode: boolean
   onToggleDebugMode: () => void
   teamMembers: TeamMemberInfo[]
@@ -56,6 +61,8 @@ export function BottomToolbar({
   isEditMode,
   onToggleEditMode,
   isStaticBackground,
+  currentBackgroundImage,
+  onSwitchScene,
   isDebugMode,
   onToggleDebugMode,
   teamMembers,
@@ -63,6 +70,16 @@ export function BottomToolbar({
   const [hovered, setHovered] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isPortfolioOpen, setIsPortfolioOpen] = useState(false)
+  const [isScenePickerOpen, setIsScenePickerOpen] = useState(false)
+
+  const handleSelectScene = (layout: OfficeLayout, defaultZoom: number) => {
+    if (onSwitchScene) {
+      onSwitchScene(layout, defaultZoom)
+    } else {
+      wsClient.postMessage({ type: 'importLayout', layout: layout as unknown as Record<string, unknown> })
+    }
+    setIsScenePickerOpen(false)
+  }
 
   return (
     <div style={panelStyle}>
@@ -84,6 +101,22 @@ export function BottomToolbar({
           Layout
         </button>
       )}
+      <button
+        onClick={() => setIsScenePickerOpen(true)}
+        onMouseEnter={() => setHovered('scene')}
+        onMouseLeave={() => setHovered(null)}
+        style={
+          isScenePickerOpen
+            ? { ...btnActive }
+            : {
+                ...btnBase,
+                background: hovered === 'scene' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+              }
+        }
+        title="Switch scene"
+      >
+        Scene
+      </button>
       <button
         onClick={() => setIsPortfolioOpen(true)}
         onMouseEnter={() => setHovered('portfolio')}
@@ -130,6 +163,12 @@ export function BottomToolbar({
           teamMembers={teamMembers}
         />
       )}
+      <ScenePickerModal
+        isOpen={isScenePickerOpen}
+        onClose={() => setIsScenePickerOpen(false)}
+        currentBackgroundImage={currentBackgroundImage}
+        onSelectScene={handleSelectScene}
+      />
     </div>
   )
 }

@@ -283,7 +283,7 @@ export function updateCharacter(
 export function getCharacterSprite(ch: Character, sprites: CharacterSprites): SpriteData {
   switch (ch.state) {
     case CharacterState.TYPE:
-      if (isReadingTool(ch.currentTool)) {
+      if (isReadingTool(ch.currentTool) || (!ch.currentTool && ch.defaultAction === 'reading')) {
         return sprites.reading[ch.dir][ch.frame % 2]
       }
       return sprites.typing[ch.dir][ch.frame % 2]

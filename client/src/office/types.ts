@@ -62,6 +62,8 @@ export interface Seat {
   /** Direction character faces when sitting (toward adjacent desk) */
   facingDir: Direction
   assigned: boolean
+  /** Default animation when no tool is active: 'typing' (default) or 'reading' */
+  defaultAction?: 'typing' | 'reading'
 }
 
 export interface FurnitureInstance {
@@ -137,6 +139,8 @@ export interface StaticSeat {
   seatCol: number
   seatRow: number
   facingDir: Direction
+  /** Default animation when no tool is active: 'typing' (default) or 'reading' */
+  defaultAction?: 'typing' | 'reading'
 }
 
 export interface OfficeLayout {
@@ -194,6 +198,8 @@ export interface Character {
   bubbleTimer: number
   /** Timer to stay seated while inactive after seat reassignment (counts down to 0) */
   seatTimer: number
+  /** Default animation for this character's seat: 'typing' (default) or 'reading' */
+  defaultAction?: 'typing' | 'reading'
   /** Display name (e.g. team member name), or undefined for unnamed agents */
   name?: string
   /** Whether this character represents a sub-agent (spawned by Task tool) */

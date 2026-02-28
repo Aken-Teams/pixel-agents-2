@@ -111,6 +111,7 @@ export class OfficeState {
           ch.x = cx
           ch.y = cy
           ch.dir = seat.facingDir
+          ch.defaultAction = seat.defaultAction
           continue
         }
       }
@@ -130,6 +131,7 @@ export class OfficeState {
         ch.x = seat.seatCol * TILE_SIZE + TILE_SIZE / 2
         ch.y = seat.seatRow * TILE_SIZE + TILE_SIZE / 2
         ch.dir = seat.facingDir
+        ch.defaultAction = seat.defaultAction
       }
     }
 
@@ -241,6 +243,7 @@ export class OfficeState {
       const seat = this.seats.get(seatId)!
       seat.assigned = true
       ch = createCharacter(id, palette, seatId, seat, hueShift, name)
+      ch.defaultAction = seat.defaultAction
     } else {
       // No seats — spawn at random walkable tile
       const spawn = this.walkableTiles.length > 0
