@@ -94,26 +94,27 @@ const level5Seats: StaticSeat[] = [
 // Positions are estimates — adjust as needed
 
 const level6Seats: StaticSeat[] = [
-  { uid: 'seat-d1', seatCol: 8, seatRow: 14, facingDir: 3 },
-  { uid: 'seat-d2', seatCol: 16, seatRow: 14, facingDir: 3 },
-  { uid: 'seat-d3', seatCol: 24, seatRow: 14, facingDir: 3 },
-  { uid: 'seat-d4', seatCol: 8, seatRow: 24, facingDir: 3 },
-  { uid: 'seat-d5', seatCol: 16, seatRow: 24, facingDir: 3 },
-  { uid: 'seat-d6', seatCol: 24, seatRow: 24, facingDir: 3 },
-  { uid: 'seat-l1', seatCol: 8, seatRow: 34, facingDir: 3 },
-  { uid: 'seat-l2', seatCol: 16, seatRow: 34, facingDir: 3 },
-  { uid: 'seat-l3', seatCol: 24, seatRow: 34, facingDir: 3 },
-  { uid: 'seat-r1', seatCol: 50, seatRow: 10, facingDir: 2 },
-  { uid: 'seat-r2', seatCol: 50, seatRow: 14, facingDir: 2 },
-  { uid: 'seat-r3', seatCol: 66, seatRow: 10, facingDir: 1 },
-  { uid: 'seat-m1', seatCol: 66, seatRow: 14, facingDir: 1 },
-  { uid: 'seat-t1', seatCol: 56, seatRow: 6, facingDir: 0 },
-  { uid: 'seat-m2', seatCol: 60, seatRow: 6, facingDir: 0 },
-  { uid: 'seat-m3', seatCol: 56, seatRow: 18, facingDir: 3 },
-  { uid: 'seat-m4', seatCol: 60, seatRow: 18, facingDir: 3 },
-  { uid: 'seat-b2', seatCol: 38, seatRow: 34, facingDir: 0 },
-  { uid: 'seat-b4', seatCol: 42, seatRow: 34, facingDir: 0 },  // 小幫手
-  { uid: 'seat-b1', seatCol: 68, seatRow: 36, facingDir: 3 },  // CTO (技術長)
+  { uid: 'seat-l1', seatCol: 12, seatRow: 10, facingDir: 0,defaultAction: 'standing' },
+  { uid: 'seat-l2', seatCol: 4.8, seatRow: 14.3, facingDir: 3 },
+  { uid: 'seat-l3', seatCol: 8.5, seatRow: 14.3, facingDir: 3 },
+  { uid: 'seat-r1', seatCol: 14.5, seatRow: 14.3, facingDir: 3 },
+  { uid: 'seat-r2', seatCol: 17.5, seatRow: 14.3, facingDir: 3 },
+  { uid: 'seat-r3', seatCol: 21, seatRow: 11.5, facingDir: 1 },
+  { uid: 'seat-m1', seatCol: 21, seatRow: 8.8, facingDir: 1 },
+  { uid: 'seat-d1', seatCol: 62, seatRow: 13, facingDir: 0, defaultAction: 'standing' },
+  { uid: 'seat-d2', seatCol: 31.2, seatRow: 16, facingDir: 0 },
+  { uid: 'seat-d3', seatCol: 33.2, seatRow: 17.8, facingDir: 1 },
+  { uid: 'seat-d4', seatCol: 65.7, seatRow: 31, facingDir: 0 },
+  { uid: 'seat-d5', seatCol: 69.5, seatRow: 31, facingDir: 0 },
+  { uid: 'seat-d6', seatCol: 73, seatRow: 34, facingDir: 1 },
+  { uid: 'seat-t1', seatCol: 27, seatRow: 40, facingDir: 2 },
+  { uid: 'seat-m2', seatCol: 55, seatRow: 8, facingDir: 0, defaultAction: 'standing' },
+  { uid: 'seat-m3', seatCol: 39, seatRow: 18, facingDir: 2 },
+  { uid: 'seat-m4', seatCol: 47.3, seatRow: 18, facingDir: 1 },
+  { uid: 'seat-b2', seatCol: 40, seatRow: 32, facingDir: 0, defaultAction: 'reading' },
+  { uid: 'seat-b3', seatCol: 13, seatRow: 24, facingDir: 3 },
+  { uid: 'seat-b4', seatCol: 10.5, seatRow: 35.5, facingDir: 0, defaultAction: 'reading' },  // 小幫手
+  { uid: 'seat-b1', seatCol: 38, seatRow: 40, facingDir: 3 },  // CTO (技術長)
 ]
 
 // ── Export all scenes ────────────────────────────────────────
