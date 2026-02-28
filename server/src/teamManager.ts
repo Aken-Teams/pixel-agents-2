@@ -19,7 +19,7 @@ import {
 	type ProjectSummary,
 	type TaskRecord,
 } from './projectPersistence.js';
-import { setActiveProjectDir, getActiveProjectDir } from './settingsPersistence.js';
+import { setActiveProjectDir } from './settingsPersistence.js';
 
 const teamSessions = new Map<string, TeamSession>();
 let cachedSkills: SkillDefinition[] = [];
@@ -33,6 +33,8 @@ let taskIdCounter = 0;
 
 // Current project directory (under workspace/)
 let currentProjectDir: string | null = null;
+// Deferred: original user message for lazy project creation
+let pendingProjectMessage: string | null = null;
 
 const MAX_ORCHESTRATION_DEPTH = 10;
 
@@ -297,7 +299,10 @@ function getIdleAgents(): IdleAgent[] {
  *  update would read stale data from disk and overwrite the pending history. */
 function persistHistory(_session: TeamSession): void {
 	if (!currentProjectDir) return;
-	const allHistory: Record<string, ChatMessage[]> = {};
+	// Merge: keep existing disk history (for sessions no longer in memory),
+	// overlay with current in-memory sessions — cumulative, never overwrite.
+	const existing = loadProjectState(currentProjectDir);
+	const allHistory: Record<string, ChatMessage[]> = { ...(existing?.history ?? {}) };
 	for (const [skillId, sess] of teamSessions) {
 		if (sess.history.length > 0) {
 			allHistory[skillId] = sess.history;
@@ -582,6 +587,7 @@ function getAgentCwd(): string {
  * Skips orchestrator dispatch messages that only contain [TASK] blocks.
  */
 function saveAgentResponse(session: TeamSession, response: string): void {
+	if (!currentProjectDir) return; // No project — don't persist casual Q&A
 	try {
 		// Skip orchestrator responses that are purely task dispatches
 		const { cleanText } = parseTaskBlocks(response);
@@ -792,35 +798,8 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		}
 	}
 
-	// Restore or create project directory
-	if (!currentProjectDir) {
-		// Try to restore from persisted setting (survives server restart)
-		const persisted = getActiveProjectDir();
-		if (persisted && fs.existsSync(persisted)) {
-			currentProjectDir = persisted;
-			// Restore counters from project.json so new items don't overwrite old ones
-			const state = loadProjectState(persisted);
-			if (state) {
-				responseCounter = state.responseCounter;
-				// Restore taskIdCounter from existing tasks
-				if (state.tasks) {
-					let maxId = 0;
-					for (const key of Object.keys(state.tasks)) {
-						const m = key.match(/^task-(\d+)$/);
-						if (m) maxId = Math.max(maxId, parseInt(m[1], 10));
-					}
-					if (maxId > taskIdCounter) taskIdCounter = maxId;
-				}
-			}
-			console.log(`[Orchestrator] Restored project directory from settings: ${currentProjectDir}`);
-		} else {
-			currentProjectDir = createProjectDir(message);
-			initProjectState(currentProjectDir, message);
-			console.log(`[Orchestrator] Created project directory: ${currentProjectDir}`);
-		}
-	}
-	// Always persist active project dir so it survives restarts
-	setActiveProjectDir(currentProjectDir);
+	// Defer project creation — only create when orchestrator dispatches [TASK]
+	pendingProjectMessage = message;
 
 	// Stop idle chat when work begins
 	stopIdleChat();
@@ -840,6 +819,7 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 				currentPhase: (prev?.currentPhase ?? 0) + 1,
 			});
 		}
+		pendingProjectMessage = null;
 		// Resume idle chat when work is done
 		startIdleChatScheduler(broadcast, getIdleAgents);
 	});
@@ -927,6 +907,16 @@ async function orchestrateStep(
 		// No tasks dispatched — orchestration complete for this round
 		console.log(`[Orchestrator] No tasks in response — round complete`);
 		return;
+	}
+
+	// Lazy project creation — only when real tasks are dispatched
+	if (!currentProjectDir) {
+		const projectMsg = pendingProjectMessage ?? message;
+		currentProjectDir = createProjectDir(projectMsg);
+		initProjectState(currentProjectDir, projectMsg);
+		setActiveProjectDir(currentProjectDir);
+		pendingProjectMessage = null;
+		console.log(`[Orchestrator] Created project directory (lazy): ${currentProjectDir}`);
 	}
 
 	// Process tasks sequentially
