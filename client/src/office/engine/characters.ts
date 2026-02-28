@@ -283,6 +283,9 @@ export function updateCharacter(
 export function getCharacterSprite(ch: Character, sprites: CharacterSprites): SpriteData {
   switch (ch.state) {
     case CharacterState.TYPE:
+      if (!ch.currentTool && ch.defaultAction === 'standing') {
+        return sprites.walk[ch.dir][1]
+      }
       if (isReadingTool(ch.currentTool) || (!ch.currentTool && ch.defaultAction === 'reading')) {
         return sprites.reading[ch.dir][ch.frame % 2]
       }

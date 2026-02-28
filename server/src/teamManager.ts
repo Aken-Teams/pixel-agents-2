@@ -39,7 +39,25 @@ const MAX_ORCHESTRATION_DEPTH = 10;
 // Receptionist bubble state
 const RECEPTIONIST_SKILL_ID = 'receptionist';
 const RECEPTIONIST_SEAT_ID = 'seat-b4';
+const ORCHESTRATOR_SEAT_ID = 'seat-b1';
 const RECEPTIONIST_BUBBLE_INTERVAL_MS = 25_000;
+
+/** Fixed seat assignment order for workers (excludes seat-b1=orchestrator, seat-b4=receptionist) */
+const WORKER_SEAT_ORDER = [
+	'seat-l1', 'seat-l2', 'seat-l3',
+	'seat-r1', 'seat-r2', 'seat-r3',
+	'seat-t1',
+	'seat-d1', 'seat-d2', 'seat-d3', 'seat-d4', 'seat-d5', 'seat-d6',
+	'seat-m1', 'seat-m2', 'seat-m3', 'seat-m4',
+	'seat-b2', 'seat-b3',
+];
+
+/** Determine the preferred seat for a skill based on role and order among workers */
+function getSeatForSkill(skill: SkillDefinition, workerIndex: number): string {
+	if (skill.role === 'orchestrator') return ORCHESTRATOR_SEAT_ID;
+	if (skill.id === RECEPTIONIST_SKILL_ID) return RECEPTIONIST_SEAT_ID;
+	return WORKER_SEAT_ORDER[workerIndex % WORKER_SEAT_ORDER.length];
+}
 let receptionistBubbleTimer: ReturnType<typeof setInterval> | null = null;
 let receptionistBubbleIndex = 0;
 let cachedBroadcastForReceptionist: Broadcast | null = null;
@@ -105,14 +123,21 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 	cachedSkills = skills;
 
 	// Add or update members
+	let workerIdx = 0;
 	for (const skill of skills) {
+		const isWorker = skill.role !== 'orchestrator' && skill.id !== RECEPTIONIST_SKILL_ID;
+
 		const existing = teamSessions.get(skill.id);
 		if (existing) {
 			// Update system prompt if changed, keep history
 			existing.name = skill.name;
 			existing.systemPrompt = buildSystemPrompt(skill, skills);
+			if (isWorker) workerIdx++;
 			continue;
 		}
+
+		const seatId = getSeatForSkill(skill, workerIdx);
+		if (isWorker) workerIdx++;
 
 		const agentId = nextAgentIdRef.current++;
 		const session: TeamSession = {
@@ -125,13 +150,13 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 		};
 		teamSessions.set(skill.id, session);
 
-		console.log(`[Team] Added member ${skill.name} (skill ${skill.id}, agent ${agentId}${skill.role === 'orchestrator' ? ', ORCHESTRATOR' : ''})`);
+		console.log(`[Team] Added member ${skill.name} (skill ${skill.id}, agent ${agentId}, seat ${seatId}${skill.role === 'orchestrator' ? ', ORCHESTRATOR' : ''})`);
 		broadcast({
 			type: 'agentCreated',
 			id: agentId,
 			name: skill.name,
 			role: skill.role ?? 'worker',
-			preferredSeatId: skill.id === RECEPTIONIST_SKILL_ID ? RECEPTIONIST_SEAT_ID : undefined,
+			preferredSeatId: seatId,
 		});
 	}
 
@@ -214,8 +239,12 @@ ${summaryRule}`;
 }
 
 function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
+	let workerIdx = 0;
 	return skills.map((skill) => {
 		const session = teamSessions.get(skill.id);
+		const isWorker = skill.role !== 'orchestrator' && skill.id !== RECEPTIONIST_SKILL_ID;
+		const seatId = getSeatForSkill(skill, workerIdx);
+		if (isWorker) workerIdx++;
 		return {
 			skillId: skill.id,
 			name: skill.name,
@@ -225,7 +254,7 @@ function getTeamMemberInfos(skills: SkillDefinition[]): TeamMemberInfo[] {
 			role: skill.role,
 			description: skill.description,
 			bio: skill.bio,
-			preferredSeatId: skill.id === RECEPTIONIST_SKILL_ID ? RECEPTIONIST_SEAT_ID : undefined,
+			preferredSeatId: seatId,
 		};
 	}).filter((m) => m.agentId >= 0);
 }
