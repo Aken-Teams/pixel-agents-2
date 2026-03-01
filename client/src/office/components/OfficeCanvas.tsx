@@ -661,9 +661,8 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
         zoomAccumulatorRef.current += e.deltaY
         if (Math.abs(zoomAccumulatorRef.current) >= ZOOM_SCROLL_THRESHOLD) {
           const direction = zoomAccumulatorRef.current < 0 ? 1 : -1
-          const step = direction > 0 ? (zoom < 1 ? 0.5 : 1) : (zoom <= 1 ? 0.5 : 1)
           zoomAccumulatorRef.current = 0
-          const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + direction * step))
+          const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + direction * 0.5))
           if (newZoom !== zoom) {
             onZoomChange(newZoom)
           }
