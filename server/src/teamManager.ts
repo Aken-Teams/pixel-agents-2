@@ -468,13 +468,21 @@ function parseInterviewBlock(text: string): { cleanText: string; interview: stri
 /**
  * Parse interview markdown into individual numbered questions.
  * Extracts lines matching "N. question text" pattern.
+ * Supports {{opt1|opt2|opt3}} syntax for single-select options.
  */
-function parseInterviewQuestions(markdown: string): { id: string; question: string }[] {
-	const questions: { id: string; question: string }[] = [];
+function parseInterviewQuestions(markdown: string): { id: string; question: string; options?: string[] }[] {
+	const questions: { id: string; question: string; options?: string[] }[] = [];
 	for (const line of markdown.split('\n')) {
 		const m = line.match(/^\s*(\d+)\.\s+(.+)/);
 		if (m) {
-			questions.push({ id: `q${m[1]}`, question: m[2].trim() });
+			let text = m[2].trim();
+			let options: string[] | undefined;
+			const optMatch = text.match(/\{\{(.+?)\}\}/);
+			if (optMatch) {
+				options = optMatch[1].split('|').map(o => o.trim()).filter(Boolean);
+				text = text.replace(/\s*\{\{.+?\}\}/, '').trim();
+			}
+			questions.push({ id: `q${m[1]}`, question: text, options });
 		}
 	}
 	// Fallback: if no numbered questions found, treat entire block as one question
@@ -482,6 +490,44 @@ function parseInterviewQuestions(markdown: string): { id: string; question: stri
 		questions.push({ id: 'q1', question: markdown.trim() });
 	}
 	return questions;
+}
+
+/**
+ * Sanitize user interview responses to prevent prompt injection.
+ * Strips protocol markers, system-level instructions, and suspicious content.
+ * Returns { safe: true, sanitized } or { safe: false, reason }.
+ */
+function sanitizeInterviewResponse(raw: string): { safe: boolean; sanitized: string; reason?: string } {
+	// Strip any protocol markers that could manipulate orchestrator flow
+	let text = raw
+		.replace(/\[TASK[:\w-]*\]/gi, '')
+		.replace(/\[\/TASK\]/gi, '')
+		.replace(/\[RESULT[:\w-]*\]/gi, '')
+		.replace(/\[\/RESULT\]/gi, '')
+		.replace(/\[INTERVIEW\]/gi, '')
+		.replace(/\[\/INTERVIEW\]/gi, '');
+
+	// Detect prompt injection patterns
+	const injectionPatterns = [
+		/ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|rules?)/i,
+		/you\s+are\s+now\s+/i,
+		/new\s+instructions?:/i,
+		/system\s*:\s*/i,
+		/override\s+(all\s+)?rules?/i,
+		/disregard\s+(all\s+)?(previous|above|prior)/i,
+		/forget\s+(all\s+)?(previous|above|prior)/i,
+		/act\s+as\s+(if|a|an)\s+/i,
+		/pretend\s+(you\s+are|to\s+be)/i,
+	];
+
+	for (const pattern of injectionPatterns) {
+		if (pattern.test(text)) {
+			console.warn(`[Orchestrator] Interview response rejected — detected injection pattern: ${pattern}`);
+			return { safe: false, sanitized: '', reason: '偵測到不安全的內容，請重新回答。' };
+		}
+	}
+
+	return { safe: true, sanitized: text.trim() };
 }
 
 // Interview response resolver — set when waiting for user, resolved by submitInterviewResponse
@@ -900,9 +946,28 @@ async function orchestrateStep(
 			interviewResolver = resolve;
 		});
 
-		console.log(`[Orchestrator] Interview response received — continuing orchestration`);
-		// Feed user's interview response back to the orchestrator
-		const feedbackMsg = `用戶的回覆：\n${userResponse}`;
+		console.log(`[Orchestrator] Interview response received — sanitizing before continuing`);
+
+		// Sanitize user response to prevent prompt injection
+		const { safe, sanitized, reason } = sanitizeInterviewResponse(userResponse);
+		if (!safe) {
+			console.warn(`[Orchestrator] Interview response rejected: ${reason}`);
+			// Re-prompt user by sending the same questions again
+			broadcast({ type: 'interviewRequest', questions: parsedQuestions });
+			broadcast({ type: 'teamStreamChunk', skillId: orchSkillId, text: `⚠️ ${reason}\n` });
+			broadcast({ type: 'teamStreamEnd', skillId: orchSkillId, agentId: -1 });
+			const retryResponse = await new Promise<string>((resolve) => {
+				interviewResolver = resolve;
+			});
+			const retryResult = sanitizeInterviewResponse(retryResponse);
+			const finalResponse = retryResult.safe ? retryResult.sanitized : '跳過，直接開始開發。';
+			const feedbackMsg = `用戶的回覆：\n${finalResponse}`;
+			await orchestrateStep(orchSkillId, feedbackMsg, broadcast, depth + 1);
+			return;
+		}
+
+		// Feed sanitized user response back to the orchestrator
+		const feedbackMsg = `用戶的回覆：\n${sanitized}`;
 		await orchestrateStep(orchSkillId, feedbackMsg, broadcast, depth + 1);
 		return;
 	}

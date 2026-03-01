@@ -4,6 +4,7 @@ import { wsClient } from '../wsClient.js'
 export interface InterviewQuestion {
   id: string
   question: string
+  options?: string[]
 }
 
 interface InterviewModalProps {
@@ -24,12 +25,14 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [currentAnswer, setCurrentAnswer] = useState('')
+  const [isOtherMode, setIsOtherMode] = useState(false)
   const [hovered, setHovered] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('questions')
 
   const current = questions[currentIndex]
   const isFirst = currentIndex === 0
   const isLast = currentIndex === questions.length - 1
+  const hasOptions = current?.options && current.options.length > 0
 
   const submitAnswers = (allAnswers: Record<string, string>) => {
     const responseLines: string[] = []
@@ -47,8 +50,8 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
     onClose()
   }
 
-  /** Save current answer and move to next question or confirmation screen */
-  const handleNext = () => {
+  /** Navigate to a question index, saving current answer */
+  const saveCurrent = () => {
     const trimmed = currentAnswer.trim()
     const newAnswers = { ...answers }
     if (trimmed) {
@@ -57,12 +60,29 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
       delete newAnswers[current.id]
     }
     setAnswers(newAnswers)
+    return newAnswers
+  }
 
+  const goToQuestion = (idx: number, savedAnswers: Record<string, string>) => {
+    const nextQ = questions[idx]
+    const nextAnswer = savedAnswers[nextQ?.id] || ''
+    setCurrentAnswer(nextAnswer)
+    setCurrentIndex(idx)
+    // If the next question has options, check if the saved answer is a custom "other" answer
+    if (nextQ?.options && nextQ.options.length > 0) {
+      setIsOtherMode(nextAnswer !== '' && !nextQ.options.includes(nextAnswer))
+    } else {
+      setIsOtherMode(false)
+    }
+  }
+
+  /** Save current answer and move to next question or confirmation screen */
+  const handleNext = () => {
+    const saved = saveCurrent()
     if (isLast) {
       setPhase('confirm')
     } else {
-      setCurrentAnswer(newAnswers[questions[currentIndex + 1]?.id] || '')
-      setCurrentIndex((i) => i + 1)
+      goToQuestion(currentIndex + 1, saved)
     }
   }
 
@@ -75,26 +95,14 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
     if (isLast) {
       setPhase('confirm')
     } else {
-      setCurrentAnswer(newAnswers[questions[currentIndex + 1]?.id] || '')
-      setCurrentIndex((i) => i + 1)
+      goToQuestion(currentIndex + 1, newAnswers)
     }
   }
 
   /** Go back to previous question */
   const handlePrev = () => {
-    // Save current answer before going back
-    const trimmed = currentAnswer.trim()
-    const newAnswers = { ...answers }
-    if (trimmed) {
-      newAnswers[current.id] = trimmed
-    } else {
-      delete newAnswers[current.id]
-    }
-    setAnswers(newAnswers)
-
-    const prevIdx = currentIndex - 1
-    setCurrentAnswer(newAnswers[questions[prevIdx]?.id] || '')
-    setCurrentIndex(prevIdx)
+    const saved = saveCurrent()
+    goToQuestion(currentIndex - 1, saved)
   }
 
   /** Skip all and submit immediately */
@@ -104,9 +112,31 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
 
   /** From confirm screen: go back to edit a specific question */
   const handleEditQuestion = (idx: number) => {
-    setCurrentAnswer(answers[questions[idx]?.id] || '')
+    const q = questions[idx]
+    const ans = answers[q?.id] || ''
+    setCurrentAnswer(ans)
     setCurrentIndex(idx)
+    if (q?.options && q.options.length > 0) {
+      setIsOtherMode(ans !== '' && !q.options.includes(ans))
+    } else {
+      setIsOtherMode(false)
+    }
     setPhase('questions')
+  }
+
+  /** Handle selecting an option button */
+  const handleSelectOption = (option: string) => {
+    setCurrentAnswer(option)
+    setIsOtherMode(false)
+  }
+
+  /** Handle clicking "其他" */
+  const handleSelectOther = () => {
+    setIsOtherMode(true)
+    // If current answer is one of the predefined options, clear it
+    if (current.options?.includes(currentAnswer)) {
+      setCurrentAnswer('')
+    }
   }
 
   const answeredCount = Object.keys(answers).filter((k) => answers[k]).length
@@ -226,6 +256,10 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
   // ─── Question Screen ───
   const { title, hint } = parseQuestionParts(current.question)
 
+  // For option questions: is the current answer one of the predefined options?
+  const isOptionSelected = hasOptions && !isOtherMode && current.options!.includes(currentAnswer)
+  const hasAnswer = currentAnswer.trim() !== ''
+
   return (
     <>
       {/* Backdrop */}
@@ -275,20 +309,103 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
           )}
         </div>
 
-        {/* Input */}
+        {/* Input area: options or textarea */}
         <div style={{ padding: '0 16px 14px' }}>
-          <textarea
-            value={currentAnswer}
-            onChange={(e) => setCurrentAnswer(e.target.value)}
-            placeholder="請輸入您的回答，或跳過此題..."
-            autoFocus
-            style={{
-              width: '100%', minHeight: 80, padding: '8px 10px',
-              fontSize: '14px', lineHeight: 1.5, background: 'rgba(0, 0, 0, 0.3)',
-              border: '1px solid var(--pixel-border)', color: 'rgba(255, 255, 255, 0.9)',
-              resize: 'vertical', outline: 'none', boxSizing: 'border-box',
-            }}
-          />
+          {hasOptions ? (
+            <>
+              {/* Option buttons grid */}
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: isOtherMode ? 10 : 0,
+              }}>
+                {current.options!.map((opt) => {
+                  const selected = !isOtherMode && currentAnswer === opt
+                  const isHovered = hovered === `opt-${opt}`
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => handleSelectOption(opt)}
+                      onMouseEnter={() => setHovered(`opt-${opt}`)}
+                      onMouseLeave={() => setHovered(null)}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        lineHeight: 1.4,
+                        background: selected
+                          ? 'rgba(90, 140, 255, 0.25)'
+                          : isHovered ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+                        color: selected ? 'rgba(160, 190, 255, 1)' : 'rgba(255, 255, 255, 0.8)',
+                        border: selected
+                          ? '1.5px solid rgba(90, 140, 255, 0.7)'
+                          : '1px solid var(--pixel-border)',
+                        cursor: 'pointer',
+                        transition: 'background 0.1s, border-color 0.1s',
+                      }}
+                    >
+                      {selected && (
+                        <span style={{ marginRight: 6, fontSize: '12px' }}>&#10003;</span>
+                      )}
+                      {opt}
+                    </button>
+                  )
+                })}
+                {/* "其他" button */}
+                <button
+                  onClick={handleSelectOther}
+                  onMouseEnter={() => setHovered('opt-other')}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    lineHeight: 1.4,
+                    background: isOtherMode
+                      ? 'rgba(90, 140, 255, 0.25)'
+                      : hovered === 'opt-other' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)',
+                    color: isOtherMode ? 'rgba(160, 190, 255, 1)' : 'rgba(255, 255, 255, 0.5)',
+                    border: isOtherMode
+                      ? '1.5px solid rgba(90, 140, 255, 0.7)'
+                      : '1px solid var(--pixel-border)',
+                    cursor: 'pointer',
+                    fontStyle: 'italic',
+                    transition: 'background 0.1s, border-color 0.1s',
+                  }}
+                >
+                  {isOtherMode && (
+                    <span style={{ marginRight: 6, fontSize: '12px' }}>&#10003;</span>
+                  )}
+                  其他...
+                </button>
+              </div>
+              {/* Textarea for custom input when "其他" is selected */}
+              {isOtherMode && (
+                <textarea
+                  value={currentAnswer}
+                  onChange={(e) => setCurrentAnswer(e.target.value)}
+                  placeholder="請輸入您的選擇..."
+                  autoFocus
+                  style={{
+                    width: '100%', minHeight: 60, padding: '8px 10px',
+                    fontSize: '14px', lineHeight: 1.5, background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--pixel-border)', color: 'rgba(255, 255, 255, 0.9)',
+                    resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+              )}
+            </>
+          ) : (
+            /* Standard textarea for free-text questions */
+            <textarea
+              value={currentAnswer}
+              onChange={(e) => setCurrentAnswer(e.target.value)}
+              placeholder="請輸入您的回答，或跳過此題..."
+              autoFocus
+              style={{
+                width: '100%', minHeight: 80, padding: '8px 10px',
+                fontSize: '14px', lineHeight: 1.5, background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid var(--pixel-border)', color: 'rgba(255, 255, 255, 0.9)',
+                resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+          )}
         </div>
 
         {/* Footer */}
@@ -348,8 +465,8 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
                 padding: '6px 16px', fontSize: '14px',
                 background: hovered === 'next' ? 'rgba(90, 140, 255, 0.9)' : 'rgba(90, 140, 255, 0.7)',
                 color: '#fff', border: '1px solid rgba(90, 140, 255, 0.5)',
-                cursor: currentAnswer.trim() ? 'pointer' : 'default',
-                opacity: currentAnswer.trim() ? 1 : 0.5,
+                cursor: (hasAnswer || isOptionSelected) ? 'pointer' : 'default',
+                opacity: (hasAnswer || isOptionSelected) ? 1 : 0.5,
               }}
             >
               {isLast ? '完成' : '下一題 →'}
