@@ -93,7 +93,7 @@ export function PixelSpriteAvatar({
 
         const spriteData = getFrame(frame)
         const cached = getCachedSprite(spriteData, zoom)
-        ctx!.clearRect(0, 0, canvas.width, canvas.height)
+        ctx!.clearRect(0, 0, canvas!.width, canvas!.height)
         ctx!.imageSmoothingEnabled = false
         ctx!.drawImage(cached, 0, 0)
       }

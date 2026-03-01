@@ -269,7 +269,7 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
     const handler = (msg: unknown) => {
       const data = msg as { type: string; [key: string]: unknown }
       if (data.type === 'projectList') {
-        setProjects((data as { projects: ProjectSummary[] }).projects ?? [])
+        setProjects(((data as unknown as { projects: ProjectSummary[] }).projects) ?? [])
         setLoading(false)
       } else if (data.type === 'projectDetail') {
         const d = data as unknown as ProjectDetail
@@ -277,7 +277,7 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
         setView('detail')
         setSelectedDoc(null)
       } else if (data.type === 'docContent') {
-        const d = data as { fileName: string; content: string }
+        const d = data as unknown as { fileName: string; content: string }
         setSelectedDoc(prev => prev && prev.doc.fileName === d.fileName ? { ...prev, content: d.content } : prev)
       }
     }

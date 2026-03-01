@@ -432,6 +432,8 @@ export function ChatPanel({
                 assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
                 teamMembers={teamMembers}
                 dispatchedTasks={dispatchedTasks}
+                isSubAgentTab={isInputDisabled}
+                orchestratorName={orchestratorMember?.name}
               />
             ))}
             {activeChat.isStreaming && activeChat.streamBuffer && (
@@ -440,6 +442,8 @@ export function ChatPanel({
                 assistantName={mode === 'team' ? activeTeamMember?.name : undefined}
                 teamMembers={teamMembers}
                 dispatchedTasks={dispatchedTasks}
+                isSubAgentTab={isInputDisabled}
+                orchestratorName={orchestratorMember?.name}
                 isStreaming
               />
             )}
@@ -608,19 +612,23 @@ function stripInternalBlocks(text: string): { cleanText: string; tasks: { skillI
   return { cleanText: cleaned.trim(), tasks }
 }
 
-function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispatchedTasks }: {
+function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispatchedTasks, isSubAgentTab, orchestratorName }: {
   message: ChatMessage
   assistantName?: string
   isStreaming?: boolean
   teamMembers?: TeamMemberInfo[]
   dispatchedTasks?: DispatchedTask[]
+  isSubAgentTab?: boolean
+  orchestratorName?: string
 }) {
   const isUser = message.role === 'user'
 
   // Detect internal messages injected as 'user' role (result feedback, system notices)
   const isInternalResultFeedback = isUser && /^\[RESULT:/.test(message.content.trim())
   const isSystemNotice = isUser && message.content.trim().startsWith('⚠️ 專案恢復狀態通知')
-  const isInternalMessage = isInternalResultFeedback || isSystemNotice
+  // Sub-agent tabs: all 'user' messages are task instructions from orchestrator
+  const isOrchestratorInstruction = isUser && isSubAgentTab
+  const isInternalMessage = isInternalResultFeedback || isSystemNotice || isOrchestratorInstruction
 
   // Parse and strip all internal protocol blocks from assistant messages
   const { cleanText, tasks } = !isUser || isInternalMessage
@@ -681,23 +689,29 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
     )
   }
 
+  // Determine display alignment and sender label
+  const showAsUser = isUser && !isOrchestratorInstruction
+  const senderLabel = isOrchestratorInstruction
+    ? (orchestratorName || '技術長')
+    : isUser ? 'You' : (assistantName || 'Claude')
+
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      alignItems: isUser ? 'flex-end' : 'flex-start',
+      alignItems: showAsUser ? 'flex-end' : 'flex-start',
     }}>
       <div style={{
         fontSize: '12px',
         fontFamily: MESSAGE_FONT,
         fontWeight: 600,
-        color: 'var(--pixel-text-dim)',
+        color: isOrchestratorInstruction ? '#daa520' : 'var(--pixel-text-dim)',
         marginBottom: 2,
-        paddingLeft: isUser ? 0 : 4,
-        paddingRight: isUser ? 4 : 0,
+        paddingLeft: showAsUser ? 0 : 4,
+        paddingRight: showAsUser ? 4 : 0,
         letterSpacing: '0.02em',
       }}>
-        {isUser ? 'You' : (assistantName || 'Claude')}
+        {senderLabel}
       </div>
 
       {/* Main text content (with TASK blocks stripped) */}
@@ -710,16 +724,69 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
             fontSize: '14.5px',
             lineHeight: 1.6,
             fontFamily: MESSAGE_FONT,
-            background: isUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
-            color: isUser ? '#fff' : 'var(--pixel-text)',
-            border: `2px solid ${isUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
+            background: isOrchestratorInstruction
+              ? 'rgba(218, 165, 32, 0.12)'
+              : showAsUser ? 'var(--pixel-accent)' : 'var(--pixel-btn-bg)',
+            color: isOrchestratorInstruction
+              ? 'var(--pixel-text)'
+              : showAsUser ? '#fff' : 'var(--pixel-text)',
+            border: `2px solid ${isOrchestratorInstruction ? 'rgba(218, 165, 32, 0.3)' : showAsUser ? 'rgba(255,255,255,0.2)' : 'var(--pixel-border)'}`,
             borderRadius: 0,
             wordBreak: 'break-word',
             opacity: isStreaming ? 0.9 : 1,
           }}
         >
-          {isUser ? (
+          {showAsUser ? (
             <span style={{ whiteSpace: 'pre-wrap' }}>{cleanText.trim()}</span>
+          ) : isOrchestratorInstruction ? (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p style={{ margin: '0.4em 0' }}>{children}</p>,
+                strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
+                code: ({ children, className }) => {
+                  if (className) {
+                    return (
+                      <code style={{
+                        display: 'block',
+                        background: 'rgba(0,0,0,0.2)',
+                        padding: '6px 8px',
+                        margin: '4px 0',
+                        fontSize: '13px',
+                        fontFamily: CODE_FONT,
+                        overflowX: 'auto',
+                        whiteSpace: 'pre',
+                      }}>
+                        {children}
+                      </code>
+                    )
+                  }
+                  return (
+                    <code style={{
+                      background: 'rgba(0,0,0,0.15)',
+                      padding: '1px 4px',
+                      fontSize: '13px',
+                      fontFamily: CODE_FONT,
+                    }}>
+                      {children}
+                    </code>
+                  )
+                },
+                pre: ({ children }) => (
+                  <pre style={{ margin: '4px 0', overflow: 'auto', background: 'rgba(0,0,0,0.2)', padding: '6px 8px', fontSize: '13px', fontFamily: CODE_FONT, whiteSpace: 'pre' }}>
+                    {children}
+                  </pre>
+                ),
+                ul: ({ children }) => <ul style={{ margin: '0.4em 0', paddingLeft: '1.2em' }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ margin: '0.4em 0', paddingLeft: '1.2em' }}>{children}</ol>,
+                li: ({ children }) => <li style={{ margin: '0.15em 0' }}>{children}</li>,
+                h1: ({ children }) => <div style={{ fontSize: '16px', fontWeight: 700, margin: '0.6em 0 0.2em' }}>{children}</div>,
+                h2: ({ children }) => <div style={{ fontSize: '15px', fontWeight: 700, margin: '0.5em 0 0.2em' }}>{children}</div>,
+                h3: ({ children }) => <div style={{ fontSize: '14.5px', fontWeight: 600, margin: '0.4em 0 0.15em' }}>{children}</div>,
+              }}
+            >
+              {cleanText}
+            </ReactMarkdown>
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
