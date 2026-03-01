@@ -78,6 +78,7 @@ export function ProjectListModal({ onClose, onProjectClose }: ProjectListModalPr
         }}
       />
       <div
+        className="modal-responsive"
         style={{
           position: 'fixed',
           top: '50%',

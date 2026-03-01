@@ -31,6 +31,7 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
       />
       {/* Modal */}
       <div
+        className="modal-responsive"
         style={{
           position: 'fixed',
           top: '50%',
@@ -79,6 +80,7 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
 
         {/* Scene grid */}
         <div
+          className="scene-grid"
           style={{
             display: 'flex',
             flexWrap: 'wrap',

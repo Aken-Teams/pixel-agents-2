@@ -321,7 +321,7 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
       />
       {/* Full-screen panel */}
       <div
-        className="interview-modal"
+        className="interview-modal portfolio-modal"
         style={{
           position: 'fixed',
           top: '5%',
@@ -378,6 +378,7 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
             )}
           </div>
           <button
+            className="portfolio-close-btn"
             onClick={onClose}
             onMouseEnter={() => setHovered('close')}
             onMouseLeave={() => setHovered(null)}
@@ -524,9 +525,10 @@ function ProjectDetailView({
   const showPhaseHeaders = phaseGroups.length > 1
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div className="portfolio-detail" style={{ display: 'flex', height: '100%' }}>
       {/* Left: Task Timeline */}
       <div
+        className="task-timeline"
         style={{
           width: '35%',
           borderRight: '2px solid var(--pixel-border)',
@@ -719,9 +721,9 @@ function DocPreviewView({
   const member = findMember(doc.skillId)
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div className="doc-preview-layout" style={{ display: 'flex', height: '100%' }}>
       {/* Left: Document preview with white background */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#ffffff' }}>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#ffffff', minHeight: 0 }}>
         {/* Watermark overlay */}
         <div
           style={{
@@ -784,6 +786,7 @@ function DocPreviewView({
 
       {/* Right: Character panel */}
       <div
+        className="doc-character-panel"
         style={{
           width: 220,
           borderLeft: '2px solid var(--pixel-border)',
@@ -797,38 +800,41 @@ function DocPreviewView({
         }}
       >
         {/* Large avatar */}
-        {member ? (
-          <PixelSpriteAvatar
-            palette={member.palette ?? 0}
-            hueShift={member.hueShift ?? 0}
-            zoom={5}
-            animated
-            interactive
-            style={{ width: 80, height: 120 }}
-          />
-        ) : (
-          <div style={{ width: 80, height: 120, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }} />
-        )}
+        <div className="doc-panel-avatar">
+          {member ? (
+            <PixelSpriteAvatar
+              palette={member.palette ?? 0}
+              hueShift={member.hueShift ?? 0}
+              zoom={5}
+              animated
+              interactive
+              style={{ width: 80, height: 120 }}
+            />
+          ) : (
+            <div style={{ width: 80, height: 120, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }} />
+          )}
+        </div>
 
         {/* Agent name */}
         <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.9)', textAlign: 'center' }}>
           {SKILL_ROLE_NAMES[doc.skillId] ?? doc.agentName}
         </div>
-        <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+        <div className="doc-panel-secondary" style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
           {doc.agentName}
         </div>
 
         {/* Divider */}
-        <div style={{ width: '80%', height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <div className="doc-panel-secondary" style={{ width: '80%', height: 1, background: 'rgba(255,255,255,0.1)' }} />
 
         {/* Summary */}
         <div
+          className="doc-panel-secondary"
           style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, textAlign: 'left', width: '100%' }}
           dangerouslySetInnerHTML={{ __html: doc.summary ? escapeHtml(doc.summary) : '無摘要內容' }}
         />
 
         {/* File info */}
-        <div style={{ marginTop: 'auto', width: '100%', fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
+        <div className="doc-panel-secondary" style={{ marginTop: 'auto', width: '100%', fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
           <div>{doc.fileName}</div>
           <div>{formatFileSize(doc.sizeBytes)}</div>
           {doc.time && <div>{formatTime(doc.time)}</div>}

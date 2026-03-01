@@ -158,6 +158,7 @@ export function SettingsModal({ isOpen, onClose, aiProvider, deepseekModel }: Se
       />
       {/* Centered modal */}
       <div
+        className="modal-responsive"
         style={{
           position: 'fixed',
           top: '50%',

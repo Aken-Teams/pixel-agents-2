@@ -25,6 +25,8 @@ import { ThoughtBubbles } from './components/ThoughtBubbles.js'
 import { InterviewModal } from './components/InterviewModal.js'
 import { CharacterProfileModal } from './components/CharacterProfileModal.js'
 import { LoginScreen } from './components/LoginScreen.js'
+import { MobileNavBar } from './components/MobileNavBar.js'
+import { useIsMobile } from './hooks/useIsMobile.js'
 import type { TeamMemberInfo } from './hooks/useServerMessages.js'
 
 // Game state lives outside React — updated imperatively by message handlers
@@ -150,6 +152,9 @@ function App() {
       editor.handleZoomChange(1)
     }
   }, [layoutReady]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isMobile = useIsMobile()
+  const [mobileView, setMobileView] = useState<'canvas' | 'chat'>('canvas')
 
   const [isDebugMode, setIsDebugMode] = useState(false)
   const [isChatCollapsed, setIsChatCollapsed] = useState(
@@ -280,14 +285,17 @@ function App() {
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex' }}>
-      {/* Chat panel — collapsible */}
-      <div style={{
-        width: isChatCollapsed ? 0 : 340,
-        flexShrink: 0,
-        height: '100%',
-        overflow: 'hidden',
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-      }}>
+      {/* Chat panel — collapsible (desktop) / full-screen overlay (mobile) */}
+      <div
+        className={`chat-panel-wrapper${isMobile && mobileView !== 'chat' ? ' mobile-hidden' : ''}`}
+        style={isMobile ? undefined : {
+          width: isChatCollapsed ? 0 : 340,
+          flexShrink: 0,
+          height: '100%',
+          overflow: 'hidden',
+          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
         <ChatPanel
           chatList={chatList}
           chats={chats}
@@ -305,13 +313,19 @@ function App() {
           dispatchedTasks={dispatchedTasks}
           onSendOrchestratorMessage={handleSendOrchestratorMessage}
           teamToolActivities={teamToolActivities}
-          onToggleCollapse={() => setChatCollapsed(true)}
+          onToggleCollapse={() => {
+            if (isMobile) {
+              setMobileView('canvas')
+            } else {
+              setChatCollapsed(true)
+            }
+          }}
         />
       </div>
 
-      {/* VS Code-style collapsed sidebar */}
-      {isChatCollapsed && (
-        <div className="hidden-scrollbar" style={{
+      {/* VS Code-style collapsed sidebar — hidden on mobile */}
+      {!isMobile && isChatCollapsed && (
+        <div className="hidden-scrollbar desktop-sidebar" style={{
           width: 64,
           flexShrink: 0,
           height: '100%',
@@ -456,7 +470,7 @@ function App() {
           })}
         </div>
       )}
-      <div ref={containerRef} style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
+      <div ref={containerRef} className="canvas-area" style={{ flex: 1, height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @keyframes pixel-agents-pulse {
           0%, 100% { opacity: 1; }
@@ -493,6 +507,7 @@ function App() {
 
       {/* Vignette overlay */}
       <div
+        className="mobile-vignette"
         style={{
           position: 'absolute',
           inset: 0,
@@ -608,6 +623,16 @@ function App() {
 
       <ProjectStatusBar currentProject={currentProject} />
       <ConnectionStatus />
+
+      {/* Mobile bottom navigation bar */}
+      {isMobile && (
+        <MobileNavBar
+          activeView={mobileView}
+          onViewChange={setMobileView}
+          agentCount={enrichedTeamMembers.length}
+          hasUnread={Object.values(teamChats).some((c) => c?.isStreaming)}
+        />
+      )}
       </div>
       {interviewQuestions && (
         <InterviewModal

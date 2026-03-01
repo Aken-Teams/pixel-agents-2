@@ -245,7 +245,7 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
           background: 'rgba(0, 0, 0, 0.6)', zIndex: 69,
         }} />
         <div
-          className="interview-modal"
+          className="interview-modal modal-responsive"
           style={{
             position: 'fixed', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)', zIndex: 70,
@@ -533,7 +533,7 @@ export function InterviewModal({ questions, onClose }: InterviewModalProps) {
       }} />
       {/* Modal */}
       <div
-        className="interview-modal"
+        className="interview-modal modal-responsive"
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)', zIndex: 70,

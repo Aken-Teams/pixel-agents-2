@@ -176,7 +176,7 @@ export function CharacterProfileModal({ member, onClose }: CharacterProfileModal
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 69 }} />
 
       {/* Card */}
-      <div style={{
+      <div className="modal-responsive" style={{
         position: 'fixed', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)', zIndex: 70,
         background: 'var(--pixel-bg)',

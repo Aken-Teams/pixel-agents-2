@@ -141,7 +141,7 @@ export function ChatPanel({
   }
 
   return (
-    <div style={{
+    <div className="chat-panel-inner" style={{
       width: 340,
       minWidth: 340,
       height: '100%',

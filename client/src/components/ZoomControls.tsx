@@ -97,6 +97,7 @@ export function ZoomControls({ zoom, onZoomChange, isPanMode, onTogglePanMode, o
 
       {/* Vertically stacked buttons — top-left */}
       <div
+        className="zoom-controls"
         style={{
           position: 'absolute',
           top: 8,
