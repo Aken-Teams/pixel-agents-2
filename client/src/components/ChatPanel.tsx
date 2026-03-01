@@ -617,8 +617,13 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
 }) {
   const isUser = message.role === 'user'
 
+  // Detect internal messages injected as 'user' role (result feedback, system notices)
+  const isInternalResultFeedback = isUser && /^\[RESULT:/.test(message.content.trim())
+  const isSystemNotice = isUser && message.content.trim().startsWith('⚠️ 專案恢復狀態通知')
+  const isInternalMessage = isInternalResultFeedback || isSystemNotice
+
   // Parse and strip all internal protocol blocks from assistant messages
-  const { cleanText, tasks } = !isUser
+  const { cleanText, tasks } = !isUser || isInternalMessage
     ? stripInternalBlocks(message.content)
     : { cleanText: message.content, tasks: [] }
 
@@ -628,6 +633,53 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
 
   const getMemberName = (skillId: string) =>
     teamMembers?.find((m) => m.skillId === skillId)?.name || skillId
+
+  // System notice: render as compact warning
+  if (isSystemNotice) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 10px',
+        fontSize: '12px',
+        fontFamily: MESSAGE_FONT,
+        color: '#facc15',
+        opacity: 0.7,
+      }}>
+        <span>⚠️ 專案恢復通知已注入</span>
+      </div>
+    )
+  }
+
+  // Internal result feedback: render as compact system indicator
+  if (isInternalResultFeedback) {
+    // Extract skill ID from [RESULT:xxx]
+    const resultMatch = message.content.match(/\[RESULT:(\w[\w-]*)\]/)
+    const resultSkillId = resultMatch?.[1]
+    const resultName = resultSkillId ? getMemberName(resultSkillId) : '成員'
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 10px',
+        fontSize: '12px',
+        fontFamily: MESSAGE_FONT,
+        color: 'var(--pixel-text-dim)',
+        opacity: 0.6,
+      }}>
+        <span style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: 'var(--pixel-green)',
+          flexShrink: 0,
+        }} />
+        <span>{resultName} 回報完成</span>
+      </div>
+    )
+  }
 
   return (
     <div style={{
@@ -672,7 +724,7 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                p: ({ children }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
+                p: ({ children }) => <p style={{ margin: '0.4em 0' }}>{children}</p>,
                 strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
                 em: ({ children }) => <em>{children}</em>,
                 code: ({ children, className }) => {
@@ -719,12 +771,12 @@ function MessageBubble({ message, assistantName, isStreaming, teamMembers, dispa
                   </pre>
                 ),
                 hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0.6em 0' }} />,
-                ul: ({ children }) => <ul style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ul>,
-                ol: ({ children }) => <ol style={{ margin: '0.3em 0', paddingLeft: '1.2em' }}>{children}</ol>,
+                ul: ({ children }) => <ul style={{ margin: '0.4em 0', paddingLeft: '1.2em' }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ margin: '0.4em 0', paddingLeft: '1.2em' }}>{children}</ol>,
                 li: ({ children }) => <li style={{ margin: '0.15em 0' }}>{children}</li>,
-                h1: ({ children }) => <div style={{ fontSize: '17px', fontWeight: 700, margin: '0.5em 0 0.3em' }}>{children}</div>,
-                h2: ({ children }) => <div style={{ fontSize: '16px', fontWeight: 700, margin: '0.4em 0 0.2em' }}>{children}</div>,
-                h3: ({ children }) => <div style={{ fontSize: '15px', fontWeight: 600, margin: '0.3em 0 0.2em' }}>{children}</div>,
+                h1: ({ children }) => <div style={{ fontSize: '17px', fontWeight: 700, margin: '0.8em 0 0.3em', paddingBottom: '0.2em', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>{children}</div>,
+                h2: ({ children }) => <div style={{ fontSize: '16px', fontWeight: 700, margin: '0.7em 0 0.3em', paddingBottom: '0.2em', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{children}</div>,
+                h3: ({ children }) => <div style={{ fontSize: '15px', fontWeight: 600, margin: '0.6em 0 0.2em', color: 'rgba(180,210,255,0.95)' }}>{children}</div>,
                 a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#7ecfff' }}>{children}</a>,
                 blockquote: ({ children }) => (
                   <blockquote style={{
