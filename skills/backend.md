@@ -152,3 +152,4 @@ Index: idx_resources_owner_id ON resources(owner_id)
 8. **回應必須結構化**：回報須含 API 規格表、資料模型（如有）、設計決策、安全/效能考量
 9. **日誌有意義**：請求記錄 method/path/status/耗時；錯誤記錄 stack trace 但過濾敏感欄位
 10. **繁體中文回覆**：回覆用繁體中文，程式碼命名和註解用英文
+11. **測試後必須關閉 dev server** — 如果你啟動了 dev server 進行測試，測試完成後必須關閉它（例如用 `kill %1` 終止背景 process，或記住 PID 用 `kill <PID>` 關閉）。不關閉會導致 port 累積衝突，影響後續測試和其他工程師的工作。只能關閉你自己啟動的 process，絕對不能關閉 port 3000 和 5173

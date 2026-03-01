@@ -60,7 +60,7 @@ html, body, #root {
   font-family: 'FS Pixel Sans', sans-serif;
 }
 
-*:not(.chat-message-bubble):not(.chat-message-bubble *):not(.team-tabs):not(.team-tabs *):not(.thought-bubble-content):not(.thought-bubble-content *):not(.interview-modal):not(.interview-modal *) {
+*:not(.chat-message-bubble):not(.chat-message-bubble *):not(.team-tabs):not(.team-tabs *):not(.thought-bubble-content):not(.thought-bubble-content *):not(.interview-modal):not(.interview-modal *):not(.bottom-toolbar):not(.bottom-toolbar *):not(.project-status-bar):not(.project-status-bar *) {
   font-family: 'FS Pixel Sans', sans-serif;
 }
 
@@ -85,6 +85,18 @@ html, body, #root {
 .chat-message-bubble code,
 .chat-message-bubble pre code {
   font-family: 'Cascadia Code', 'Fira Code', 'Source Code Pro', Consolas, monospace;
+}
+
+/* Bottom toolbar uses system font for readable English labels */
+.bottom-toolbar,
+.bottom-toolbar * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+}
+
+/* Project status bar uses system font for mixed CJK/Latin */
+.project-status-bar,
+.project-status-bar * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
 }
 
 /* Hidden scrollbar but still scrollable */

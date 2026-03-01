@@ -39,6 +39,7 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
   if (collapsed) {
     return (
       <button
+        className="project-status-bar"
         onClick={toggleCollapse}
         title={currentProject ? `${currentProject.name}（${STATUS_LABELS[currentProject.status] ?? currentProject.status}）` : '目前無載入專案'}
         onMouseEnter={() => setHovered('collapsed')}
@@ -78,6 +79,7 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
   // ── Expanded: status bar ──
   return (
     <div
+      className="project-status-bar"
       style={{
         position: 'absolute',
         top: 8,
@@ -117,7 +119,6 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
         userSelect: 'none',
       }}>
         {currentProject
