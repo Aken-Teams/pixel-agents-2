@@ -14,7 +14,10 @@ class WsClient {
 
 	connect(): void {
 		const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-		const url = `${protocol}//${location.host}/ws`
+		const token = localStorage.getItem('auth_token')
+		const url = token
+			? `${protocol}//${location.host}/ws?token=${encodeURIComponent(token)}`
+			: `${protocol}//${location.host}/ws`
 		this.ws = new WebSocket(url)
 
 		this.ws.onopen = () => {
@@ -82,4 +85,3 @@ class WsClient {
 }
 
 export const wsClient = new WsClient()
-wsClient.connect()

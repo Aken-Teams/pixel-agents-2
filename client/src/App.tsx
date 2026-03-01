@@ -24,6 +24,7 @@ import { AgentLabels } from './components/AgentLabels.js'
 import { ThoughtBubbles } from './components/ThoughtBubbles.js'
 import { InterviewModal } from './components/InterviewModal.js'
 import { CharacterProfileModal } from './components/CharacterProfileModal.js'
+import { LoginScreen } from './components/LoginScreen.js'
 import type { TeamMemberInfo } from './hooks/useServerMessages.js'
 
 // Game state lives outside React — updated imperatively by message handlers
@@ -628,4 +629,81 @@ function App() {
   )
 }
 
-export default App
+function AppWithAuth() {
+  const [authState, setAuthState] = useState<'checking' | 'login' | 'ready'>('checking')
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/auth-required')
+        const { required } = await res.json() as { required: boolean }
+        if (cancelled) return
+
+        if (!required) {
+          // No auth needed — connect and go
+          wsClient.connect()
+          setAuthState('ready')
+          return
+        }
+
+        // Auth required — check existing token
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+          const vRes = await fetch('/api/verify-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          })
+          const { valid } = await vRes.json() as { valid: boolean }
+          if (!cancelled && valid) {
+            wsClient.connect()
+            setAuthState('ready')
+            return
+          }
+        }
+
+        if (!cancelled) {
+          localStorage.removeItem('auth_token')
+          setAuthState('login')
+        }
+      } catch {
+        // Server unreachable — show login so user can retry
+        if (!cancelled) setAuthState('login')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const handleLogin = useCallback((token: string) => {
+    localStorage.setItem('auth_token', token)
+    wsClient.connect()
+    setAuthState('ready')
+  }, [])
+
+  if (authState === 'checking') {
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        background: '#0a0a14',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'rgba(255,255,255,0.5)',
+        fontFamily: "'FS Pixel Sans', sans-serif",
+        fontSize: '16px',
+      }}>
+        Connecting...
+      </div>
+    )
+  }
+
+  if (authState === 'login') {
+    return <LoginScreen onLogin={handleLogin} />
+  }
+
+  return <App />
+}
+
+export default AppWithAuth

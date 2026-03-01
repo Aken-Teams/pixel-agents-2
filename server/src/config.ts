@@ -5,6 +5,11 @@ import * as os from 'os';
 // ── Server ──────────────────────────────────────────────────
 export const HTTP_PORT = parseInt(process.env.PORT || '3000', 10);
 
+// ── Authentication ──────────────────────────────────────────
+// Set AUTH_PASSWORD env var to enable password protection.
+// If not set, the app is open (for local-only use).
+export const AUTH_PASSWORD: string | null = process.env.AUTH_PASSWORD || null;
+
 // ── Character Limit ─────────────────────────────────────────
 export const MAX_CHARACTERS = 21;
 

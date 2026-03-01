@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import express from 'express';
@@ -6,7 +7,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { AgentState } from './types.js';
 import type { ClientMessage, DocMeta } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
-import { HTTP_PORT, MAX_CHARACTERS, getAssetsRoot, getClientAssetsDir } from './config.js';
+import crypto from 'crypto';
+import { HTTP_PORT, MAX_CHARACTERS, AUTH_PASSWORD, getAssetsRoot, getClientAssetsDir } from './config.js';
 import {
 	launchNewSession,
 	removeAgent,
@@ -86,6 +88,9 @@ let layoutWatcher: LayoutWatcher | null = null;
 // Connected WebSocket clients
 const clients = new Set<WebSocket>();
 
+// Active auth sessions (token → true)
+const activeSessions = new Set<string>();
+
 // Cached assets (loaded once at startup)
 let cachedAssets: {
 	furnitureCatalog: unknown[] | null;
@@ -136,11 +141,51 @@ app.get('/api/layout', (_req, res) => {
 	res.json(layout || {});
 });
 
+// ── Authentication ──────────────────────────────────────────
+app.get('/api/auth-required', (_req, res) => {
+	res.json({ required: !!AUTH_PASSWORD });
+});
+
+app.post('/api/login', (req, res) => {
+	if (!AUTH_PASSWORD) {
+		res.json({ token: 'no-auth' });
+		return;
+	}
+	const { password } = req.body as { password?: string };
+	if (password === AUTH_PASSWORD) {
+		const token = crypto.randomBytes(32).toString('hex');
+		activeSessions.add(token);
+		console.log(`[Pixel Agents] Login successful (active sessions: ${activeSessions.size})`);
+		res.json({ token });
+	} else {
+		res.status(401).json({ error: 'Invalid password' });
+	}
+});
+
+app.post('/api/verify-token', (req, res) => {
+	if (!AUTH_PASSWORD) {
+		res.json({ valid: true });
+		return;
+	}
+	const { token } = req.body as { token?: string };
+	res.json({ valid: !!token && activeSessions.has(token) });
+});
+
 // ── HTTP Server + WebSocket ──────────────────────────────────
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+	// Authenticate WebSocket connections when AUTH_PASSWORD is set
+	if (AUTH_PASSWORD) {
+		const url = new URL(req.url || '', `http://${req.headers.host}`);
+		const token = url.searchParams.get('token');
+		if (!token || !activeSessions.has(token)) {
+			ws.close(4001, 'Unauthorized');
+			return;
+		}
+	}
+
 	clients.add(ws);
 	console.log(`[Pixel Agents] WebSocket client connected (total: ${clients.size})`);
 
