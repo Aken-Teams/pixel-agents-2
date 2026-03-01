@@ -114,11 +114,34 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function renderMarkdown(raw: string): string {
+function renderMarkdown(raw: string, lightTheme = false): string {
   // Normalize line endings (Windows CRLF → LF) and strip BOM
   const normalized = raw.replace(/\uFEFF/g, '').replace(/\r\n?/g, '\n')
   // Strip metadata header
   const text = normalized.replace(/^(<!--[\s\S]*?-->\s*\n)+/, '').trimStart()
+
+  // Theme-aware colors
+  const c = lightTheme ? {
+    codeBg: 'rgba(0,0,0,0.05)',
+    codeBorder: 'rgba(0,0,0,0.12)',
+    hr: 'rgba(0,0,0,0.15)',
+    thBorder: 'rgba(0,0,0,0.2)',
+    tdBorder: 'rgba(0,0,0,0.08)',
+    headingBorder: '1px solid rgba(0,0,0,0.15)',
+    inlineCodeBg: 'rgba(0,0,0,0.06)',
+    checkDim: 'opacity:0.4',
+    checkDone: 'color:#16a34a',
+  } : {
+    codeBg: 'rgba(255,255,255,0.05)',
+    codeBorder: 'rgba(255,255,255,0.1)',
+    hr: 'rgba(255,255,255,0.15)',
+    thBorder: 'rgba(255,255,255,0.2)',
+    tdBorder: 'rgba(255,255,255,0.06)',
+    headingBorder: '1px solid rgba(255,255,255,0.15)',
+    inlineCodeBg: 'rgba(255,255,255,0.08)',
+    checkDim: 'opacity:0.4',
+    checkDone: 'color:#4ade80',
+  }
 
   const lines = text.split('\n')
   const html: string[] = []
@@ -137,7 +160,7 @@ function renderMarkdown(raw: string): string {
       } else {
         if (inList) { html.push('</ul>'); inList = false }
         if (inTable) { html.push('</table>'); inTable = false }
-        html.push('<pre style="background:rgba(255,255,255,0.05);padding:8px;overflow-x:auto;font-size:14px;font-family:\'Cascadia Code\',\'Fira Code\',Consolas,monospace;border:1px solid rgba(255,255,255,0.1)">')
+        html.push(`<pre style="background:${c.codeBg};padding:8px;overflow-x:auto;font-size:14px;font-family:'Cascadia Code','Fira Code',Consolas,monospace;border:1px solid ${c.codeBorder}">`)
         inCodeBlock = true
       }
       continue
@@ -160,7 +183,7 @@ function renderMarkdown(raw: string): string {
     if (/^[-*_]{3,}\s*$/.test(line.trim())) {
       if (inList) { html.push('</ul>'); inList = false }
       if (inTable) { html.push('</table>'); inTable = false }
-      html.push('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.15);margin:10px 0" />')
+      html.push(`<hr style="border:none;border-top:1px solid ${c.hr};margin:10px 0" />`)
       continue
     }
 
@@ -177,9 +200,9 @@ function renderMarkdown(raw: string): string {
       const isHeader = i + 1 < lines.length && /^\|[\s\-:|]+\|$/.test(lines[i + 1].trim())
       const tag = isHeader ? 'th' : 'td'
       const style = isHeader
-        ? 'padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.2);text-align:left;font-weight:bold'
-        : 'padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:left'
-      html.push('<tr>' + cells.map(c => `<${tag} style="${style}">${inlineFormat(escapeHtml(c))}</${tag}>`).join('') + '</tr>')
+        ? `padding:4px 8px;border-bottom:1px solid ${c.thBorder};text-align:left;font-weight:bold`
+        : `padding:4px 8px;border-bottom:1px solid ${c.tdBorder};text-align:left`
+      html.push('<tr>' + cells.map(cell => `<${tag} style="${style}">${inlineFormat(escapeHtml(cell), lightTheme)}</${tag}>`).join('') + '</tr>')
       continue
     }
     if (inTable) { html.push('</table>'); inTable = false }
@@ -190,7 +213,7 @@ function renderMarkdown(raw: string): string {
       if (inList) { html.push('</ul>'); inList = false }
       const level = headingMatch[1].length
       const sizes: Record<number, string> = { 1: '22px', 2: '19px', 3: '16px', 4: '15px' }
-      html.push(`<div style="font-size:${sizes[level] ?? '15px'};font-weight:bold;margin:12px 0 6px;padding-bottom:4px;border-bottom:${level <= 2 ? '1px solid rgba(255,255,255,0.15)' : 'none'}">${inlineFormat(escapeHtml(headingMatch[2]))}</div>`)
+      html.push(`<div style="font-size:${sizes[level] ?? '15px'};font-weight:bold;margin:12px 0 6px;padding-bottom:4px;border-bottom:${level <= 2 ? c.headingBorder : 'none'}">${inlineFormat(escapeHtml(headingMatch[2]), lightTheme)}</div>`)
       continue
     }
 
@@ -199,17 +222,17 @@ function renderMarkdown(raw: string): string {
       if (!inList) { html.push('<ul style="margin:4px 0;padding-left:20px">'); inList = true }
       const content = line.replace(/^\s*[-*]\s+/, '').replace(/^\s*\d+\.\s+/, '')
       // Handle checkbox
-      const checkbox = content.startsWith('[ ] ') ? '<span style="opacity:0.4">☐</span> '
-        : content.startsWith('[x] ') || content.startsWith('[X] ') ? '<span style="color:#4ade80">☑</span> '
+      const checkbox = content.startsWith('[ ] ') ? `<span style="${c.checkDim}">☐</span> `
+        : content.startsWith('[x] ') || content.startsWith('[X] ') ? `<span style="${c.checkDone}">☑</span> `
         : ''
       const cleaned = checkbox ? content.slice(4) : content
-      html.push(`<li style="margin:2px 0;font-size:15px">${checkbox}${inlineFormat(escapeHtml(cleaned))}</li>`)
+      html.push(`<li style="margin:2px 0;font-size:15px">${checkbox}${inlineFormat(escapeHtml(cleaned), lightTheme)}</li>`)
       continue
     }
     if (inList) { html.push('</ul>'); inList = false }
 
     // Regular paragraph
-    html.push(`<p style="margin:4px 0;font-size:15px;line-height:1.5">${inlineFormat(escapeHtml(line))}</p>`)
+    html.push(`<p style="margin:4px 0;font-size:15px;line-height:1.5">${inlineFormat(escapeHtml(line), lightTheme)}</p>`)
   }
 
   if (inCodeBlock) html.push('</pre>')
@@ -219,10 +242,11 @@ function renderMarkdown(raw: string): string {
   return html.join('')
 }
 
-function inlineFormat(text: string): string {
+function inlineFormat(text: string, lightTheme = false): string {
+  const codeBg = lightTheme ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)'
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,0.08);padding:1px 4px;font-size:13px;font-family:\'Cascadia Code\',Consolas,monospace">$1</code>')
+    .replace(/`(.+?)`/g, `<code style="background:${codeBg};padding:1px 4px;font-size:13px;font-family:'Cascadia Code',Consolas,monospace">$1</code>`)
 }
 
 // ── Main Component ──────────────────────────────────────────
@@ -696,8 +720,8 @@ function DocPreviewView({
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      {/* Left: Document preview with watermark */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      {/* Left: Document preview with white background */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#ffffff' }}>
         {/* Watermark overlay */}
         <div
           style={{
@@ -716,7 +740,7 @@ function DocPreviewView({
               flexWrap: 'wrap',
               gap: 80,
               transform: 'rotate(-30deg)',
-              opacity: 0.04,
+              opacity: 0.06,
               alignContent: 'flex-start',
             }}
           >
@@ -724,13 +748,13 @@ function DocPreviewView({
               <span
                 key={i}
                 style={{
-                  color: '#ffffff',
+                  color: '#000000',
                   fontSize: 18,
                   whiteSpace: 'nowrap',
                   letterSpacing: 4,
                 }}
               >
-                PIXEL AGENTS
+                AI AGENTS OFFICE
               </span>
             ))}
           </div>
@@ -745,15 +769,15 @@ function DocPreviewView({
             height: '100%',
             boxSizing: 'border-box',
             padding: '16px 20px 60px',
-            color: 'rgba(255,255,255,0.8)',
+            color: '#1a1a1a',
           }}
         >
           {content === null ? (
-            <div style={{ padding: '32px', fontSize: '18px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+            <div style={{ padding: '32px', fontSize: '18px', color: 'rgba(0,0,0,0.35)', textAlign: 'center' }}>
               Loading...
             </div>
           ) : (
-            <div dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+            <div dangerouslySetInnerHTML={{ __html: renderMarkdown(content, true) }} />
           )}
         </div>
       </div>

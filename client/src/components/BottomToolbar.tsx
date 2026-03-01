@@ -86,7 +86,7 @@ export function BottomToolbar({
   }
 
   return (
-    <div className="bottom-toolbar" style={panelStyle}>
+    <div style={panelStyle}>
       {!isStaticBackground && (
         <button
           onClick={onToggleEditMode}
