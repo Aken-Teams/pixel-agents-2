@@ -1,4 +1,93 @@
 import type { Broadcast } from './timerManager.js';
+import { getDeepseekApiKey } from './settingsPersistence.js';
+
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
+/** Every N conversations, attempt one AI-generated conversation */
+const AI_CHAT_EVERY = 5;
+
+/**
+ * Call DeepSeek API (non-streaming) to generate a short 2-person idle chat.
+ * Returns null on any failure so caller can fall back to fixed scripts.
+ */
+async function generateAIConversation(): Promise<ConversationLine[] | null> {
+	const apiKey = getDeepseekApiKey();
+	if (!apiKey) return null;
+
+	// Always use deepseek-chat for idle chat — reasoner is too slow/unstable for simple dialogue
+	const model = 'deepseek-chat';
+	const topics = [
+		'AI 和科技業最新動態（如 OpenAI、Google、Claude、NVIDIA、台積電、Apple 等公司的新產品或新聞）',
+		'台灣近期真實發生的社會新聞或政策變化',
+		'最近全球科技趨勢（AI 工具、新程式語言、開源專案、晶片技術）',
+		'台灣 IT 產業或軟體工程師的工作文化話題',
+		'最近台灣的天災、地震、颱風或天氣異常',
+		'台灣股市、房價、經濟相關的話題',
+		'最近爆紅的迷因、網路話題、YouTuber 或社群事件',
+		'台灣的交通建設、捷運新路線、高鐵延伸等',
+		'程式開發相關（debug 經驗、code review、新框架、部署踩雷）',
+		'遠端工作 vs 進辦公室、加班文化、面試經驗',
+		"生活時事、附近好吃的餐廳",
+		"國外時事、國外大事、AI 趨勢"
+	];
+	const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+
+	const today = new Date().toISOString().slice(0, 10); // e.g. "2026-03-01"
+	const prompt = `你是台灣科技公司的軟體工程師。今天是 ${today}。請生成一段 2 人的繁體中文辦公室閒聊對話，共 6 句。
+話題：${randomTopic}
+規則：
+- 內容要符合 ${today} 這個時間點，不要提到已經過時的舊聞（例如不要講 2024 年以前的產品發表）
+- 內容要像在討論真實發生的事，提到具體的名稱、數字或事件（可以虛構但要逼真）
+- 每句話要短，不超過 20 個字
+- 語氣口語自然，像台灣年輕工程師聊天
+- 不要用表情符號
+回覆格式為 JSON 陣列：[{"s":0,"t":"內容"},{"s":1,"t":"內容"},...]
+s 是說話者編號（0 或 1），t 是對話內容。只回覆 JSON，不要其他文字。`;
+
+	try {
+		const start = Date.now();
+		const res = await fetch(DEEPSEEK_API_URL, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${apiKey}`,
+			},
+			body: JSON.stringify({
+				model,
+				messages: [{ role: 'user', content: prompt }],
+				stream: false,
+				temperature: 1.0,
+			}),
+			signal: AbortSignal.timeout(30_000),
+		});
+
+		const elapsed = Date.now() - start;
+		if (!res.ok) {
+			console.log(`[IdleChat] DeepSeek API error ${res.status} (${elapsed}ms)`);
+			return null;
+		}
+
+		const data = await res.json() as { choices?: { message?: { content?: string } }[] };
+		const text = data.choices?.[0]?.message?.content?.trim();
+		if (!text) return null;
+		console.log(`[IdleChat] AI response received in ${elapsed}ms`);
+
+		// Extract JSON array from response (may be wrapped in ```json ... ```)
+		const jsonMatch = text.match(/\[[\s\S]*\]/);
+		if (!jsonMatch) return null;
+
+		const arr = JSON.parse(jsonMatch[0]) as { s: number; t: string }[];
+		if (!Array.isArray(arr) || arr.length < 2) return null;
+
+		return arr.slice(0, 6).map((item) => ({
+			speaker: item.s === 0 ? 0 : 1,
+			text: item.t,
+		}));
+	} catch (err) {
+		console.log(`[IdleChat] AI generation failed: ${err instanceof Error ? err.message : err}`);
+		return null;
+	}
+}
 
 /**
  * Idle Chat Manager — makes team members chat casually when not working.
@@ -2139,7 +2228,6 @@ function pickConversation(agents: IdleAgent[]): number {
 	const base = fresh.length > 0 ? fresh : eligible;
 
 	// Every 3rd conversation, prefer multi-person (3+) if available
-	conversationCount++;
 	let pool = base;
 	if (conversationCount % 3 === 0 && agents.length >= 3) {
 		const groupChats = base.filter((c) => c.needed >= 3);
@@ -2200,6 +2288,38 @@ function startNextConversation(): void {
 		idleTimer = setTimeout(() => startNextConversation(), BETWEEN_CHAT_MS);
 		return;
 	}
+
+	// Increment count here (before branching) so both AI and fixed paths are counted
+	conversationCount++;
+
+	// Every N conversations, try AI-generated conversation
+	if (conversationCount % AI_CHAT_EVERY === 0 && getDeepseekApiKey()) {
+		// Pick 2 random agents for AI conversation
+		const shuffled = [...agents].sort(() => Math.random() - 0.5);
+		const aiGroup = shuffled.slice(0, 2);
+
+		console.log(`[IdleChat] Attempting AI conversation (count=${conversationCount})...`);
+		generateAIConversation().then((aiLines) => {
+			if (!isActive || !cachedBroadcast) return;
+
+			if (aiLines) {
+				currentParticipants = aiGroup.map((a) => a.agentId);
+				const names = aiGroup.map((a) => a.name).join(', ');
+				console.log(`[IdleChat] AI conversation between ${names}`);
+				playConversation(aiLines, aiGroup, 0);
+			} else {
+				// AI failed — fall back to fixed conversation
+				playFixedConversation(agents);
+			}
+		});
+		return;
+	}
+
+	playFixedConversation(agents);
+}
+
+function playFixedConversation(agents: IdleAgent[]): void {
+	if (!isActive || !cachedBroadcast) return;
 
 	// Pick a conversation that fits available agent count & roles
 	const convIdx = pickConversation(agents);
