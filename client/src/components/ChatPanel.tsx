@@ -18,6 +18,7 @@ interface ChatPanelProps {
   orchestratorSkillId: string | null
   orchestratorBusy: boolean
   dispatchedTasks: DispatchedTask[]
+  activePipeline: { pipelineId: string; taskCount: number; completedTasks: number } | null
   onSendOrchestratorMessage: (message: string) => void
   teamToolActivities: Record<string, string | null>
   onToggleCollapse?: () => void
@@ -26,7 +27,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   chatList, chats, onCreateChat, onSendMessage, onCloseChat, atCharacterLimit,
   mode, onModeChange, teamMembers, teamChats, onSendTeamMessage,
-  orchestratorSkillId, orchestratorBusy, dispatchedTasks, onSendOrchestratorMessage,
+  orchestratorSkillId, orchestratorBusy, dispatchedTasks, activePipeline, onSendOrchestratorMessage,
   teamToolActivities, onToggleCollapse,
 }: ChatPanelProps) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
@@ -479,6 +480,42 @@ export function ChatPanel({
                 <span>{teamToolActivities[activeSkillId]}</span>
               </div>
             )}
+            {/* Pipeline progress bar */}
+            {isActiveOrchestrator && activePipeline && (
+              <div style={{
+                padding: '6px 10px',
+                fontSize: '13px',
+                fontFamily: MESSAGE_FONT,
+                color: 'var(--pixel-text-dim)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--pixel-status-active)',
+                  animation: 'pixel-agents-pulse 1.5s ease-in-out infinite',
+                }} />
+                <span>Pipeline {activePipeline.completedTasks}/{activePipeline.taskCount}</span>
+                <div style={{
+                  flex: 1,
+                  height: 6,
+                  background: 'var(--pixel-border)',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    width: `${(activePipeline.completedTasks / activePipeline.taskCount) * 100}%`,
+                    height: '100%',
+                    background: 'var(--pixel-status-active)',
+                    borderRadius: 3,
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+              </div>
+            )}
             {/* Show waiting indicator when orchestrator is busy but not streaming (sub-agent working) */}
             {!activeChat.isStreaming && isActiveOrchestrator && orchestratorBusy && dispatchedTasks.some((t) => !t.completed) && (
               <div style={{
@@ -597,6 +634,9 @@ function stripInternalBlocks(text: string): { cleanText: string; tasks: { skillI
         return ''
       },
     )
+    // Remove PIPELINE markers
+    .replace(/\[PIPELINE[^\]]*\]/g, '')
+    .replace(/\[\/PIPELINE\]/g, '')
     // Remove tag markers only (keep content between them)
     .replace(/\[INTERVIEW\]/g, '')
     .replace(/\[\/INTERVIEW\]/g, '')

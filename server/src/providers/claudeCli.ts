@@ -47,10 +47,18 @@ export class ClaudeCLIProvider implements AIProvider {
 
 			const args = [
 				'-p',
-				'--no-session-persistence',
 				'--output-format', 'stream-json',
 				'--verbose',
 			];
+
+			// Session persistence: use --session-id for persistent sessions,
+			// --no-session-persistence for one-shot calls
+			if (options?.sessionId) {
+				args.push('--session-id', options.sessionId);
+			} else {
+				args.push('--no-session-persistence');
+			}
+
 			if (options?.dangerouslySkipPermissions) {
 				args.push('--dangerously-skip-permissions');
 			}
@@ -62,7 +70,16 @@ export class ClaudeCLIProvider implements AIProvider {
 				env: cleanEnv,
 			});
 
-			const stdinPayload = messagesToStdin(messages);
+			// For persistent sessions after the first call, send only the latest user message
+			// (Claude remembers the system prompt and conversation history)
+			let stdinPayload: string;
+			if (options?.sessionId && !options.isFirstSessionCall) {
+				// Extract just the latest user message
+				const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+				stdinPayload = lastUserMsg?.content || '';
+			} else {
+				stdinPayload = messagesToStdin(messages);
+			}
 			proc.stdin!.write(stdinPayload);
 			proc.stdin!.end();
 

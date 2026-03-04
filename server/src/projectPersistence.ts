@@ -10,6 +10,7 @@ export interface TaskRecord {
 	status: 'dispatched' | 'completed' | 'failed';
 	description: string;
 	phase?: number;
+	pipelineId?: string;
 }
 
 export interface ProjectState {

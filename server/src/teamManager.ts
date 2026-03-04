@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { TeamSession, ChatMessage } from './types.js';
@@ -30,6 +31,11 @@ let nextAgentIdRef: { current: number } = { current: 1000 };
 let orchestratorSkillId: string | null = null;
 let orchestratorBusy = false;
 let taskIdCounter = 0;
+
+// Session persistence (Claude CLI only — gives each worker a persistent session
+// so system prompts are only sent once, reducing token usage on subsequent calls)
+const workerSessionIds = new Map<string, string>(); // skillId → UUID
+const initializedSessions = new Set<string>(); // session IDs that have sent full messages
 
 // Current project directory (under workspace/)
 let currentProjectDir: string | null = null;
@@ -511,7 +517,9 @@ function sanitizeInterviewResponse(raw: string): { safe: boolean; sanitized: str
 		.replace(/\[RESULT[:\w-]*\]/gi, '')
 		.replace(/\[\/RESULT\]/gi, '')
 		.replace(/\[INTERVIEW\]/gi, '')
-		.replace(/\[\/INTERVIEW\]/gi, '');
+		.replace(/\[\/INTERVIEW\]/gi, '')
+		.replace(/\[PIPELINE[^\]]*\]/gi, '')
+		.replace(/\[\/PIPELINE\]/gi, '');
 
 	// Detect prompt injection patterns
 	const injectionPatterns = [
@@ -580,6 +588,7 @@ export function resetOrchestratorState(broadcast: Broadcast): void {
 		interviewResolver = null;
 	}
 
+	clearWorkerSessions();
 	orchestratorBusy = false;
 	stopAllNagging();
 	broadcast({ type: 'orchestratorBusy', busy: false });
@@ -608,6 +617,44 @@ export function parseTaskBlocks(text: string): { cleanText: string; tasks: Parse
 	).trim();
 
 	return { cleanText, tasks };
+}
+
+// ── Pipeline Block Parsing ──────────────────────────────────
+
+interface ParsedPipeline {
+	tasks: ParsedTask[];
+	parallel: boolean;
+}
+
+/**
+ * Parse [PIPELINE]...[/PIPELINE] blocks from orchestrator output.
+ * Each pipeline contains multiple [TASK:skillId]...[/TASK] blocks.
+ * Supports [PIPELINE parallel] for concurrent execution.
+ * Also extracts bare [TASK] blocks outside any pipeline (backward compat).
+ */
+function parsePipelineBlocks(text: string): {
+	cleanText: string;
+	pipelines: ParsedPipeline[];
+	bareTasks: ParsedTask[];
+} {
+	const pipelines: ParsedPipeline[] = [];
+
+	// First extract [PIPELINE]...[/PIPELINE] blocks
+	const afterPipelines = text.replace(
+		/\[PIPELINE(\s+parallel)?\]\s*([\s\S]*?)\s*\[\/PIPELINE\]/g,
+		(_match, parallelFlag: string | undefined, body: string) => {
+			const { tasks } = parseTaskBlocks(body);
+			if (tasks.length > 0) {
+				pipelines.push({ tasks, parallel: !!parallelFlag?.trim() });
+			}
+			return '';
+		},
+	).trim();
+
+	// Then extract bare [TASK] blocks outside any pipeline (backward compatibility)
+	const { cleanText, tasks: bareTasks } = parseTaskBlocks(afterPipelines);
+
+	return { cleanText, pipelines, bareTasks };
 }
 
 // ── Project Directory & Response Persistence ────────────────
@@ -680,6 +727,25 @@ function saveAgentResponse(session: TeamSession, response: string): void {
 	}
 }
 
+// ── Session Persistence Helpers ──────────────────────────────
+
+/** Get or create a persistent session ID for a worker skill (Claude CLI only) */
+function getWorkerSessionId(skillId: string): string {
+	let sessionId = workerSessionIds.get(skillId);
+	if (!sessionId) {
+		sessionId = crypto.randomUUID();
+		workerSessionIds.set(skillId, sessionId);
+	}
+	return sessionId;
+}
+
+/** Clear all worker sessions (call when orchestration ends or project resets) */
+function clearWorkerSessions(): void {
+	workerSessionIds.clear();
+	initializedSessions.clear();
+	console.log('[Session] Cleared all worker sessions');
+}
+
 // ── Core: Send message to a team member (direct) ───────────
 
 function spawnForSkill(
@@ -716,6 +782,14 @@ function spawnForSkill(
 		chunkTimer = null;
 	};
 
+	// Session persistence: get session ID for this worker (Claude CLI will use
+	// --session-id to persist context, reducing token usage on subsequent calls)
+	const sessionId = getWorkerSessionId(session.skillId);
+	const isFirstSessionCall = !initializedSessions.has(sessionId);
+	if (isFirstSessionCall) {
+		initializedSessions.add(sessionId);
+	}
+
 	const handle = provider.generate(messages, {
 		onTextChunk: (text) => {
 			chunkBuffer += text;
@@ -729,6 +803,8 @@ function spawnForSkill(
 	}, {
 		cwd: getAgentCwd(),
 		dangerouslySkipPermissions: true,
+		sessionId,
+		isFirstSessionCall,
 	});
 
 	session.activeGeneration = handle;
@@ -870,6 +946,7 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	orchestrateStep(orchestratorSkillId, message, broadcast, 0).finally(() => {
 		orchestratorBusy = false;
 		stopAllNagging();
+		clearWorkerSessions();
 		broadcast({ type: 'orchestratorBusy', busy: false });
 		// Mark project as paused and advance phase counter
 		if (currentProjectDir) {
@@ -885,12 +962,192 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	});
 }
 
+// ── Pipeline Execution ──────────────────────────────────────
+
+let pipelineCounter = 0;
+
+/**
+ * Execute a single task and return a formatted [RESULT] string.
+ * Shared by both executePipeline and bare task execution in orchestrateStep.
+ */
+async function executeTask(
+	task: ParsedTask,
+	broadcast: Broadcast,
+	pipelineId?: string,
+	pipelineIndex?: number,
+): Promise<{ result: string; rawResult: string | null }> {
+	const targetSession = teamSessions.get(task.skillId);
+	if (!targetSession) {
+		console.log(`[Pipeline] Unknown skill: ${task.skillId}, skipping`);
+		return {
+			result: `[RESULT:${task.skillId}] 錯誤：找不到成員 ${task.skillId} [/RESULT]`,
+			rawResult: null,
+		};
+	}
+
+	const taskId = `task-${++taskIdCounter}`;
+
+	broadcast({
+		type: 'taskDispatched',
+		taskId,
+		targetSkillId: task.skillId,
+		targetAgentId: targetSession.agentId,
+		description: task.description,
+	});
+
+	console.log(`[Pipeline] Dispatching ${taskId} to ${targetSession.name}: ${task.description.slice(0, 80)}...`);
+
+	if (currentProjectDir) {
+		const prev = loadProjectState(currentProjectDir);
+		const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
+		tasks[taskId] = {
+			skillId: task.skillId,
+			status: 'dispatched',
+			description: task.description.slice(0, 200),
+			phase: prev?.currentPhase ?? 0,
+			pipelineId,
+		};
+		saveProjectStateImmediate(currentProjectDir, { tasks });
+	}
+
+	trackTask(targetSession.agentId, task.skillId, broadcast, getIdleAgents);
+
+	// Wait if sub-agent is still busy from a previous task
+	if (targetSession.activeGeneration) {
+		console.log(`[Pipeline] Waiting for ${targetSession.name}'s active generation to finish...`);
+		await new Promise<void>((resolve) => {
+			const check = setInterval(() => {
+				if (!targetSession.activeGeneration) {
+					clearInterval(check);
+					resolve();
+				}
+			}, 500);
+		});
+	}
+
+	const projectDir = getAgentCwd();
+	const snapshotBefore = scanDirectory(projectDir, projectDir);
+
+	targetSession.history.push({ role: 'user', content: task.description });
+
+	try {
+		const result = await spawnForSkill(targetSession, task.description, broadcast);
+		const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
+
+		const snapshotAfter = scanDirectory(projectDir, projectDir);
+		const verificationReport = buildVerificationReport(snapshotBefore, snapshotAfter);
+
+		const truncated = truncateResultForOrchestrator(resultText);
+		broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
+		if (pipelineId != null && pipelineIndex != null) {
+			broadcast({ type: 'pipelineTaskCompleted', pipelineId, taskIndex: pipelineIndex, taskId, targetSkillId: task.skillId });
+		}
+		untrackTask(targetSession.agentId);
+
+		if (currentProjectDir) {
+			const prev = loadProjectState(currentProjectDir);
+			const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
+			if (tasks[taskId]) tasks[taskId] = { ...tasks[taskId], status: 'completed' };
+			saveProjectStateImmediate(currentProjectDir, { tasks });
+		}
+		console.log(`[Pipeline] Task ${taskId} completed by ${targetSession.name}`);
+
+		return {
+			result: `[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${truncated}${verificationReport}\n[/RESULT]`,
+			rawResult: resultText,
+		};
+	} catch (err) {
+		const errMsg = err instanceof Error ? err.message : String(err);
+		untrackTask(targetSession.agentId);
+		if (currentProjectDir) {
+			const prev = loadProjectState(currentProjectDir);
+			const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
+			if (tasks[taskId]) tasks[taskId] = { ...tasks[taskId], status: 'failed' };
+			saveProjectStateImmediate(currentProjectDir, { tasks });
+		}
+		console.error(`[Pipeline] Task ${taskId} failed:`, errMsg);
+		return {
+			result: `[RESULT:${task.skillId}] 錯誤：${errMsg} [/RESULT]`,
+			rawResult: null,
+		};
+	}
+}
+
+/**
+ * Execute a sequential pipeline: run tasks in order, auto-passing context between them.
+ * Returns all results as formatted [RESULT] strings.
+ */
+async function executePipeline(
+	pipeline: ParsedPipeline,
+	pipelineId: string,
+	broadcast: Broadcast,
+): Promise<string[]> {
+	const results: string[] = [];
+	let previousRawResult: string | null = null;
+	let previousSkillId: string | null = null;
+
+	broadcast({ type: 'pipelineStarted', pipelineId, taskCount: pipeline.tasks.length });
+
+	for (let i = 0; i < pipeline.tasks.length; i++) {
+		const task = { ...pipeline.tasks[i] };
+
+		// Auto-inject previous task's result as context
+		if (previousRawResult && previousSkillId) {
+			const prevSession = teamSessions.get(previousSkillId);
+			const prevName = prevSession?.name ?? previousSkillId;
+			const contextRef = truncateResultForOrchestrator(previousRawResult, 3000);
+			task.description += `\n\n---\n## 前一個任務的成果（${prevName}）\n${contextRef}\n---`;
+		}
+
+		const { result, rawResult } = await executeTask(task, broadcast, pipelineId, i);
+		results.push(result);
+		previousRawResult = rawResult;
+		previousSkillId = pipeline.tasks[i].skillId;
+	}
+
+	broadcast({ type: 'pipelineCompleted', pipelineId });
+	return results;
+}
+
+/**
+ * Execute a parallel pipeline: run all tasks concurrently.
+ * No context chaining (tasks are independent).
+ * Returns results in original task order.
+ */
+async function executePipelineParallel(
+	pipeline: ParsedPipeline,
+	pipelineId: string,
+	broadcast: Broadcast,
+): Promise<string[]> {
+	// Concurrency safety note:
+	// - Task IDs: allocated by ++taskIdCounter in executeTask's synchronous phase (before any await)
+	//   Since JS is single-threaded and Promise.all starts all tasks synchronously, IDs are unique.
+	// - Project state: saveProjectStateImmediate uses readFileSync+writeFileSync with no await between
+	//   read and write, so each update is atomic within the event loop.
+	// - Same-skill tasks: if two parallel tasks target the same skill, executeTask's activeGeneration
+	//   wait loop naturally serializes them.
+
+	broadcast({ type: 'pipelineStarted', pipelineId, taskCount: pipeline.tasks.length });
+
+	const resultPromises = pipeline.tasks.map((task, i) =>
+		executeTask(task, broadcast, pipelineId, i),
+	);
+
+	const taskResults = await Promise.all(resultPromises);
+	broadcast({ type: 'pipelineCompleted', pipelineId });
+	return taskResults.map(r => r.result);
+}
+
+// ── Core: Recursive Orchestration ───────────────────────────
+
 /**
  * Recursive orchestration step:
  * 1. Send message to orchestrator
- * 2. Parse response for [TASK] blocks
- * 3. If tasks found: dispatch to sub-agents, collect results, feed back to orchestrator
- * 4. If no tasks: orchestration complete
+ * 2. Parse response for [PIPELINE] and [TASK] blocks
+ * 3. If pipelines found: execute them (sequential or parallel), collect results
+ * 4. If bare tasks found: execute them sequentially (backward compat)
+ * 5. Feed all results back to orchestrator in one message
+ * 6. If no tasks: orchestration complete
  */
 async function orchestrateStep(
 	orchSkillId: string,
@@ -979,10 +1236,10 @@ async function orchestrateStep(
 		return;
 	}
 
-	// Parse for task blocks
-	const { tasks } = parseTaskBlocks(response);
+	// Parse for pipeline and task blocks
+	const { pipelines, bareTasks } = parsePipelineBlocks(response);
 
-	if (tasks.length === 0) {
+	if (pipelines.length === 0 && bareTasks.length === 0) {
 		// No tasks dispatched — orchestration complete for this round
 		console.log(`[Orchestrator] No tasks in response — round complete`);
 		return;
@@ -1000,100 +1257,34 @@ async function orchestrateStep(
 		broadcast({ type: 'projectLoaded', projectDir: currentProjectDir, name: projName, status: 'running' });
 	}
 
-	// Process tasks sequentially
-	const results: string[] = [];
-	for (const task of tasks) {
-		const targetSession = teamSessions.get(task.skillId);
-		if (!targetSession) {
-			console.log(`[Orchestrator] Unknown skill: ${task.skillId}, skipping`);
-			results.push(`[RESULT:${task.skillId}] 錯誤：找不到成員 ${task.skillId} [/RESULT]`);
-			continue;
-		}
+	const allResults: string[] = [];
 
-		const taskId = `task-${++taskIdCounter}`;
+	// Execute pipelines
+	for (let p = 0; p < pipelines.length; p++) {
+		const pipelineId = `pipeline-${Date.now()}-${p}`;
+		const pipeline = pipelines[p];
 
-		// Notify client about task dispatch
-		broadcast({
-			type: 'taskDispatched',
-			taskId,
-			targetSkillId: task.skillId,
-			targetAgentId: targetSession.agentId,
-			description: task.description,
-		});
-
-		console.log(`[Orchestrator] Dispatching task ${taskId} to ${targetSession.name}: ${task.description.slice(0, 80)}...`);
-
-		// Persist task as dispatched (immediate write — critical for crash recovery)
-		if (currentProjectDir) {
-			const prev = loadProjectState(currentProjectDir);
-			const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
-			tasks[taskId] = { skillId: task.skillId, status: 'dispatched', description: task.description.slice(0, 200), phase: prev?.currentPhase ?? 0 };
-			saveProjectStateImmediate(currentProjectDir, { tasks });
-		}
-
-		// Track task for boss nagging
-		trackTask(targetSession.agentId, task.skillId, broadcast, getIdleAgents);
-
-		// Wait if sub-agent is still busy from a previous task
-		if (targetSession.activeGeneration) {
-			console.log(`[Orchestrator] Waiting for ${targetSession.name}'s active generation to finish...`);
-			await new Promise<void>((resolve) => {
-				const check = setInterval(() => {
-					if (!targetSession.activeGeneration) {
-						clearInterval(check);
-						resolve();
-					}
-				}, 500);
-			});
-		}
-
-		// Snapshot project directory before task runs (for auto-verification)
-		const projectDir = getAgentCwd();
-		const snapshotBefore = scanDirectory(projectDir, projectDir);
-
-		// Send to sub-agent and wait for result
-		targetSession.history.push({ role: 'user', content: task.description });
-
-		try {
-			const result = await spawnForSkill(targetSession, task.description, broadcast);
-			const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
-
-			// Auto-verify: compare file changes after task completion
-			const snapshotAfter = scanDirectory(projectDir, projectDir);
-			const verificationReport = buildVerificationReport(snapshotBefore, snapshotAfter);
-
-			const truncated = truncateResultForOrchestrator(resultText);
-			results.push(`[RESULT:${task.skillId}]\n${targetSession.name} 的回覆：\n${truncated}${verificationReport}\n[/RESULT]`);
-			broadcast({ type: 'taskCompleted', taskId, targetSkillId: task.skillId });
-			untrackTask(targetSession.agentId);
-			// Persist task as completed
-			if (currentProjectDir) {
-				const prev = loadProjectState(currentProjectDir);
-				const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
-				if (tasks[taskId]) tasks[taskId] = { ...tasks[taskId], status: 'completed' };
-				saveProjectStateImmediate(currentProjectDir, { tasks });
-			}
-			console.log(`[Orchestrator] Task ${taskId} completed by ${targetSession.name}`);
-		} catch (err) {
-			const errMsg = err instanceof Error ? err.message : String(err);
-			results.push(`[RESULT:${task.skillId}] 錯誤：${errMsg} [/RESULT]`);
-			untrackTask(targetSession.agentId);
-			// Persist task as failed
-			if (currentProjectDir) {
-				const prev = loadProjectState(currentProjectDir);
-				const tasks: Record<string, TaskRecord> = { ...(prev?.tasks ?? {}) };
-				if (tasks[taskId]) tasks[taskId] = { ...tasks[taskId], status: 'failed' };
-				saveProjectStateImmediate(currentProjectDir, { tasks });
-			}
-			console.error(`[Orchestrator] Task ${taskId} failed:`, errMsg);
+		if (pipeline.parallel) {
+			const results = await executePipelineParallel(pipeline, pipelineId, broadcast);
+			allResults.push(...results);
+		} else {
+			const results = await executePipeline(pipeline, pipelineId, broadcast);
+			allResults.push(...results);
 		}
 	}
 
-	// Feed results back to orchestrator for review
-	const feedbackMessage = results.join('\n\n');
-	console.log(`[Orchestrator] Feeding ${results.length} result(s) back to orchestrator`);
+	// Execute bare tasks sequentially (backward compatibility)
+	for (const task of bareTasks) {
+		const { result } = await executeTask(task, broadcast);
+		allResults.push(result);
+	}
 
-	await orchestrateStep(orchSkillId, feedbackMessage, broadcast, depth + 1);
+	// Feed ALL results back to orchestrator in one message
+	if (allResults.length > 0) {
+		const feedbackMessage = allResults.join('\n\n');
+		console.log(`[Orchestrator] Feeding ${allResults.length} result(s) back (from ${pipelines.length} pipeline(s) + ${bareTasks.length} bare task(s))`);
+		await orchestrateStep(orchSkillId, feedbackMessage, broadcast, depth + 1);
+	}
 }
 
 /** Reset current project so next orchestrator message creates a new one */
@@ -1102,6 +1293,7 @@ export function resetProject(): void {
 	pendingProjectMessage = null;
 	responseCounter = 0;
 	setActiveProjectDir(null);
+	clearWorkerSessions();
 	// Clear conversation history so orchestrator doesn't remember old context
 	for (const session of teamSessions.values()) {
 		session.history = [];

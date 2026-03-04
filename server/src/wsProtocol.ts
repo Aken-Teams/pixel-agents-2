@@ -53,6 +53,10 @@ export type ServerMessage =
 	| { type: 'taskCompleted'; taskId: string; targetSkillId: string }
 	| { type: 'orchestratorBusy'; busy: boolean }
 	| { type: 'teamToolActivity'; skillId: string; status: string | null }
+	// Pipeline
+	| { type: 'pipelineStarted'; pipelineId: string; taskCount: number }
+	| { type: 'pipelineTaskCompleted'; pipelineId: string; taskIndex: number; taskId: string; targetSkillId: string }
+	| { type: 'pipelineCompleted'; pipelineId: string }
 	// Interview (pre-development questionnaire)
 	| { type: 'interviewRequest'; questions: { id: string; question: string }[] }
 	// Idle chat

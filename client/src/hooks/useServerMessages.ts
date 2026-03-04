@@ -128,6 +128,7 @@ export function useServerMessages(
   const [orchestratorSkillId, setOrchestratorSkillId] = useState<string | null>(null)
   const [orchestratorBusy, setOrchestratorBusy] = useState(false)
   const [dispatchedTasks, setDispatchedTasks] = useState<DispatchedTask[]>([])
+  const [activePipeline, setActivePipeline] = useState<{ pipelineId: string; taskCount: number; completedTasks: number } | null>(null)
   const [teamToolActivities, setTeamToolActivities] = useState<Record<string, string | null>>({})
   const [thoughtData, setThoughtData] = useState<Record<number, ThoughtData>>({})
   const [interviewQuestions, setInterviewQuestions] = useState<{ id: string; question: string }[] | null>(null)
@@ -724,6 +725,19 @@ export function useServerMessages(
         setDispatchedTasks((prev) =>
           prev.map((t) => t.taskId === taskId ? { ...t, completed: true } : t),
         )
+      } else if (msg.type === 'pipelineStarted') {
+        setActivePipeline({
+          pipelineId: msg.pipelineId as string,
+          taskCount: msg.taskCount as number,
+          completedTasks: 0,
+        })
+      } else if (msg.type === 'pipelineTaskCompleted') {
+        setActivePipeline((prev) => {
+          if (!prev || prev.pipelineId !== (msg.pipelineId as string)) return prev
+          return { ...prev, completedTasks: prev.completedTasks + 1 }
+        })
+      } else if (msg.type === 'pipelineCompleted') {
+        setActivePipeline(null)
       } else if (msg.type === 'orchestratorBusy') {
         setOrchestratorBusy(msg.busy as boolean)
         if (!(msg.busy as boolean)) {
@@ -879,7 +893,7 @@ export function useServerMessages(
     agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters,
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
-    orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
+    orchestratorSkillId, orchestratorBusy, dispatchedTasks, activePipeline, addOrchestratorUserMessage,
     teamToolActivities, thoughtData,
     interviewQuestions, clearInterview,
     aiProvider, deepseekModel,

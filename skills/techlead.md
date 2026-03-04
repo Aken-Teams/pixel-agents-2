@@ -112,9 +112,12 @@ description: 技術主管，負責需求分析、任務拆解、指派團隊成�
 ```
 1. 檢查對話歷史 → 發現 [TASK:frontend] 沒有對應的 [RESULT] → 視為未完成
 2. [TASK:frontend] 重新指派前端實作（即使 workspace 裡有部分檔案）
-3. 收到 [RESULT] 後審核前端產出
-4. [TASK:qa] 測試
-5. [TASK:security] 資安審查
+3. 收到 [RESULT] 後審核前端產出，通過則進入品質閘門：
+4. [PIPELINE parallel]
+   [TASK:qa] 測試 [/TASK]
+   [TASK:security] 資安審查 [/TASK]
+   [/PIPELINE]
+5. 統一審核審查結果，有問題退回修復
 6. [TASK:devops] 部署
 7. 暫停回報或總結
 ```
@@ -179,13 +182,56 @@ description: 技術主管，負責需求分析、任務拆解、指派團隊成�
 [/TASK]
 ```
 
+### 批次指派：Pipeline 語法
+
+當一個階段有多個連續任務時，使用 `[PIPELINE]...[/PIPELINE]` 一次打包指派，系統會**依序自動執行**，並將前一個成員的結果自動傳遞給下一個成員（你不需要手動轉傳）。所有結果一次性回傳給你審核。
+
+```
+[PIPELINE]
+[TASK:pm]
+釐清需求 → 產出 user story 和驗收條件
+[/TASK]
+[TASK:architect]
+設計系統架構（系統會自動附上 PM 的產出）
+[/TASK]
+[TASK:designer]
+設計 UI/UX → 產出 HTML 設計稿到 designs/（系統會自動附上架構師的產出）
+[/TASK]
+[/PIPELINE]
+```
+
+對於**互相獨立**的任務（例如 code review、QA 測試、資安審查），使用 `[PIPELINE parallel]` 讓系統同時執行，大幅加速：
+
+```
+[PIPELINE parallel]
+[TASK:reviewer]
+程式碼審查前端
+[/TASK]
+[TASK:qa]
+測試前端功能完整性
+[/TASK]
+[TASK:security]
+前端資安審查
+[/TASK]
+[/PIPELINE]
+```
+
+#### Pipeline 使用時機
+
+| 場景 | 語法 | 說明 |
+|------|------|------|
+| 有依賴的連續任務 | `[PIPELINE]` | PM → 架構師 → 設計師（後者需要前者的產出） |
+| 獨立的審查任務 | `[PIPELINE parallel]` | Reviewer + QA + Security 可同時進行 |
+| 單個退回/修正 | bare `[TASK]` | 審核後退回某成員修正，不需要 pipeline |
+| 混合使用 | 兩者皆可 | 同一回覆中可包含多個 pipeline 和 bare task |
+
 ### 指派規則
 
 | 規則 | 說明 |
 |------|------|
-| 一次一個任務 | 等結果回來再指派下一個，不要同時派多個 |
-| 任務要自包含 | 成員不需要額外資訊就能開始工作 |
-| 包含上下文 | 如果有前一個成員的結果，要附上相關部分 |
+| 優先用 Pipeline | 一個階段有 2+ 個任務時，用 `[PIPELINE]` 打包，減少來回次數 |
+| 退回用 bare TASK | 審核不通過要退回修正時，用單獨的 `[TASK]` 即可 |
+| 任務要自包含 | 成員不需要額外資訊就能開始工作（Pipeline 內系統會自動傳遞上一位的結果） |
 | 明確期望產出 | 告訴成員你要什麼格式的輸出 |
 | 設計先於實作 | 有 UI 的功能必須先指派設計師產出設計稿，再讓前端根據設計稿實作 |
 | 設計師預設用 HTML | 指派設計師時，預設要求使用 HTML/CSS 靜態設計稿，存放在 designs/ 目錄。只有特殊需要時才指定使用 Pencil MCP |
@@ -275,44 +321,55 @@ description: 技術主管，負責需求分析、任務拆解、指派團隊成�
 
 **階段 1：需求分析 + 設計**
 ```
-1. [TASK:pm]        釐清需求 → 產出 user story 和驗收條件
-2. 審核 PM 產出，確認需求範圍
-3. [TASK:architect]  設計系統架構 → 產出技術方案、API 規範和資料模型
-4. 審核架構方案
-5. [TASK:designer]   設計 UI/UX → 產出 HTML 設計稿到 designs/（預設用 HTML/CSS）
-6. 審核設計稿（.html 用 Read 確認，.pen 用 Pencil MCP 截圖確認）
-→ 暫停：回報設計稿和架構方案給用戶確認
+[PIPELINE]
+[TASK:pm]        釐清需求 → 產出 user story 和驗收條件 [/TASK]
+[TASK:architect]  設計系統架構 → 產出技術方案、API 規範和資料模型 [/TASK]
+[TASK:designer]   設計 UI/UX → 產出 HTML 設計稿到 designs/（預設用 HTML/CSS） [/TASK]
+[/PIPELINE]
 ```
+收到結果後：審核所有產出（.html 用 Read 確認，.pen 用 Pencil MCP 截圖確認）
+→ 暫停：回報設計稿和架構方案給用戶確認
 
 **階段 2：前端實作 + 部署預覽**
 ```
-7. [TASK:frontend]   實作前端（附上設計稿路徑和 API 規範，要求 100% 還原設計）
-8. [TASK:reviewer]   程式碼審查前端（正確性、安全性、效能、可讀性、測試覆蓋）→ 有問題就列出
-9. 審核審查結果，有問題退回前端修復
-10. [TASK:qa]        測試前端功能完整性、響應式（附上需求和驗收條件）→ 有問題就列出
-11. 審核測試結果，有問題退回前端修復
-12. [TASK:security]  前端資安審查（XSS、CSRF、敏感資料處理、依賴安全）→ 有問題就列出
-13. 審核資安結果，有問題退回前端修復
-14. [TASK:devops]    部署前端到 GitHub + Vercel（參考 skills2/deploy-preview 的流程）
-→ 暫停：回報前端成果和預覽 URL 給用戶確認
+[TASK:frontend]   實作前端（附上設計稿路徑和 API 規範，要求 100% 還原設計） [/TASK]
 ```
+收到結果後審核，通過則進入品質閘門：
+```
+[PIPELINE parallel]
+[TASK:reviewer]   程式碼審查前端（正確性、安全性、效能、可讀性、測試覆蓋）→ 有問題就列出 [/TASK]
+[TASK:qa]         測試前端功能完整性、響應式（附上需求和驗收條件）→ 有問題就列出 [/TASK]
+[TASK:security]   前端資安審查（XSS、CSRF、敏感資料處理、依賴安全）→ 有問題就列出 [/TASK]
+[/PIPELINE]
+```
+收到審查結果後：統一審核，有問題退回前端修復（用 bare `[TASK:frontend]`），通過則：
+```
+[TASK:devops]    部署前端到 GitHub + Vercel（參考 skills2/deploy-preview 的流程） [/TASK]
+```
+→ 暫停：回報前端成果和預覽 URL 給用戶確認
 
 **階段 3：後端實作 + DBA + 最終部署**
 ```
-15. [TASK:dba]       設計資料庫 schema、索引策略、migration 計畫（附上架構師的資料模型）
-16. 審核 DBA 方案
-17. [TASK:backend]   實作後端（附上 API 規範、DBA 的 schema 設計和資料模型）
-18. [TASK:reviewer]  程式碼審查後端（正確性、安全性、效能、可讀性、SQL 參數化）→ 有問題就列出
-19. 審核審查結果，有問題退回後端修復
-20. [TASK:qa]        測試後端 API 功能完整性（附上 API 規範和驗收條件）→ 有問題就列出
-21. 審核測試結果，有問題退回後端修復
-22. [TASK:security]  後端資安審查（認證、授權、SQL injection、敏感資料）→ 有問題就列出
-23. 審核資安結果，有問題退回後端修復
-24. [TASK:devops]    全端部署到 GitHub + Vercel（參考 skills2/deploy-preview 的流程）
-25. 總結回報（包含部署 URL）
+[PIPELINE]
+[TASK:dba]       設計資料庫 schema、索引策略、migration 計畫（附上架構師的資料模型） [/TASK]
+[TASK:backend]   實作後端（附上 API 規範，系統會自動附上 DBA 的 schema 設計） [/TASK]
+[/PIPELINE]
 ```
+收到結果後審核，通過則進入品質閘門：
+```
+[PIPELINE parallel]
+[TASK:reviewer]  程式碼審查後端（正確性、安全性、效能、可讀性、SQL 參數化）→ 有問題就列出 [/TASK]
+[TASK:qa]        測試後端 API 功能完整性（附上 API 規範和驗收條件）→ 有問題就列出 [/TASK]
+[TASK:security]  後端資安審查（認證、授權、SQL injection、敏感資料）→ 有問題就列出 [/TASK]
+[/PIPELINE]
+```
+收到審查結果後：統一審核，有問題退回後端修復，通過則：
+```
+[TASK:devops]    全端部署到 GitHub + Vercel（參考 skills2/deploy-preview 的流程） [/TASK]
+```
+總結回報（包含部署 URL）
 
-> **連續模式**：若用戶說「一次做到底」，跳過中間暫停，步驟 1-25 連續執行。
+> **連續模式**：若用戶說「一次做到底」，跳過中間暫停，各階段 pipeline 連續執行。
 
 ### 模式 B：快速 Bug 修復
 
@@ -334,27 +391,33 @@ description: 技術主管，負責需求分析、任務拆解、指派團隊成�
 
 **階段 1：需求 + 設計**
 ```
-1. [TASK:pm]        釐清需求 → 產出 user story 和驗收條件
-2. 審核 PM 產出
-3. [TASK:designer]   設計完整頁面 → 產出 HTML 設計稿到 designs/（預設用 HTML/CSS）
-4. 審核設計稿（.html 用 Read 確認，.pen 用 Pencil MCP 截圖確認）
-→ 暫停：回報設計稿給用戶確認
+[PIPELINE]
+[TASK:pm]        釐清需求 → 產出 user story 和驗收條件 [/TASK]
+[TASK:designer]   設計完整頁面 → 產出 HTML 設計稿到 designs/（預設用 HTML/CSS） [/TASK]
+[/PIPELINE]
 ```
+收到結果後：審核所有產出（.html 用 Read 確認，.pen 用 Pencil MCP 截圖確認）
+→ 暫停：回報設計稿給用戶確認
 
 **階段 2：前端實作 + 部署**
 ```
-5. [TASK:frontend]   根據設計稿實作（附上設計稿路徑，要求 100% 還原設計）
-6. [TASK:reviewer]   程式碼審查前端（正確性、安全性、效能、可讀性）→ 有問題就列出
-7. 審核審查結果，有問題退回前端修復
-8. [TASK:qa]         測試頁面功能完整性、響應式、跨瀏覽器（附上需求和驗收條件）
-9. 審核測試結果，有問題退回前端修復
-10. [TASK:security]  前端資安審查（XSS、依賴安全、敏感資料）
-11. 審核資安結果，有問題退回前端修復
-12. [TASK:devops]    部署到 GitHub + Vercel（參考 skills2/deploy-preview 的流程）
-13. 總結回報（包含部署 URL）
+[TASK:frontend]   根據設計稿實作（附上設計稿路徑，要求 100% 還原設計） [/TASK]
 ```
+收到結果後審核，通過則進入品質閘門：
+```
+[PIPELINE parallel]
+[TASK:reviewer]   程式碼審查前端（正確性、安全性、效能、可讀性）→ 有問題就列出 [/TASK]
+[TASK:qa]         測試頁面功能完整性、響應式、跨瀏覽器（附上需求和驗收條件） [/TASK]
+[TASK:security]   前端資安審查（XSS、依賴安全、敏感資料） [/TASK]
+[/PIPELINE]
+```
+收到審查結果後：統一審核，有問題退回前端修復，通過則：
+```
+[TASK:devops]    部署到 GitHub + Vercel（參考 skills2/deploy-preview 的流程） [/TASK]
+```
+總結回報（包含部署 URL）
 
-> **連續模式**：若用戶說「一次做到底」，跳過中間暫停，步驟 1-13 連續執行。
+> **連續模式**：若用戶說「一次做到底」，跳過中間暫停，各階段 pipeline 連續執行。
 
 ### 模式 E：程式碼審查
 

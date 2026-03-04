@@ -139,7 +139,7 @@ function App() {
     agents, selectedAgent, agentTools, agentStatuses, subagentTools, subagentCharacters,
     layoutReady, loadedAssets, chatList, chats, addUserMessage,
     mode, teamMembers, teamChats, addTeamUserMessage, agentNames,
-    orchestratorSkillId, orchestratorBusy, dispatchedTasks, addOrchestratorUserMessage,
+    orchestratorSkillId, orchestratorBusy, dispatchedTasks, activePipeline, addOrchestratorUserMessage,
     teamToolActivities, thoughtData,
     interviewQuestions, clearInterview,
     aiProvider, deepseekModel,
@@ -311,6 +311,7 @@ function App() {
           orchestratorSkillId={orchestratorSkillId}
           orchestratorBusy={orchestratorBusy}
           dispatchedTasks={dispatchedTasks}
+          activePipeline={activePipeline}
           onSendOrchestratorMessage={handleSendOrchestratorMessage}
           teamToolActivities={teamToolActivities}
           onToggleCollapse={() => {
