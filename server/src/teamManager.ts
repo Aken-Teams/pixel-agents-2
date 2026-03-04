@@ -197,6 +197,20 @@ export function loadTeam(skills: SkillDefinition[], broadcast: Broadcast): void 
 /**
  * Build the system prompt for a skill. For orchestrator, inject team member list.
  */
+function buildReferenceIndex(skill: SkillDefinition): string {
+	if (!skill.referencePaths || skill.referencePaths.length === 0) return '';
+
+	const lines = skill.referencePaths.map(refPath => {
+		const filename = path.basename(refPath, '.md');
+		const label = filename.replace(/-/g, ' ');
+		// Use forward slashes for display (Windows compat)
+		const displayPath = refPath.replace(/\\/g, '/');
+		return `- \`${displayPath}\` — ${label}`;
+	});
+
+	return `\n\n## 參考文件\n以下參考文件可用 Read 工具查閱，需要時再讀取：\n${lines.join('\n')}`;
+}
+
 function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[]): string {
 	const langRule = '\n\n## 語言規則（最高優先級）\n- 你的所有回覆必須全程使用繁體中文，包括思考過程、說明文字、標題和摘要。\n- 程式碼中的變數名、函式名、註解可以用英文，但所有對話內容、解釋、報告必須是繁體中文。\n- 絕對不可以用英文句子回覆。違反此規則等同任務失敗。';
 
@@ -208,7 +222,7 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	const docOutputRule = '\n\n## 文件產出規則（必須遵守）\n- 你的文件內容（PRD、架構設計、測試報告、技術文件等）必須直接寫在回覆中，系統會自動存檔並加上 metadata\n- **禁止**使用 Write 工具另外存文件到 `docs/` 目錄（如 `prd.md`、`architecture.md` 等），這會導致文件沒有 metadata、無法追蹤作者\n- 程式碼檔案（如 `.tsx`、`.ts`、`.css`、`.html`）可以用 Write 工具存到適當目錄（如 `src/`、`designs/`）\n- 簡單說：「文件寫在回覆裡，程式碼寫進檔案」';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
 
 	// Build team member list for orchestrator (exclude receptionist — FAQ-only, not task-capable)
 	const workers = allSkills.filter((s) => s.id !== skill.id && s.id !== RECEPTIONIST_SKILL_ID);
@@ -217,7 +231,7 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 		return `- **${w.name}** (${w.id}) — ${desc.slice(0, 100)}`;
 	}).join('\n');
 
-	return `${skill.systemPrompt}
+	return `${skill.systemPrompt}${buildReferenceIndex(skill)}
 
 ## 你的團隊成員
 

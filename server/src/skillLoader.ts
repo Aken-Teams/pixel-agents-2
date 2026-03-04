@@ -4,7 +4,7 @@ import { watch } from 'chokidar';
 import { getAssetsRoot } from './config.js';
 
 export interface SkillDefinition {
-	/** Filename without extension, used as stable ID */
+	/** Directory name or filename without extension, used as stable ID */
 	id: string;
 	/** Display name from frontmatter */
 	name: string;
@@ -22,6 +22,8 @@ export interface SkillDefinition {
 	order?: number;
 	/** The markdown body = system prompt content */
 	systemPrompt: string;
+	/** Absolute paths to reference files in the skill's references/ subdirectory */
+	referencePaths?: string[];
 }
 
 function getSkillsDir(): string {
@@ -31,11 +33,12 @@ function getSkillsDir(): string {
 /**
  * Parse a skill markdown file with --- frontmatter.
  * Returns null if the file is invalid or missing required fields.
+ * @param overrideId - Use this as the skill ID instead of deriving from filename
  */
-function parseSkillFile(filePath: string): SkillDefinition | null {
+function parseSkillFile(filePath: string, overrideId?: string): SkillDefinition | null {
 	try {
 		const raw = fs.readFileSync(filePath, 'utf-8');
-		const id = path.basename(filePath, '.md');
+		const id = overrideId ?? path.basename(filePath, '.md');
 
 		// Split on --- delimiters
 		const parts = raw.split(/^---\s*$/m);
@@ -80,17 +83,44 @@ function parseSkillFile(filePath: string): SkillDefinition | null {
 	}
 }
 
-/** Load all skill definitions from the skills/ directory */
+/**
+ * Load all skill definitions from the skills/ directory.
+ * Supports both directory-based skills (name/SKILL.md + references/)
+ * and legacy flat .md files.
+ */
 export function loadSkills(): SkillDefinition[] {
 	const dir = getSkillsDir();
 	if (!fs.existsSync(dir)) return [];
 
-	const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+	const entries = fs.readdirSync(dir, { withFileTypes: true });
 	const skills: SkillDefinition[] = [];
-	for (const file of files) {
-		const skill = parseSkillFile(path.join(dir, file));
-		if (skill) skills.push(skill);
+
+	for (const entry of entries) {
+		if (entry.isDirectory()) {
+			// Directory-based skill: read SKILL.md inside
+			const skillMdPath = path.join(dir, entry.name, 'SKILL.md');
+			if (!fs.existsSync(skillMdPath)) continue;
+			const skill = parseSkillFile(skillMdPath, entry.name);
+			if (skill) {
+				// Discover reference files
+				const refsDir = path.join(dir, entry.name, 'references');
+				if (fs.existsSync(refsDir)) {
+					const refFiles = fs.readdirSync(refsDir)
+						.filter(f => f.endsWith('.md'))
+						.sort();
+					if (refFiles.length > 0) {
+						skill.referencePaths = refFiles.map(f => path.join(refsDir, f));
+					}
+				}
+				skills.push(skill);
+			}
+		} else if (entry.name.endsWith('.md')) {
+			// Legacy flat-file skill (backward compat)
+			const skill = parseSkillFile(path.join(dir, entry.name));
+			if (skill) skills.push(skill);
+		}
 	}
+
 	// Sort by order field (lower first), unordered skills go to end
 	skills.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 	return skills;
@@ -101,7 +131,11 @@ export function watchSkills(onChange: (skills: SkillDefinition[]) => void): { cl
 	const dir = getSkillsDir();
 	if (!fs.existsSync(dir)) return null;
 
-	const watcher = watch(path.join(dir, '*.md'), {
+	const watcher = watch([
+		path.join(dir, '*.md'),
+		path.join(dir, '*/SKILL.md'),
+		path.join(dir, '*/references/*.md'),
+	], {
 		ignoreInitial: true,
 		awaitWriteFinish: { stabilityThreshold: 300 },
 	});
