@@ -576,12 +576,10 @@ export class OfficeState {
     if (ch) {
       ch.isActive = active
       if (active) {
-        // Becoming active: clear any in-progress route
+        // Becoming active: clear route phase but preserve routeId/waypoint info
+        // so updateCharacter can build a return-along-route path
         if (ch.routePhase) {
           ch.routePhase = null
-          ch.routeId = null
-          ch.routeReturning = false
-          ch.routeWaypointIndex = 0
           ch.routePauseTimer = 0
           this.wanderCoordinator.removeWalker(id)
         }

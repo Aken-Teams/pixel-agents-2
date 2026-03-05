@@ -28,7 +28,7 @@ export const ROUTE_STAGGER_MAX_SEC = 15.0
 export const ROUTE_REST_MIN_SEC = 30.0
 export const ROUTE_REST_MAX_SEC = 90.0
 /** Max Manhattan-distance (tiles) a character will travel to reach a route */
-export const ROUTE_MAX_PICKUP_DIST = 10
+export const ROUTE_MAX_PICKUP_DIST = 5
 
 // ── Matrix Effect ────────────────────────────────────────────
 export const MATRIX_EFFECT_DURATION_SEC = 0.3

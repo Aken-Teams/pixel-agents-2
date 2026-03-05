@@ -760,6 +760,14 @@ function clearWorkerSessions(): void {
 	console.log('[Session] Cleared all worker sessions');
 }
 
+/** Check if a session ID belongs to a team worker (used by fileWatcher to skip team JSONL files) */
+export function isTeamSessionId(sessionId: string): boolean {
+	for (const sid of workerSessionIds.values()) {
+		if (sid === sessionId) return true;
+	}
+	return false;
+}
+
 /** Invalidate a single worker session (call on "Session ID already in use" errors) */
 function invalidateWorkerSession(skillId: string): void {
 	const sid = workerSessionIds.get(skillId);
@@ -789,6 +797,7 @@ function spawnForSkill(
 	}
 	messages.push({ role: 'user', content: userMessage });
 
+	// Status broadcasts happen ONCE — not repeated on retry
 	broadcast({ type: 'agentStatus', id: session.agentId, status: 'active' });
 	broadcast({ type: 'teamAlertBubble', skillId: session.skillId, agentId: session.agentId });
 
@@ -804,46 +813,62 @@ function spawnForSkill(
 		chunkTimer = null;
 	};
 
-	// Session persistence: get session ID for this worker (Claude CLI will use
-	// --session-id to persist context, reducing token usage on subsequent calls)
-	const sessionId = getWorkerSessionId(session.skillId);
-	const isFirstSessionCall = !initializedSessions.has(sessionId);
-	if (isFirstSessionCall) {
-		initializedSessions.add(sessionId);
-	}
-
-	const handle = provider.generate(messages, {
-		onTextChunk: (text) => {
+	const callbacks = {
+		onTextChunk: (text: string) => {
 			chunkBuffer += text;
 			if (!chunkTimer) {
 				chunkTimer = setTimeout(flushChunks, CHUNK_INTERVAL);
 			}
 		},
-		onToolActivity: (status) => {
+		onToolActivity: (status: string | null) => {
 			broadcast({ type: 'teamToolActivity', skillId: session.skillId, status });
 		},
-	}, {
-		cwd: getAgentCwd(),
-		dangerouslySkipPermissions: true,
-		sessionId,
-		isFirstSessionCall,
-	});
+	};
 
-	session.activeGeneration = handle;
+	// Launch a single generation attempt (reused for retry)
+	function attempt(): Promise<string> {
+		const sessionId = getWorkerSessionId(session.skillId);
+		const isFirstSessionCall = !initializedSessions.has(sessionId);
+		if (isFirstSessionCall) {
+			initializedSessions.add(sessionId);
+		}
+		const handle = provider.generate(messages, callbacks, {
+			cwd: getAgentCwd(),
+			dangerouslySkipPermissions: true,
+			sessionId,
+			isFirstSessionCall,
+		});
+		session.activeGeneration = handle;
+		return handle.done;
+	}
 
-	// Handle completion
-	const done = handle.done.then((response) => {
+	// Attempt with one silent retry on session ID conflict
+	const done = attempt()
+	.catch((err) => {
+		if (err instanceof Error && err.message.includes('already in use')) {
+			console.log(`[Team ${session.name}] Session ID conflict, retrying with fresh session`);
+			invalidateWorkerSession(session.skillId);
+			// Clear partial chunks from failed attempt
+			chunkBuffer = '';
+			if (chunkTimer) { clearTimeout(chunkTimer); chunkTimer = null; }
+			return attempt();
+		}
+		throw err;
+	})
+	.then((response) => {
 		if (response) {
 			session.history.push({ role: 'assistant', content: response });
 			saveAgentResponse(session, response);
 			persistHistory(session);
 		}
 		return response;
-	}).catch((err) => {
+	})
+	.catch((err) => {
 		console.error(`[Team ${session.name}] Error:`, err.message);
 		broadcast({ type: 'teamError', skillId: session.skillId, error: err.message });
 		throw err;
-	}).finally(() => {
+	})
+	.finally(() => {
 		// Flush any remaining throttled chunks
 		if (chunkTimer) clearTimeout(chunkTimer);
 		flushChunks();

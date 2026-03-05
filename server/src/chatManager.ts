@@ -149,6 +149,11 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 			session.history.push({ role: 'assistant', content: response });
 		}
 	}).catch((err) => {
+		// Suppress internal session conflict errors — don't show to user
+		if (err instanceof Error && err.message.includes('already in use')) {
+			console.log(`[Chat ${chatId}] Session ID conflict (suppressed)`);
+			return;
+		}
 		console.error(`[Chat ${chatId}] Error:`, err.message);
 		broadcast({ type: 'chatError', chatId, error: err.message });
 	}).finally(() => {
