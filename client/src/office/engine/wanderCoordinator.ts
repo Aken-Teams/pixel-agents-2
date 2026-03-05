@@ -1,6 +1,5 @@
 import { CharacterState, TILE_SIZE } from '../types.js'
 import type { Character, Seat, WalkRoute, TileType as TileTypeVal } from '../types.js'
-import { findPath } from '../layout/tileMap.js'
 import {
   MAX_ROUTE_WALKERS,
   ROUTE_STAGGER_MIN_SEC,
@@ -11,6 +10,26 @@ import {
 
 function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min)
+}
+
+/** Generate a straight-line tile path between two points (Bresenham-style).
+ *  Used instead of BFS for static backgrounds where tileMap has no wall data. */
+export function directPath(
+  fromCol: number, fromRow: number,
+  toCol: number, toRow: number,
+): Array<{ col: number; row: number }> {
+  const dx = toCol - fromCol
+  const dy = toRow - fromRow
+  const steps = Math.max(Math.abs(dx), Math.abs(dy))
+  if (steps === 0) return []
+  const path: Array<{ col: number; row: number }> = []
+  for (let i = 1; i <= steps; i++) {
+    path.push({
+      col: Math.round(fromCol + (dx * i) / steps),
+      row: Math.round(fromRow + (dy * i) / steps),
+    })
+  }
+  return path
 }
 
 export class WanderCoordinator {
@@ -41,8 +60,8 @@ export class WanderCoordinator {
     dt: number,
     characters: Map<number, Character>,
     seats: Map<string, Seat>,
-    tileMap: TileTypeVal[][],
-    blockedTiles: Set<string>,
+    _tileMap: TileTypeVal[][],
+    _blockedTiles: Set<string>,
   ): void {
     if (this.routes.length === 0) return
 
@@ -84,20 +103,36 @@ export class WanderCoordinator {
     const picked = candidates[this.pickIndex]
     this.pickIndex = (this.pickIndex + 1) % candidates.length
 
-    // Pick a route not currently in use by another walker (prefer unique routes)
+    // Pick a route: prefer unused, closest to the character's seat
     const usedRouteIds = new Set<string>()
     for (const id of this.activeWalkers) {
       const ch = characters.get(id)
       if (ch?.routeId) usedRouteIds.add(ch.routeId)
     }
-    let route = this.routes.find(r => !usedRouteIds.has(r.id))
+
+    const seatCol = Math.round(picked.tileCol)
+    const seatRow = Math.round(picked.tileRow)
+    const availableRoutes = this.routes
+      .filter(r => !usedRouteIds.has(r.id))
+    // Sort by distance to first waypoint (closest first)
+    availableRoutes.sort((a, b) => {
+      const da = Math.abs(a.waypoints[0].col - seatCol) + Math.abs(a.waypoints[0].row - seatRow)
+      const db = Math.abs(b.waypoints[0].col - seatCol) + Math.abs(b.waypoints[0].row - seatRow)
+      return da - db
+    })
+    let route = availableRoutes[0]
     if (!route) {
-      // All routes in use — pick random
-      route = this.routes[Math.floor(Math.random() * this.routes.length)]
+      // All routes in use — pick closest overall
+      const sorted = [...this.routes].sort((a, b) => {
+        const da = Math.abs(a.waypoints[0].col - seatCol) + Math.abs(a.waypoints[0].row - seatRow)
+        const db = Math.abs(b.waypoints[0].col - seatCol) + Math.abs(b.waypoints[0].row - seatRow)
+        return da - db
+      })
+      route = sorted[0]
     }
 
     // Assign route
-    if (this.assignRoute(picked, route, tileMap, blockedTiles, seats)) {
+    if (this.assignRoute(picked, route, seats)) {
       this.activeWalkers.add(picked.id)
       this.staggerTimer = randomRange(ROUTE_STAGGER_MIN_SEC, ROUTE_STAGGER_MAX_SEC)
     }
@@ -106,28 +141,15 @@ export class WanderCoordinator {
   private assignRoute(
     ch: Character,
     route: WalkRoute,
-    tileMap: TileTypeVal[][],
-    blockedTiles: Set<string>,
     seats: Map<string, Seat>,
   ): boolean {
     if (route.waypoints.length === 0) return false
 
     const wp = route.waypoints[0]
-    // BFS from character's current position (rounded for fractional seat coords) to first waypoint
     const startCol = Math.round(ch.tileCol)
     const startRow = Math.round(ch.tileRow)
 
-    // Temporarily unblock own seat for pathfinding
-    const seatKey = ch.seatId ? `${Math.round(seats.get(ch.seatId)!.seatCol)},${Math.round(seats.get(ch.seatId)!.seatRow)}` : null
-    if (seatKey) blockedTiles.delete(seatKey)
-    const path = findPath(startCol, startRow, Math.round(wp.col), Math.round(wp.row), tileMap, blockedTiles)
-    if (seatKey) blockedTiles.add(seatKey)
-
-    if (path.length === 0 && (startCol !== Math.round(wp.col) || startRow !== Math.round(wp.row))) {
-      // Can't reach first waypoint — skip
-      ch.seatTimer = randomRange(ROUTE_REST_MIN_SEC, ROUTE_REST_MAX_SEC)
-      return false
-    }
+    const path = directPath(startCol, startRow, Math.round(wp.col), Math.round(wp.row))
 
     ch.routeId = route.id
     ch.routePhase = 'toRoute'

@@ -238,7 +238,8 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
             const ch = officeState.characters.get(wId)
             if (ch?.routeId) activeRouteIds.add(ch.routeId)
           }
-          return { routes, activeRouteIds }
+          const hoveredTile = officeState.hoveredTile
+          return { routes, activeRouteIds, hoveredTile }
         })() : undefined
 
         const { offsetX, offsetY } = renderFrame(

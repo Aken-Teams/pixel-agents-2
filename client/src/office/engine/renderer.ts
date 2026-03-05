@@ -627,7 +627,7 @@ export function renderFrame(
   layoutCols?: number,
   layoutRows?: number,
   isStaticBackground?: boolean,
-  routeDebug?: { routes: WalkRoute[]; activeRouteIds: Set<string> },
+  routeDebug?: { routes: WalkRoute[]; activeRouteIds: Set<string>; hoveredTile?: { col: number; row: number } | null },
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -677,8 +677,32 @@ export function renderFrame(
   renderBubbles(ctx, characters, offsetX, offsetY, zoom)
 
   // Route debug overlay
-  if (routeDebug && routeDebug.routes.length > 0) {
-    renderRouteDebugOverlay(ctx, routeDebug.routes, routeDebug.activeRouteIds, offsetX, offsetY, zoom)
+  if (routeDebug) {
+    if (routeDebug.routes.length > 0) {
+      renderRouteDebugOverlay(ctx, routeDebug.routes, routeDebug.activeRouteIds, offsetX, offsetY, zoom)
+    }
+    // Show hovered tile coordinate so user can easily pick waypoints
+    if (routeDebug.hoveredTile) {
+      const ht = routeDebug.hoveredTile
+      const s = TILE_SIZE * zoom
+      const hx = offsetX + ht.col * s
+      const hy = offsetY + ht.row * s
+      // Highlight tile
+      ctx.save()
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.25)'
+      ctx.fillRect(hx, hy, s, s)
+      ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(hx, hy, s, s)
+      // Coordinate label
+      const fontSize = Math.max(11, Math.round(11 * zoom))
+      ctx.font = `bold ${fontSize}px monospace`
+      ctx.fillStyle = '#000'
+      ctx.fillText(`${ht.col}, ${ht.row}`, hx + 2 * zoom + 1, hy - 4 * zoom + 1)
+      ctx.fillStyle = '#ffff00'
+      ctx.fillText(`${ht.col}, ${ht.row}`, hx + 2 * zoom, hy - 4 * zoom)
+      ctx.restore()
+    }
   }
 
   // Editor overlays (not in static background mode)

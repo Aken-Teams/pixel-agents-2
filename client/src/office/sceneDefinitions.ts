@@ -199,7 +199,7 @@ const level5Routes: WalkRoute[] = [
     { col: 55, row: 15 }, { col: 55, row: 25 }, { col: 70, row: 25 },
   ]},
   { id: 'l5-bottom', debugColor: '#66cc66', waypoints: [
-    { col: 35, row: 35 }, { col: 35, row: 42 }, { col: 50, row: 42 },
+    { col: 35, row: 43 }, { col: 35, row: 39 }, { col: 52, row: 39 }, { col: 52, row: 36 }
   ]},
 ]
 

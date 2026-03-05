@@ -2,6 +2,7 @@ import { CharacterState, Direction, TILE_SIZE } from '../types.js'
 import type { Character, Seat, SpriteData, TileType as TileTypeVal, WalkRoute } from '../types.js'
 import type { CharacterSprites } from '../sprites/spriteData.js'
 import { findPath } from '../layout/tileMap.js'
+import { directPath } from './wanderCoordinator.js'
 import {
   WALK_SPEED_PX_PER_SEC,
   WALK_FRAME_DURATION_SEC,
@@ -34,14 +35,15 @@ function tileCenter(col: number, row: number): { x: number; y: number } {
   }
 }
 
-/** Direction from one tile to an adjacent tile */
+/** Direction from one tile to another (picks dominant axis for diagonals) */
 function directionBetween(fromCol: number, fromRow: number, toCol: number, toRow: number): Direction {
   const dc = toCol - fromCol
   const dr = toRow - fromRow
-  if (dc > 0) return Direction.RIGHT
-  if (dc < 0) return Direction.LEFT
-  if (dr > 0) return Direction.DOWN
-  return Direction.UP
+  // For diagonal movement, pick the dominant axis
+  if (Math.abs(dc) >= Math.abs(dr)) {
+    return dc >= 0 ? Direction.RIGHT : Direction.LEFT
+  }
+  return dr >= 0 ? Direction.DOWN : Direction.UP
 }
 
 export function createCharacter(
@@ -173,10 +175,9 @@ export function updateCharacter(
           if (route && route.waypoints.length > 1) {
             ch.routeWaypointIndex = route.waypoints.length - 2
             const wp = route.waypoints[ch.routeWaypointIndex]
-            const path = findPath(
+            const path = directPath(
               Math.round(ch.tileCol), Math.round(ch.tileRow),
               Math.round(wp.col), Math.round(wp.row),
-              tileMap, blockedTiles,
             )
             if (path.length > 0) {
               ch.path = path
@@ -198,10 +199,9 @@ export function updateCharacter(
       if (ch.routePhase === 'toSeat') {
         const seat = ch.seatId ? seats.get(ch.seatId) : null
         if (seat) {
-          const path = findPath(
+          const path = directPath(
             Math.round(ch.tileCol), Math.round(ch.tileRow),
             Math.round(seat.seatCol), Math.round(seat.seatRow),
-            tileMap, blockedTiles,
           )
           if (path.length > 0) {
             ch.path = path
@@ -291,7 +291,7 @@ export function updateCharacter(
           }
         } else if (ch.routePhase && ch.routePhase !== 'pausing') {
           // Route waypoint arrival
-          handleRouteArrival(ch, seats, tileMap, blockedTiles, routes ?? [])
+          handleRouteArrival(ch, seats, routes ?? [])
         } else {
           // Check if arrived at assigned seat — sit down for a rest before wandering again
           if (ch.seatId) {
@@ -370,8 +370,6 @@ export function updateCharacter(
 function handleRouteArrival(
   ch: Character,
   seats: Map<string, Seat>,
-  tileMap: TileTypeVal[][],
-  blockedTiles: Set<string>,
   routes: WalkRoute[],
 ): void {
   const route = routes.find(r => r.id === ch.routeId)
@@ -394,17 +392,16 @@ function handleRouteArrival(
         ch.routePhase = 'onRoute'
         ch.routeWaypointIndex = nextIdx
         const wp = route.waypoints[nextIdx]
-        const path = findPath(
+        const path = directPath(
           Math.round(ch.tileCol), Math.round(ch.tileRow),
           Math.round(wp.col), Math.round(wp.row),
-          tileMap, blockedTiles,
         )
         if (path.length > 0) {
           ch.path = path
           ch.moveProgress = 0
         } else {
           // Skip unreachable waypoint — try next
-          handleRouteArrival(ch, seats, tileMap, blockedTiles, routes)
+          handleRouteArrival(ch, seats, routes)
         }
       }
       break
@@ -418,16 +415,15 @@ function handleRouteArrival(
       } else {
         ch.routeWaypointIndex = prevIdx
         const wp = route.waypoints[prevIdx]
-        const path = findPath(
+        const path = directPath(
           Math.round(ch.tileCol), Math.round(ch.tileRow),
           Math.round(wp.col), Math.round(wp.row),
-          tileMap, blockedTiles,
         )
         if (path.length > 0) {
           ch.path = path
           ch.moveProgress = 0
         } else {
-          handleRouteArrival(ch, seats, tileMap, blockedTiles, routes)
+          handleRouteArrival(ch, seats, routes)
         }
       }
       break
