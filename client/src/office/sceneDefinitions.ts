@@ -193,8 +193,11 @@ const level5Routes: WalkRoute[] = [
     { col: 25, row: 20 }, { col: 40, row: 20 }, { col: 40, row: 30 },
   ]},
 
-  { id: 'l5-left-wing', debugColor: '#cc66cc', waypoints: [
-    { col: 10, row: 20 }, { col: 10, row: 35 }, { col: 25, row: 35 },
+  { id: 'l5-left-top-1', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 7, row: 9 }, { col: 12, row: 9 }, { col: 12, row: 8 },
+  ]},
+  { id: 'l5-left-top-2', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 7, row: 9 }, { col: 15, row: 9 }, { col: 15, row: 8 },
   ]},
 
   { id: 'l5-right-top-1', debugColor: '#6679cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
@@ -230,9 +233,6 @@ const level5Routes: WalkRoute[] = [
   ]},
   { id: 'l5-right-wing-5', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 73, row: 21 }, { col: 55, row: 21 }, { col: 55, row: 15 }, { col: 52, row: 15 }, { col: 52, row: 9 }, { col: 59, row: 9 }
-  ]},
-  { id: 'l5-right-wing-6', debugColor: '#cccc00', waypoints: [
-    { col: 67, row: 15 }, { col: 68, row: 15 }
   ]},
 
   { id: 'l5-bottom-1', debugColor: '#66cc66',pauseAction: 'standing',  pauseDir: 3,  waypoints: [

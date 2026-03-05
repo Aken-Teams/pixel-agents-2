@@ -128,6 +128,23 @@ export function updateCharacter(
           break
         }
       }
+      // If active but not at seat, rush back first
+      if (ch.isActive && ch.seatId) {
+        const seat = seats.get(ch.seatId)
+        if (seat && (Math.round(ch.tileCol) !== Math.round(seat.seatCol) || Math.round(ch.tileRow) !== Math.round(seat.seatRow))) {
+          const path = routes
+            ? directPath(Math.round(ch.tileCol), Math.round(ch.tileRow), Math.round(seat.seatCol), Math.round(seat.seatRow))
+            : findPath(ch.tileCol, ch.tileRow, seat.seatCol, seat.seatRow, tileMap, blockedTiles)
+          if (path.length > 0) {
+            ch.path = path
+            ch.moveProgress = 0
+            ch.state = CharacterState.WALK
+            ch.frame = 0
+            ch.frameTimer = 0
+            break
+          }
+        }
+      }
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
         if (ch.seatTimer > 0) {
@@ -283,7 +300,12 @@ export function updateCharacter(
             ch.state = CharacterState.TYPE
           } else {
             const seat = seats.get(ch.seatId)
-            if (seat && ch.tileCol === seat.seatCol && ch.tileRow === seat.seatRow) {
+            if (seat) {
+              // Snap to exact seat position (may be fractional on static backgrounds)
+              ch.tileCol = seat.seatCol
+              ch.tileRow = seat.seatRow
+              ch.x = seat.seatCol * TILE_SIZE + TILE_SIZE / 2
+              ch.y = seat.seatRow * TILE_SIZE + TILE_SIZE / 2
               ch.state = CharacterState.TYPE
               ch.dir = seat.facingDir
             } else {
@@ -354,7 +376,7 @@ export function updateCharacter(
         const seat = seats.get(ch.seatId)
         if (seat) {
           const lastStep = ch.path[ch.path.length - 1]
-          if (!lastStep || lastStep.col !== seat.seatCol || lastStep.row !== seat.seatRow) {
+          if (!lastStep || Math.round(lastStep.col) !== Math.round(seat.seatCol) || Math.round(lastStep.row) !== Math.round(seat.seatRow)) {
             // Static backgrounds use fractional seat coords — use directPath
             const newPath = routes
               ? directPath(Math.round(ch.tileCol), Math.round(ch.tileRow), Math.round(seat.seatCol), Math.round(seat.seatRow))
