@@ -29,9 +29,10 @@ interface OfficeCanvasProps {
   onZoomChange: (zoom: number) => void
   panRef: React.MutableRefObject<{ x: number; y: number }>
   isPanMode?: boolean
+  isDebugMode?: boolean
 }
 
-export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, onEditorTileAction, onEditorEraseAction, onEditorSelectionChange, onDeleteSelected, onRotateSelected, onDragMove, editorTick: _editorTick, zoom, onZoomChange, panRef, isPanMode = false }: OfficeCanvasProps) {
+export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, onEditorTileAction, onEditorEraseAction, onEditorSelectionChange, onDeleteSelected, onRotateSelected, onDragMove, editorTick: _editorTick, zoom, onZoomChange, panRef, isPanMode = false, isDebugMode = false }: OfficeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const offsetRef = useRef({ x: 0, y: 0 })
@@ -45,6 +46,9 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
   const isEraseDraggingRef = useRef(false)
   // Zoom scroll accumulator for trackpad pinch sensitivity
   const zoomAccumulatorRef = useRef(0)
+  // Track debug mode via ref so the render loop closure always sees the latest value
+  const isDebugModeRef = useRef(isDebugMode)
+  isDebugModeRef.current = isDebugMode
 
   // Update canvas cursor when pan mode toggles
   useEffect(() => {
@@ -225,6 +229,18 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
           characters: officeState.characters,
         }
 
+        // Route debug overlay (only for static background scenes in debug mode)
+        const routeDebug = isDebugModeRef.current && hasStaticBg ? (() => {
+          const routes = officeState.getSceneRoutes()
+          if (routes.length === 0) return undefined
+          const activeRouteIds = new Set<string>()
+          for (const wId of officeState.wanderCoordinator.getActiveWalkerIds()) {
+            const ch = officeState.characters.get(wId)
+            if (ch?.routeId) activeRouteIds.add(ch.routeId)
+          }
+          return { routes, activeRouteIds }
+        })() : undefined
+
         const { offsetX, offsetY } = renderFrame(
           ctx,
           w,
@@ -241,6 +257,7 @@ export function OfficeCanvas({ officeState, onClick, isEditMode, editorState, on
           layout.cols,
           layout.rows,
           hasStaticBg,
+          routeDebug,
         )
         offsetRef.current = { x: offsetX, y: offsetY }
 

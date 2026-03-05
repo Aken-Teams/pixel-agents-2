@@ -1,4 +1,4 @@
-import type { OfficeLayout, StaticSeat } from './types.js'
+import type { OfficeLayout, StaticSeat, WalkRoute } from './types.js'
 
 export interface SceneDefinition {
   id: string
@@ -10,6 +10,8 @@ export interface SceneDefinition {
   defaultZoom: number
   /** The complete OfficeLayout to apply when this scene is selected */
   layout: OfficeLayout
+  /** Walking routes for idle characters */
+  routes?: WalkRoute[]
 }
 
 /** Generate a static-background OfficeLayout with an all-FLOOR tile grid.
@@ -171,7 +173,73 @@ const level8Seats: StaticSeat[] = [
   { uid: 'seat-b1', seatCol: 63, seatRow: 12, facingDir: 0, defaultAction: 'standing' },  // CTO (技術長)
 ]
 
-// ── Export all scenes ────────────────────────────────────────
+// ── Walking Routes ──────────────────────────────────────────
+// Placeholder waypoints — adjust using the debug overlay
+
+const level4Routes: WalkRoute[] = [
+  { id: 'l4-main-hall', debugColor: '#00cccc', waypoints: [
+    { col: 20, row: 18 }, { col: 20, row: 24 }, { col: 15, row: 24 },
+  ]},
+  { id: 'l4-meeting', debugColor: '#cc66cc', waypoints: [
+    { col: 20, row: 18 }, { col: 28, row: 18 }, { col: 28, row: 25 },
+  ]},
+  { id: 'l4-lower', debugColor: '#cccc00', waypoints: [
+    { col: 10, row: 30 }, { col: 10, row: 38 }, { col: 20, row: 38 },
+  ]},
+]
+
+const level5Routes: WalkRoute[] = [
+  { id: 'l5-central', debugColor: '#00cccc', waypoints: [
+    { col: 25, row: 20 }, { col: 40, row: 20 }, { col: 40, row: 30 },
+  ]},
+  { id: 'l5-left-wing', debugColor: '#cc66cc', waypoints: [
+    { col: 10, row: 20 }, { col: 10, row: 35 }, { col: 25, row: 35 },
+  ]},
+  { id: 'l5-right-wing', debugColor: '#cccc00', waypoints: [
+    { col: 55, row: 15 }, { col: 55, row: 25 }, { col: 70, row: 25 },
+  ]},
+  { id: 'l5-bottom', debugColor: '#66cc66', waypoints: [
+    { col: 35, row: 35 }, { col: 35, row: 42 }, { col: 50, row: 42 },
+  ]},
+]
+
+const level6Routes: WalkRoute[] = [
+  { id: 'l6-main', debugColor: '#00cccc', waypoints: [
+    { col: 25, row: 15 }, { col: 35, row: 15 }, { col: 35, row: 25 },
+  ]},
+  { id: 'l6-left', debugColor: '#cc66cc', waypoints: [
+    { col: 10, row: 20 }, { col: 10, row: 30 }, { col: 20, row: 30 },
+  ]},
+  { id: 'l6-right', debugColor: '#cccc00', waypoints: [
+    { col: 55, row: 15 }, { col: 55, row: 28 }, { col: 65, row: 28 },
+  ]},
+]
+
+const level7Routes: WalkRoute[] = [
+  { id: 'l7-center', debugColor: '#00cccc', waypoints: [
+    { col: 25, row: 15 }, { col: 35, row: 15 }, { col: 35, row: 28 },
+  ]},
+  { id: 'l7-left', debugColor: '#cc66cc', waypoints: [
+    { col: 10, row: 22 }, { col: 10, row: 32 }, { col: 20, row: 32 },
+  ]},
+  { id: 'l7-right', debugColor: '#cccc00', waypoints: [
+    { col: 55, row: 20 }, { col: 55, row: 30 }, { col: 65, row: 30 },
+  ]},
+]
+
+const level8Routes: WalkRoute[] = [
+  { id: 'l8-center', debugColor: '#00cccc', waypoints: [
+    { col: 30, row: 15 }, { col: 40, row: 15 }, { col: 40, row: 28 },
+  ]},
+  { id: 'l8-left', debugColor: '#cc66cc', waypoints: [
+    { col: 15, row: 25 }, { col: 15, row: 35 }, { col: 25, row: 35 },
+  ]},
+  { id: 'l8-right', debugColor: '#cccc00', waypoints: [
+    { col: 60, row: 20 }, { col: 60, row: 30 }, { col: 70, row: 30 },
+  ]},
+]
+
+// ── Export all scenes ──────────────────────────────────────────
 
 export const SCENE_DEFINITIONS: SceneDefinition[] = [
   {
@@ -180,6 +248,7 @@ export const SCENE_DEFINITIONS: SceneDefinition[] = [
     backgroundImage: 'office-level-4.png',
     defaultZoom: 1,
     layout: makeStaticLayout(40, 50, 'office-level-4.png', level4Seats),
+    routes: level4Routes,
   },
   {
     id: 'level5',
@@ -187,6 +256,7 @@ export const SCENE_DEFINITIONS: SceneDefinition[] = [
     backgroundImage: 'office-level5.jpg',
     defaultZoom: 1,
     layout: makeStaticLayout(86, 48, 'office-level5.jpg', level5Seats),
+    routes: level5Routes,
   },
   {
     id: 'level6',
@@ -194,6 +264,7 @@ export const SCENE_DEFINITIONS: SceneDefinition[] = [
     backgroundImage: 'office-level6.png',
     defaultZoom: 1,
     layout: makeStaticLayout(80, 45, 'office-level6.png', level6Seats),
+    routes: level6Routes,
   },
   {
     id: 'level7',
@@ -201,6 +272,7 @@ export const SCENE_DEFINITIONS: SceneDefinition[] = [
     backgroundImage: 'office-level7.png',
     defaultZoom: 1,
     layout: makeStaticLayout(80, 44, 'office-level7.png', level7Seats),
+    routes: level7Routes,
   },
   {
     id: 'level8',
@@ -208,5 +280,6 @@ export const SCENE_DEFINITIONS: SceneDefinition[] = [
     backgroundImage: 'office-level8.png',
     defaultZoom: 1,
     layout: makeStaticLayout(80, 44, 'office-level8.png', level8Seats),
+    routes: level8Routes,
   },
 ]

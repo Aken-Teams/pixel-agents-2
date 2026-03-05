@@ -22,6 +22,8 @@ interface BottomToolbarProps {
   onSwitchScene?: (layout: OfficeLayout, defaultZoom: number) => void
   isDebugMode: boolean
   onToggleDebugMode: () => void
+  isRouteDebug: boolean
+  onToggleRouteDebug: () => void
   teamMembers: TeamMemberInfo[]
   aiProvider: string
   deepseekModel: string
@@ -67,6 +69,8 @@ export function BottomToolbar({
   onSwitchScene,
   isDebugMode,
   onToggleDebugMode,
+  isRouteDebug,
+  onToggleRouteDebug,
   teamMembers,
   aiProvider,
   deepseekModel,
@@ -157,8 +161,8 @@ export function BottomToolbar({
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
-          isDebugMode={isDebugMode}
-          onToggleDebugMode={onToggleDebugMode}
+          isDebugMode={isRouteDebug}
+          onToggleDebugMode={onToggleRouteDebug}
           aiProvider={aiProvider}
           deepseekModel={deepseekModel}
         />

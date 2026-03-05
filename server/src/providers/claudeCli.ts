@@ -137,8 +137,10 @@ export class ClaudeCLIProvider implements AIProvider {
 				}
 			});
 
+			let stderrContent = '';
 			proc.stderr!.on('data', (data: Buffer) => {
 				const text = data.toString();
+				stderrContent += text;
 				if (text.trim()) {
 					console.log(`[ClaudeCLI] stderr: ${text.trim()}`);
 				}
@@ -177,7 +179,8 @@ export class ClaudeCLIProvider implements AIProvider {
 				proc = null;
 
 				if (code !== 0 && code !== null) {
-					reject(new Error(`Claude CLI exited with code ${code}`));
+					const errDetail = stderrContent.trim();
+					reject(new Error(`Claude CLI exited with code ${code}${errDetail ? `: ${errDetail}` : ''}`));
 				} else {
 					resolve(assistantResponse.trim());
 				}

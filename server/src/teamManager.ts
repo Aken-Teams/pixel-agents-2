@@ -753,11 +753,19 @@ function getWorkerSessionId(skillId: string): string {
 	return sessionId;
 }
 
-/** Clear all worker sessions (call when orchestration ends or project resets) */
+/** Clear all worker sessions (call when project resets) */
 function clearWorkerSessions(): void {
 	workerSessionIds.clear();
 	initializedSessions.clear();
 	console.log('[Session] Cleared all worker sessions');
+}
+
+/** Invalidate a single worker session (call on "Session ID already in use" errors) */
+function invalidateWorkerSession(skillId: string): void {
+	const sid = workerSessionIds.get(skillId);
+	if (sid) initializedSessions.delete(sid);
+	workerSessionIds.delete(skillId);
+	console.log(`[Session] Invalidated session for ${skillId}`);
 }
 
 // ── Core: Send message to a team member (direct) ───────────
@@ -960,7 +968,6 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	orchestrateStep(orchestratorSkillId, message, broadcast, 0).finally(() => {
 		orchestratorBusy = false;
 		stopAllNagging();
-		clearWorkerSessions();
 		broadcast({ type: 'orchestratorBusy', busy: false });
 		// Mark project as paused and advance phase counter
 		if (currentProjectDir) {
@@ -1045,7 +1052,19 @@ async function executeTask(
 	targetSession.history.push({ role: 'user', content: task.description });
 
 	try {
-		const result = await spawnForSkill(targetSession, task.description, broadcast);
+		let result: string;
+		try {
+			result = await spawnForSkill(targetSession, task.description, broadcast);
+		} catch (spawnErr) {
+			// Retry once if session ID conflict (Claude CLI lock not released in time)
+			if (spawnErr instanceof Error && spawnErr.message.includes('already in use')) {
+				console.log(`[Pipeline] Session ID conflict for ${targetSession.name}, retrying with fresh session`);
+				invalidateWorkerSession(task.skillId);
+				result = await spawnForSkill(targetSession, task.description, broadcast);
+			} else {
+				throw spawnErr;
+			}
+		}
 		const resultText = result || '（已完成工作但未產出文字回覆，可能全部是工具操作。）';
 
 		const snapshotAfter = scanDirectory(projectDir, projectDir);
@@ -1203,8 +1222,20 @@ async function orchestrateStep(
 	try {
 		response = await spawnForSkill(session, message, broadcast);
 	} catch (err) {
-		console.error(`[Orchestrator] Error:`, err);
-		return;
+		// Retry once if session ID conflict (Claude CLI lock not released in time)
+		if (err instanceof Error && err.message.includes('already in use')) {
+			console.log(`[Orchestrator] Session ID conflict for ${session.name}, retrying with fresh session`);
+			invalidateWorkerSession(session.skillId);
+			try {
+				response = await spawnForSkill(session, message, broadcast);
+			} catch (retryErr) {
+				console.error(`[Orchestrator] Retry also failed:`, retryErr);
+				return;
+			}
+		} else {
+			console.error(`[Orchestrator] Error:`, err);
+			return;
+		}
 	}
 
 	if (!response) {

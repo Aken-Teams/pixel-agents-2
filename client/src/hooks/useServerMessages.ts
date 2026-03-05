@@ -11,6 +11,7 @@ import { setCharacterTemplates } from '../office/sprites/spriteData.js'
 import { wsClient } from '../wsClient.js'
 import { playDoneSound, playAlertSound, setSoundEnabled } from '../notificationSound.js'
 import { loadBackgroundImage } from '../office/backgroundImage.js'
+import { SCENE_DEFINITIONS } from '../office/sceneDefinitions.js'
 
 export interface SubagentCharacter {
   id: number
@@ -164,6 +165,13 @@ export function useServerMessages(
             loadBackgroundImage(`/assets/${layout.backgroundImage}`)
           }
           os.rebuildFromLayout(layout)
+          // Set walking routes from scene definition (keyed by background image)
+          if (layout.backgroundImage) {
+            const sceneDef = SCENE_DEFINITIONS.find(s => s.layout.backgroundImage === layout.backgroundImage)
+            os.setSceneRoutes(sceneDef?.routes ?? [])
+          } else {
+            os.setSceneRoutes([])
+          }
           onLayoutLoaded?.(layout)
         } else {
           // Default layout — snapshot whatever OfficeState built
@@ -221,10 +229,18 @@ export function useServerMessages(
       } else if (msg.type === 'existingAgents') {
         const incoming = msg.agents as number[]
         const meta = (msg.agentMeta || {}) as Record<number, { palette?: number; hueShift?: number; seatId?: string }>
-        // Buffer agents — they'll be added in layoutLoaded after seats are built
-        for (const id of incoming) {
-          const m = meta[id]
-          pendingAgents.push({ id, palette: m?.palette, hueShift: m?.hueShift, seatId: m?.seatId })
+        if (layoutReadyRef.current) {
+          // Layout already loaded — add agents directly
+          for (const id of incoming) {
+            const m = meta[id]
+            os.addAgent(id, m?.palette, m?.hueShift, m?.seatId, true)
+          }
+        } else {
+          // Buffer agents — they'll be added in layoutLoaded after seats are built
+          for (const id of incoming) {
+            const m = meta[id]
+            pendingAgents.push({ id, palette: m?.palette, hueShift: m?.hueShift, seatId: m?.seatId })
+          }
         }
         setAgents((prev) => {
           const ids = new Set(prev)
@@ -809,6 +825,9 @@ export function useServerMessages(
             isIdleChat: true,
           },
         }))
+        // Signal officeState so coordinator can dispatch walking during idle chat
+        const os = getOfficeState()
+        if (os) os.setIdleChatActive(agentId, true)
       } else if (msg.type === 'idleChatEnd') {
         const agentId = msg.agentId as number
         setThoughtData((prev) => {

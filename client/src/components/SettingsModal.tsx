@@ -130,7 +130,7 @@ function PixelSelect({ value, options, onChange, maxWidth = 170 }: PixelSelectPr
   )
 }
 
-export function SettingsModal({ isOpen, onClose, aiProvider, deepseekModel }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode, aiProvider, deepseekModel }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled)
   const [showProjects, setShowProjects] = useState(false)
@@ -256,6 +256,38 @@ export function SettingsModal({ isOpen, onClose, aiProvider, deepseekModel }: Se
             }}
           >
             {soundLocal ? 'X' : ''}
+          </span>
+        </button>
+
+        {/* Route Debug Overlay */}
+        <button
+          onClick={onToggleDebugMode}
+          onMouseEnter={() => setHovered('debug')}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            ...rowStyle,
+            background: hovered === 'debug' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+          }}
+        >
+          <span>Route Overlay</span>
+          <span
+            style={{
+              marginLeft: 16,
+              width: 14,
+              height: 14,
+              border: '2px solid rgba(255, 255, 255, 0.5)',
+              borderRadius: 0,
+              background: isDebugMode ? 'rgba(90, 140, 255, 0.8)' : 'transparent',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              lineHeight: 1,
+              color: '#fff',
+            }}
+          >
+            {isDebugMode ? 'X' : ''}
           </span>
         </button>
 

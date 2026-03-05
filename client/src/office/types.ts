@@ -157,6 +157,15 @@ export interface OfficeLayout {
   staticSeats?: StaticSeat[]
 }
 
+export interface WalkRoute {
+  /** Unique route identifier */
+  id: string
+  /** Ordered waypoints (integer tile coords) */
+  waypoints: Array<{ col: number; row: number }>
+  /** Color for debug overlay */
+  debugColor?: string
+}
+
 export interface Character {
   id: number
   state: CharacterState
@@ -212,4 +221,14 @@ export interface Character {
   matrixEffectTimer: number
   /** Per-column random seeds (16 values) for staggered rain timing */
   matrixEffectSeeds: number[]
+  /** ID of currently assigned walk route, or null */
+  routeId: string | null
+  /** Index of next/current waypoint in the route */
+  routeWaypointIndex: number
+  /** Whether character is walking back along the route */
+  routeReturning: boolean
+  /** Countdown timer for pause at route destination */
+  routePauseTimer: number
+  /** Current phase of route walking lifecycle */
+  routePhase: 'toRoute' | 'onRoute' | 'pausing' | 'returning' | 'toSeat' | null
 }

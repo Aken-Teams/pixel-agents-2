@@ -198,6 +198,13 @@ export function sendCurrentAgentStatuses(
 				id: agentId,
 				status: 'waiting',
 			});
+		} else if (agent.activeToolStatuses.size === 0) {
+			// Agent is idle — notify client so character can be marked inactive
+			broadcast({
+				type: 'agentStatus',
+				id: agentId,
+				status: 'idle',
+			});
 		}
 	}
 }

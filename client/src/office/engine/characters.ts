@@ -1,5 +1,5 @@
 import { CharacterState, Direction, TILE_SIZE } from '../types.js'
-import type { Character, Seat, SpriteData, TileType as TileTypeVal } from '../types.js'
+import type { Character, Seat, SpriteData, TileType as TileTypeVal, WalkRoute } from '../types.js'
 import type { CharacterSprites } from '../sprites/spriteData.js'
 import { findPath } from '../layout/tileMap.js'
 import {
@@ -12,6 +12,10 @@ import {
   WANDER_MOVES_BEFORE_REST_MAX,
   SEAT_REST_MIN_SEC,
   SEAT_REST_MAX_SEC,
+  ROUTE_PAUSE_MIN_SEC,
+  ROUTE_PAUSE_MAX_SEC,
+  ROUTE_REST_MIN_SEC,
+  ROUTE_REST_MAX_SEC,
 } from '../../constants.js'
 
 /** Tools that show reading animation instead of typing */
@@ -80,6 +84,11 @@ export function createCharacter(
     matrixEffect: null,
     matrixEffectTimer: 0,
     matrixEffectSeeds: [],
+    routeId: null,
+    routeWaypointIndex: 0,
+    routeReturning: false,
+    routePauseTimer: 0,
+    routePhase: null,
   }
 }
 
@@ -90,6 +99,7 @@ export function updateCharacter(
   seats: Map<string, Seat>,
   tileMap: TileTypeVal[][],
   blockedTiles: Set<string>,
+  routes?: WalkRoute[],
 ): void {
   ch.frameTimer += dt
 
@@ -103,6 +113,12 @@ export function updateCharacter(
       if (!ch.isActive) {
         if (ch.seatTimer > 0) {
           ch.seatTimer -= dt
+          break
+        }
+        // When routes exist (static layout), stay in TYPE and let the coordinator
+        // assign route walking. Only transition to IDLE for dynamic layout wandering.
+        if (routes && routes.length > 0) {
+          // Stay in TYPE — coordinator will pick us up
           break
         }
         ch.seatTimer = 0 // clear sentinel
@@ -148,6 +164,70 @@ export function updateCharacter(
         }
         break
       }
+      // Route pause phase: standing at destination, counting down
+      if (ch.routePhase === 'pausing') {
+        ch.routePauseTimer -= dt
+        if (ch.routePauseTimer <= 0) {
+          ch.routePhase = 'returning'
+          const route = (routes ?? []).find(r => r.id === ch.routeId)
+          if (route && route.waypoints.length > 1) {
+            ch.routeWaypointIndex = route.waypoints.length - 2
+            const wp = route.waypoints[ch.routeWaypointIndex]
+            const path = findPath(
+              Math.round(ch.tileCol), Math.round(ch.tileRow),
+              Math.round(wp.col), Math.round(wp.row),
+              tileMap, blockedTiles,
+            )
+            if (path.length > 0) {
+              ch.path = path
+              ch.moveProgress = 0
+              ch.state = CharacterState.WALK
+              ch.frame = 0
+              ch.frameTimer = 0
+            } else {
+              ch.routePhase = 'toSeat'
+            }
+          } else {
+            ch.routePhase = 'toSeat'
+          }
+        }
+        break
+      }
+
+      // Route toSeat phase: need to walk back to seat
+      if (ch.routePhase === 'toSeat') {
+        const seat = ch.seatId ? seats.get(ch.seatId) : null
+        if (seat) {
+          const path = findPath(
+            Math.round(ch.tileCol), Math.round(ch.tileRow),
+            Math.round(seat.seatCol), Math.round(seat.seatRow),
+            tileMap, blockedTiles,
+          )
+          if (path.length > 0) {
+            ch.path = path
+            ch.moveProgress = 0
+            ch.state = CharacterState.WALK
+            ch.frame = 0
+            ch.frameTimer = 0
+          } else {
+            // Teleport to seat
+            ch.tileCol = seat.seatCol
+            ch.tileRow = seat.seatRow
+            ch.x = seat.seatCol * TILE_SIZE + TILE_SIZE / 2
+            ch.y = seat.seatRow * TILE_SIZE + TILE_SIZE / 2
+            ch.state = CharacterState.TYPE
+            ch.dir = seat.facingDir
+            ch.routePhase = null
+            ch.routeId = null
+            ch.seatTimer = randomRange(ROUTE_REST_MIN_SEC, ROUTE_REST_MAX_SEC)
+          }
+        } else {
+          ch.routePhase = null
+          ch.routeId = null
+        }
+        break
+      }
+
       // Countdown wander timer
       ch.wanderTimer -= dt
       if (ch.wanderTimer <= 0) {
@@ -209,6 +289,9 @@ export function updateCharacter(
               ch.state = CharacterState.IDLE
             }
           }
+        } else if (ch.routePhase && ch.routePhase !== 'pausing') {
+          // Route waypoint arrival
+          handleRouteArrival(ch, seats, tileMap, blockedTiles, routes ?? [])
         } else {
           // Check if arrived at assigned seat — sit down for a rest before wandering again
           if (ch.seatId) {
@@ -260,8 +343,12 @@ export function updateCharacter(
         ch.moveProgress = 0
       }
 
-      // If became active while wandering, repath to seat
+      // If became active while wandering/walking route, repath to seat
       if (ch.isActive && ch.seatId) {
+        if (ch.routePhase) {
+          ch.routePhase = null
+          ch.routeId = null
+        }
         const seat = seats.get(ch.seatId)
         if (seat) {
           const lastStep = ch.path[ch.path.length - 1]
@@ -274,6 +361,92 @@ export function updateCharacter(
           }
         }
       }
+      break
+    }
+  }
+}
+
+/** Handle arrival at a route waypoint — advance, pause, or return */
+function handleRouteArrival(
+  ch: Character,
+  seats: Map<string, Seat>,
+  tileMap: TileTypeVal[][],
+  blockedTiles: Set<string>,
+  routes: WalkRoute[],
+): void {
+  const route = routes.find(r => r.id === ch.routeId)
+  if (!route) {
+    ch.routePhase = 'toSeat'
+    ch.state = CharacterState.IDLE
+    return
+  }
+
+  switch (ch.routePhase) {
+    case 'toRoute':
+    case 'onRoute': {
+      const nextIdx = ch.routeWaypointIndex + 1
+      if (nextIdx >= route.waypoints.length) {
+        // Reached final waypoint — pause
+        ch.routePhase = 'pausing'
+        ch.routePauseTimer = randomRange(ROUTE_PAUSE_MIN_SEC, ROUTE_PAUSE_MAX_SEC)
+        ch.state = CharacterState.IDLE
+      } else {
+        ch.routePhase = 'onRoute'
+        ch.routeWaypointIndex = nextIdx
+        const wp = route.waypoints[nextIdx]
+        const path = findPath(
+          Math.round(ch.tileCol), Math.round(ch.tileRow),
+          Math.round(wp.col), Math.round(wp.row),
+          tileMap, blockedTiles,
+        )
+        if (path.length > 0) {
+          ch.path = path
+          ch.moveProgress = 0
+        } else {
+          // Skip unreachable waypoint — try next
+          handleRouteArrival(ch, seats, tileMap, blockedTiles, routes)
+        }
+      }
+      break
+    }
+    case 'returning': {
+      const prevIdx = ch.routeWaypointIndex - 1
+      if (prevIdx < 0) {
+        // Back at start — go to seat
+        ch.routePhase = 'toSeat'
+        ch.state = CharacterState.IDLE
+      } else {
+        ch.routeWaypointIndex = prevIdx
+        const wp = route.waypoints[prevIdx]
+        const path = findPath(
+          Math.round(ch.tileCol), Math.round(ch.tileRow),
+          Math.round(wp.col), Math.round(wp.row),
+          tileMap, blockedTiles,
+        )
+        if (path.length > 0) {
+          ch.path = path
+          ch.moveProgress = 0
+        } else {
+          handleRouteArrival(ch, seats, tileMap, blockedTiles, routes)
+        }
+      }
+      break
+    }
+    case 'toSeat': {
+      const seat = ch.seatId ? seats.get(ch.seatId) : null
+      if (seat) {
+        ch.tileCol = seat.seatCol
+        ch.tileRow = seat.seatRow
+        ch.x = seat.seatCol * TILE_SIZE + TILE_SIZE / 2
+        ch.y = seat.seatRow * TILE_SIZE + TILE_SIZE / 2
+        ch.state = CharacterState.TYPE
+        ch.dir = seat.facingDir
+      } else {
+        ch.state = CharacterState.IDLE
+      }
+      ch.routePhase = null
+      ch.routeId = null
+      ch.seatTimer = randomRange(ROUTE_REST_MIN_SEC, ROUTE_REST_MAX_SEC)
       break
     }
   }

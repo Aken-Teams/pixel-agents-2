@@ -157,6 +157,7 @@ function App() {
   const [mobileView, setMobileView] = useState<'canvas' | 'chat'>('canvas')
 
   const [isDebugMode, setIsDebugMode] = useState(false)
+  const [isRouteDebug, setIsRouteDebug] = useState(false)
   const [isChatCollapsed, setIsChatCollapsed] = useState(
     () => localStorage.getItem('chatPanelCollapsed') === 'true'
   )
@@ -171,6 +172,7 @@ function App() {
   const [hoveredSidebarSkillId, setHoveredSidebarSkillId] = useState<string | null>(null)
 
   const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), [])
+  const handleToggleRouteDebug = useCallback(() => setIsRouteDebug((prev) => !prev), [])
 
   const handleSelectAgent = useCallback((id: number) => {
     wsClient.postMessage({ type: 'focusAgent', id })
@@ -496,6 +498,7 @@ function App() {
         onZoomChange={editor.handleZoomChange}
         panRef={editor.panRef}
         isPanMode={editor.isPanMode}
+        isDebugMode={isRouteDebug}
       />
 
       <ZoomControls
@@ -526,6 +529,8 @@ function App() {
         onSwitchScene={handleSwitchScene}
         isDebugMode={isDebugMode}
         onToggleDebugMode={handleToggleDebugMode}
+        isRouteDebug={isRouteDebug}
+        onToggleRouteDebug={handleToggleRouteDebug}
         teamMembers={enrichedTeamMembers}
         aiProvider={aiProvider}
         deepseekModel={deepseekModel}

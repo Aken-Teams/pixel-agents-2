@@ -1,5 +1,5 @@
 import { TileType, TILE_SIZE, CharacterState } from '../types.js'
-import type { TileType as TileTypeVal, FurnitureInstance, Character, SpriteData, Seat, FloorColor } from '../types.js'
+import type { TileType as TileTypeVal, FurnitureInstance, Character, SpriteData, Seat, FloorColor, WalkRoute } from '../types.js'
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js'
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE, BUBBLE_ALERT_SPRITE } from '../sprites/spriteData.js'
 import { getCharacterSprite } from './characters.js'
@@ -552,6 +552,65 @@ export interface SelectionRenderState {
   characters: Map<number, Character>
 }
 
+/** Render walking route debug overlay: colored lines + waypoint dots */
+function renderRouteDebugOverlay(
+  ctx: CanvasRenderingContext2D,
+  routes: WalkRoute[],
+  activeRouteIds: Set<string>,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  const s = TILE_SIZE * zoom
+  for (const route of routes) {
+    const color = route.debugColor ?? '#ffff00'
+    const isActive = activeRouteIds.has(route.id)
+
+    ctx.save()
+    ctx.globalAlpha = isActive ? 0.8 : 0.3
+    ctx.strokeStyle = color
+    ctx.lineWidth = isActive ? 3 : 2
+    if (!isActive) ctx.setLineDash([4, 4])
+
+    // Draw line connecting waypoints
+    if (route.waypoints.length > 1) {
+      ctx.beginPath()
+      const first = route.waypoints[0]
+      ctx.moveTo(offsetX + first.col * s + s / 2, offsetY + first.row * s + s / 2)
+      for (let i = 1; i < route.waypoints.length; i++) {
+        const wp = route.waypoints[i]
+        ctx.lineTo(offsetX + wp.col * s + s / 2, offsetY + wp.row * s + s / 2)
+      }
+      ctx.stroke()
+    }
+
+    // Draw waypoint dots
+    ctx.setLineDash([])
+    ctx.fillStyle = color
+    ctx.globalAlpha = isActive ? 0.9 : 0.5
+    for (let i = 0; i < route.waypoints.length; i++) {
+      const wp = route.waypoints[i]
+      const cx = offsetX + wp.col * s + s / 2
+      const cy = offsetY + wp.row * s + s / 2
+      ctx.beginPath()
+      ctx.arc(cx, cy, Math.max(3, 3 * zoom), 0, Math.PI * 2)
+      ctx.fill()
+
+      // Label first and last waypoint
+      if (i === 0 || i === route.waypoints.length - 1) {
+        ctx.font = `${Math.max(9, Math.round(9 * zoom))}px monospace`
+        ctx.fillText(
+          i === 0 ? `${route.id} [${wp.col},${wp.row}]` : `[${wp.col},${wp.row}]`,
+          cx + 5 * zoom,
+          cy - 5 * zoom,
+        )
+      }
+    }
+
+    ctx.restore()
+  }
+}
+
 export function renderFrame(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
@@ -568,6 +627,7 @@ export function renderFrame(
   layoutCols?: number,
   layoutRows?: number,
   isStaticBackground?: boolean,
+  routeDebug?: { routes: WalkRoute[]; activeRouteIds: Set<string> },
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -615,6 +675,11 @@ export function renderFrame(
 
   // Speech bubbles (always on top of characters)
   renderBubbles(ctx, characters, offsetX, offsetY, zoom)
+
+  // Route debug overlay
+  if (routeDebug && routeDebug.routes.length > 0) {
+    renderRouteDebugOverlay(ctx, routeDebug.routes, routeDebug.activeRouteIds, offsetX, offsetY, zoom)
+  }
 
   // Editor overlays (not in static background mode)
   if (editor && !isStaticBackground) {

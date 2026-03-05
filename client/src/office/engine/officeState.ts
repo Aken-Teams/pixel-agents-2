@@ -14,8 +14,10 @@ import {
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_HIT_HALF_WIDTH,
   CHARACTER_HIT_HEIGHT,
+  ROUTE_REST_MIN_SEC,
+  ROUTE_REST_MAX_SEC,
 } from '../../constants.js'
-import type { Character, Seat, FurnitureInstance, TileType as TileTypeVal, OfficeLayout, PlacedFurniture } from '../types.js'
+import type { Character, Seat, FurnitureInstance, TileType as TileTypeVal, OfficeLayout, PlacedFurniture, WalkRoute } from '../types.js'
 import { createCharacter, updateCharacter } from './characters.js'
 import { matrixEffectSeeds } from './matrixEffect.js'
 import { isWalkable, getWalkableTiles, findPath } from '../layout/tileMap.js'
@@ -29,6 +31,11 @@ import {
   staticSeatsToMap,
 } from '../layout/layoutSerializer.js'
 import { getCatalogEntry, getOnStateType } from '../layout/furnitureCatalog.js'
+import { WanderCoordinator } from './wanderCoordinator.js'
+
+function randomRange(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
 
 export class OfficeState {
   layout: OfficeLayout
@@ -42,6 +49,8 @@ export class OfficeState {
   cameraFollowId: number | null = null
   hoveredAgentId: number | null = null
   hoveredTile: { col: number; row: number } | null = null
+  wanderCoordinator = new WanderCoordinator()
+  private sceneRoutes: WalkRoute[] = []
   /** Maps "parentId:toolId" → sub-agent character ID (negative) */
   subagentIdMap: Map<string, number> = new Map()
   /** Reverse lookup: sub-agent character ID → parent info */
@@ -61,6 +70,31 @@ export class OfficeState {
       this.furniture = layoutToFurnitureInstances(this.layout.furniture)
     }
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles)
+  }
+
+  setSceneRoutes(routes: WalkRoute[]): void {
+    this.sceneRoutes = routes
+    this.wanderCoordinator.setRoutes(routes)
+    this.wanderCoordinator.reset()
+  }
+
+  getSceneRoutes(): WalkRoute[] {
+    return this.sceneRoutes
+  }
+
+  /** Signal that idle chat started/ended for an agent.
+   *  When idle chat starts, mark agent as inactive and reset seatTimer so
+   *  the coordinator can pick them for walking immediately. */
+  setIdleChatActive(agentId: number, active: boolean): void {
+    const ch = this.characters.get(agentId)
+    if (!ch || ch.isSubagent) return
+    if (active && this.sceneRoutes.length > 0) {
+      // Receiving idle chat is proof the agent isn't working — ensure inactive
+      ch.isActive = false
+      if (ch.routePhase === null) {
+        ch.seatTimer = 0
+      }
+    }
   }
 
   /** Rebuild all derived state from a new layout. Reassigns existing characters.
@@ -142,6 +176,9 @@ export class OfficeState {
         this.relocateCharacterToWalkable(ch)
       }
     }
+
+    // Reset wander coordinator (routes are set separately via setSceneRoutes)
+    this.wanderCoordinator.reset()
   }
 
   /** Move a character to a random walkable tile */
@@ -538,11 +575,31 @@ export class OfficeState {
     const ch = this.characters.get(id)
     if (ch) {
       ch.isActive = active
+      if (active) {
+        // Becoming active: clear any in-progress route
+        if (ch.routePhase) {
+          ch.routePhase = null
+          ch.routeId = null
+          ch.routeReturning = false
+          ch.routeWaypointIndex = 0
+          ch.routePauseTimer = 0
+          this.wanderCoordinator.removeWalker(id)
+        }
+      }
       if (!active) {
         ch.path = []
         ch.moveProgress = 0
+        // Clear any in-progress route
+        if (ch.routePhase) {
+          ch.routePhase = null
+          ch.routeId = null
+          ch.routeReturning = false
+          ch.routeWaypointIndex = 0
+          ch.routePauseTimer = 0
+          this.wanderCoordinator.removeWalker(id)
+        }
         if (isStaticBackgroundLayout(this.layout)) {
-          // Static background: snap to seat and stay seated (no wandering)
+          // Static background: snap to seat
           if (ch.seatId) {
             const seat = this.seats.get(ch.seatId)
             if (seat) {
@@ -554,7 +611,10 @@ export class OfficeState {
             }
           }
           ch.state = CharacterState.TYPE
-          ch.seatTimer = Infinity // never transition to IDLE
+          // If routes exist, use finite timer so coordinator can pick this character later
+          ch.seatTimer = this.sceneRoutes.length > 0
+            ? randomRange(ROUTE_REST_MIN_SEC, ROUTE_REST_MAX_SEC)
+            : Infinity
         } else {
           // Sentinel -1: signals turn just ended, skip next seat rest timer.
           // Prevents the WALK handler from setting a 2-4 min rest on arrival.
@@ -697,6 +757,11 @@ export class OfficeState {
   }
 
   update(dt: number): void {
+    // Run wander coordinator for static background scenes with routes
+    if (isStaticBackgroundLayout(this.layout) && this.sceneRoutes.length > 0) {
+      this.wanderCoordinator.update(dt, this.characters, this.seats, this.tileMap, this.blockedTiles)
+    }
+
     const toDelete: number[] = []
     for (const ch of this.characters.values()) {
       // Handle matrix effect animation
@@ -718,7 +783,8 @@ export class OfficeState {
 
       // Temporarily unblock own seat so character can pathfind to it
       this.withOwnSeatUnblocked(ch, () =>
-        updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles)
+        updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles,
+          isStaticBackgroundLayout(this.layout) ? this.sceneRoutes : undefined)
       )
 
       // Tick bubble timer for waiting and alert bubbles
