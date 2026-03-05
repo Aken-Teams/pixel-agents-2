@@ -91,6 +91,7 @@ export function createCharacter(
     routeReturning: false,
     routePauseTimer: 0,
     routePhase: null,
+    routeEntryIndex: 0,
   }
 }
 
@@ -110,6 +111,21 @@ export function updateCharacter(
       if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
         ch.frameTimer -= TYPE_FRAME_DURATION_SEC
         ch.frame = (ch.frame + 1) % 2
+      }
+      // Route pause at destination with typing/reading animation
+      if (ch.routePhase === 'pausing') {
+        if (ch.isActive) {
+          // Activated during pause — clear route and let normal TYPE logic handle it
+          ch.routePhase = null
+          ch.routeId = null
+          ch.currentTool = null
+        } else {
+          ch.routePauseTimer -= dt
+          if (ch.routePauseTimer <= 0) {
+            startRouteReturn(ch, routes ?? [])
+          }
+          break
+        }
       }
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
@@ -170,27 +186,7 @@ export function updateCharacter(
       if (ch.routePhase === 'pausing') {
         ch.routePauseTimer -= dt
         if (ch.routePauseTimer <= 0) {
-          ch.routePhase = 'returning'
-          const route = (routes ?? []).find(r => r.id === ch.routeId)
-          if (route && route.waypoints.length > 1) {
-            ch.routeWaypointIndex = route.waypoints.length - 2
-            const wp = route.waypoints[ch.routeWaypointIndex]
-            const path = directPath(
-              Math.round(ch.tileCol), Math.round(ch.tileRow),
-              Math.round(wp.col), Math.round(wp.row),
-            )
-            if (path.length > 0) {
-              ch.path = path
-              ch.moveProgress = 0
-              ch.state = CharacterState.WALK
-              ch.frame = 0
-              ch.frameTimer = 0
-            } else {
-              ch.routePhase = 'toSeat'
-            }
-          } else {
-            ch.routePhase = 'toSeat'
-          }
+          startRouteReturn(ch, routes ?? [])
         }
         break
       }
@@ -366,6 +362,36 @@ export function updateCharacter(
   }
 }
 
+/** Start the returning phase — walk back from final waypoint toward entry point */
+function startRouteReturn(ch: Character, routes: WalkRoute[]): void {
+  ch.routePhase = 'returning'
+  ch.currentTool = null // clear any reading tool from pause
+  const route = routes.find(r => r.id === ch.routeId)
+  // Walk back toward entry waypoint; if entry is at/near last wp, go straight to seat
+  const returnTarget = route ? route.waypoints.length - 2 : -1
+  if (route && returnTarget >= ch.routeEntryIndex) {
+    ch.routeWaypointIndex = returnTarget
+    const wp = route.waypoints[ch.routeWaypointIndex]
+    const path = directPath(
+      Math.round(ch.tileCol), Math.round(ch.tileRow),
+      Math.round(wp.col), Math.round(wp.row),
+    )
+    if (path.length > 0) {
+      ch.path = path
+      ch.moveProgress = 0
+      ch.state = CharacterState.WALK
+      ch.frame = 0
+      ch.frameTimer = 0
+    } else {
+      ch.routePhase = 'toSeat'
+      ch.state = CharacterState.IDLE
+    }
+  } else {
+    ch.routePhase = 'toSeat'
+    ch.state = CharacterState.IDLE
+  }
+}
+
 /** Handle arrival at a route waypoint — advance, pause, or return */
 function handleRouteArrival(
   ch: Character,
@@ -384,10 +410,21 @@ function handleRouteArrival(
     case 'onRoute': {
       const nextIdx = ch.routeWaypointIndex + 1
       if (nextIdx >= route.waypoints.length) {
-        // Reached final waypoint — pause
+        // Reached final waypoint — pause with configured action
         ch.routePhase = 'pausing'
         ch.routePauseTimer = randomRange(ROUTE_PAUSE_MIN_SEC, ROUTE_PAUSE_MAX_SEC)
-        ch.state = CharacterState.IDLE
+        ch.frame = 0
+        ch.frameTimer = 0
+        if (route.pauseDir !== undefined) ch.dir = route.pauseDir
+        if (route.pauseAction === 'typing') {
+          ch.state = CharacterState.TYPE
+          ch.currentTool = null
+        } else if (route.pauseAction === 'reading') {
+          ch.state = CharacterState.TYPE
+          ch.currentTool = 'Read' // triggers reading animation
+        } else {
+          ch.state = CharacterState.IDLE // standing (default)
+        }
       } else {
         ch.routePhase = 'onRoute'
         ch.routeWaypointIndex = nextIdx
@@ -408,8 +445,8 @@ function handleRouteArrival(
     }
     case 'returning': {
       const prevIdx = ch.routeWaypointIndex - 1
-      if (prevIdx < 0) {
-        // Back at start — go to seat
+      if (prevIdx < ch.routeEntryIndex) {
+        // Back at entry point — go to seat
         ch.routePhase = 'toSeat'
         ch.state = CharacterState.IDLE
       } else {

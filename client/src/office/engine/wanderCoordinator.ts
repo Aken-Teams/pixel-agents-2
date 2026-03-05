@@ -6,10 +6,21 @@ import {
   ROUTE_STAGGER_MAX_SEC,
   ROUTE_REST_MIN_SEC,
   ROUTE_REST_MAX_SEC,
+  ROUTE_MAX_PICKUP_DIST,
 } from '../../constants.js'
 
 function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min)
+}
+
+/** Manhattan distance from a point to the nearest waypoint on a route */
+function minWaypointDist(route: WalkRoute, col: number, row: number): number {
+  let best = Infinity
+  for (const wp of route.waypoints) {
+    const d = Math.abs(wp.col - col) + Math.abs(wp.row - row)
+    if (d < best) best = d
+  }
+  return best
 }
 
 /** Generate a straight-line tile path between two points (Bresenham-style).
@@ -112,27 +123,24 @@ export class WanderCoordinator {
 
     const seatCol = Math.round(picked.tileCol)
     const seatRow = Math.round(picked.tileRow)
-    const availableRoutes = this.routes
-      .filter(r => !usedRouteIds.has(r.id))
-    // Sort by distance to first waypoint (closest first)
-    availableRoutes.sort((a, b) => {
-      const da = Math.abs(a.waypoints[0].col - seatCol) + Math.abs(a.waypoints[0].row - seatRow)
-      const db = Math.abs(b.waypoints[0].col - seatCol) + Math.abs(b.waypoints[0].row - seatRow)
-      return da - db
-    })
-    let route = availableRoutes[0]
-    if (!route) {
-      // All routes in use — pick closest overall
-      const sorted = [...this.routes].sort((a, b) => {
-        const da = Math.abs(a.waypoints[0].col - seatCol) + Math.abs(a.waypoints[0].row - seatRow)
-        const db = Math.abs(b.waypoints[0].col - seatCol) + Math.abs(b.waypoints[0].row - seatRow)
-        return da - db
-      })
-      route = sorted[0]
+    // Only consider routes within pickup distance
+    const nearbyRoutes = this.routes
+      .filter(r => !usedRouteIds.has(r.id) && minWaypointDist(r, seatCol, seatRow) <= ROUTE_MAX_PICKUP_DIST)
+    let route: WalkRoute | undefined
+    if (nearbyRoutes.length > 0) {
+      // Randomly pick from all nearby unused routes
+      route = nearbyRoutes[Math.floor(Math.random() * nearbyRoutes.length)]
+    } else {
+      // All nearby routes in use — pick randomly from nearby (including in-use)
+      const nearbyAll = this.routes
+        .filter(r => minWaypointDist(r, seatCol, seatRow) <= ROUTE_MAX_PICKUP_DIST)
+      if (nearbyAll.length > 0) {
+        route = nearbyAll[Math.floor(Math.random() * nearbyAll.length)]
+      }
     }
 
-    // Assign route
-    if (this.assignRoute(picked, route, seats)) {
+    // Assign route (skip if nothing nearby)
+    if (route && this.assignRoute(picked, route, seats)) {
       this.activeWalkers.add(picked.id)
       this.staggerTimer = randomRange(ROUTE_STAGGER_MIN_SEC, ROUTE_STAGGER_MAX_SEC)
     }
@@ -145,15 +153,27 @@ export class WanderCoordinator {
   ): boolean {
     if (route.waypoints.length === 0) return false
 
-    const wp = route.waypoints[0]
     const startCol = Math.round(ch.tileCol)
     const startRow = Math.round(ch.tileRow)
 
+    // Find nearest waypoint on this route (allows mid-route entry)
+    let nearestIdx = 0
+    let nearestDist = Infinity
+    for (let i = 0; i < route.waypoints.length; i++) {
+      const d = Math.abs(route.waypoints[i].col - startCol) + Math.abs(route.waypoints[i].row - startRow)
+      if (d < nearestDist) {
+        nearestDist = d
+        nearestIdx = i
+      }
+    }
+
+    const wp = route.waypoints[nearestIdx]
     const path = directPath(startCol, startRow, Math.round(wp.col), Math.round(wp.row))
 
     ch.routeId = route.id
     ch.routePhase = 'toRoute'
-    ch.routeWaypointIndex = 0
+    ch.routeWaypointIndex = nearestIdx
+    ch.routeEntryIndex = nearestIdx
     ch.routeReturning = false
     ch.routePauseTimer = 0
 
@@ -169,7 +189,7 @@ export class WanderCoordinator {
       ch.x = startCol * TILE_SIZE + TILE_SIZE / 2
       ch.y = startRow * TILE_SIZE + TILE_SIZE / 2
     } else {
-      // Already at first waypoint — advance to onRoute phase
+      // Already at entry waypoint — advance to onRoute phase
       ch.routePhase = 'onRoute'
       ch.state = CharacterState.IDLE
     }

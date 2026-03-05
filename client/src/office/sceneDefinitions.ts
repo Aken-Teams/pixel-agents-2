@@ -201,6 +201,15 @@ const level5Routes: WalkRoute[] = [
   { id: 'l5-bottom', debugColor: '#66cc66', waypoints: [
     { col: 35, row: 43 }, { col: 35, row: 39 }, { col: 52, row: 39 }, { col: 52, row: 36 }
   ]},
+  { id: 'l5-bottom-2', debugColor: '#66cc66', waypoints: [
+    { col: 35, row: 43 }, { col: 35, row: 39 }, { col: 48, row: 39 }, { col: 48, row: 38 }
+  ]},
+  { id: 'l5-bottom-right', debugColor: '#e66d', waypoints: [
+    { col: 77, row: 34 }, { col: 81, row: 34 }, { col: 81, row: 32 }
+  ]},
+  { id: 'l5-bottom-right-2', debugColor: '#e66d', waypoints: [
+    { col: 77, row: 34 }, { col: 77, row: 31 }, { col: 73, row: 31 }, { col: 73, row: 30 }
+  ]},
 ]
 
 const level6Routes: WalkRoute[] = [

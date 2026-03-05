@@ -164,6 +164,10 @@ export interface WalkRoute {
   waypoints: Array<{ col: number; row: number }>
   /** Color for debug overlay */
   debugColor?: string
+  /** Action at the final waypoint during pause: 'standing' (default), 'typing', or 'reading' */
+  pauseAction?: 'standing' | 'typing' | 'reading'
+  /** Direction the character faces at the final waypoint during pause */
+  pauseDir?: Direction
 }
 
 export interface Character {
@@ -231,4 +235,6 @@ export interface Character {
   routePauseTimer: number
   /** Current phase of route walking lifecycle */
   routePhase: 'toRoute' | 'onRoute' | 'pausing' | 'returning' | 'toSeat' | null
+  /** Waypoint index where the character entered the route (for mid-route entry) */
+  routeEntryIndex: number
 }
