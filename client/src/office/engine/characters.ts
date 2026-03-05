@@ -5,6 +5,7 @@ import { findPath } from '../layout/tileMap.js'
 import { directPath } from './wanderCoordinator.js'
 import {
   WALK_SPEED_PX_PER_SEC,
+  RUSH_SPEED_PX_PER_SEC,
   WALK_FRAME_DURATION_SEC,
   TYPE_FRAME_DURATION_SEC,
   WANDER_PAUSE_MIN_SEC,
@@ -165,7 +166,11 @@ export function updateCharacter(
         }
         const seat = seats.get(ch.seatId)
         if (seat) {
-          const path = findPath(ch.tileCol, ch.tileRow, seat.seatCol, seat.seatRow, tileMap, blockedTiles)
+          // Static backgrounds use fractional seat coords — use directPath;
+          // dynamic layouts use integer tile coords — use BFS findPath.
+          const path = routes
+            ? directPath(Math.round(ch.tileCol), Math.round(ch.tileRow), Math.round(seat.seatCol), Math.round(seat.seatRow))
+            : findPath(ch.tileCol, ch.tileRow, seat.seatCol, seat.seatRow, tileMap, blockedTiles)
           if (path.length > 0) {
             ch.path = path
             ch.moveProgress = 0
@@ -321,7 +326,8 @@ export function updateCharacter(
       const nextTile = ch.path[0]
       ch.dir = directionBetween(ch.tileCol, ch.tileRow, nextTile.col, nextTile.row)
 
-      ch.moveProgress += (WALK_SPEED_PX_PER_SEC / TILE_SIZE) * dt
+      const speed = ch.isActive ? RUSH_SPEED_PX_PER_SEC : WALK_SPEED_PX_PER_SEC
+      ch.moveProgress += (speed / TILE_SIZE) * dt
 
       const fromCenter = tileCenter(ch.tileCol, ch.tileRow)
       const toCenter = tileCenter(nextTile.col, nextTile.row)
@@ -349,7 +355,10 @@ export function updateCharacter(
         if (seat) {
           const lastStep = ch.path[ch.path.length - 1]
           if (!lastStep || lastStep.col !== seat.seatCol || lastStep.row !== seat.seatRow) {
-            const newPath = findPath(ch.tileCol, ch.tileRow, seat.seatCol, seat.seatRow, tileMap, blockedTiles)
+            // Static backgrounds use fractional seat coords — use directPath
+            const newPath = routes
+              ? directPath(Math.round(ch.tileCol), Math.round(ch.tileRow), Math.round(seat.seatCol), Math.round(seat.seatRow))
+              : findPath(ch.tileCol, ch.tileRow, seat.seatCol, seat.seatRow, tileMap, blockedTiles)
             if (newPath.length > 0) {
               ch.path = newPath
               ch.moveProgress = 0

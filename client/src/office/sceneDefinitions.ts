@@ -201,7 +201,7 @@ const level5Routes: WalkRoute[] = [
     { col: 42, row: 10 }, { col: 46, row: 10 }, { col: 46, row: 9 },
   ]},
   { id: 'l5-right-top-2', debugColor: '#6679cc', waypoints: [
-    { col: 42, row: 10 },  { col: 51.5, row: 10 }, { col: 51.5, row: 9 },
+    { col: 42, row: 10 },  { col: 52, row: 10 }, { col: 52, row: 9 },
   ]},
   { id: 'l5-right-top-3', debugColor: '#6679cc',pauseAction: 'standing',  pauseDir: 2, waypoints: [
     { col: 42, row: 9 },  { col: 59, row: 9 },   { col: 59, row: 12 },
@@ -226,7 +226,7 @@ const level5Routes: WalkRoute[] = [
     { col: 67, row: 12 }, { col: 67, row: 9 }, { col: 73, row: 9 }, { col: 73, row: 8 },
   ]},
   { id: 'l5-right-wing-4', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
-    { col: 67, row: 18 }, { col: 67, row: 21 }, { col: 55, row: 21 }, { col: 55, row: 15 }, { col: 51.5, row: 15 }, { col: 51.5, row: 9 }
+    { col: 67, row: 18 }, { col: 67, row: 21 }, { col: 55, row: 21 }, { col: 55, row: 15 }, { col: 52, row: 15 }, { col: 52, row: 9 }
   ]},
   { id: 'l5-right-wing-5', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 73, row: 21 }, { col: 55, row: 21 }, { col: 55, row: 15 }, { col: 52, row: 15 }, { col: 52, row: 9 }, { col: 59, row: 9 }
@@ -249,7 +249,7 @@ const level5Routes: WalkRoute[] = [
     { col: 48, row: 37 }, { col: 48, row: 39 }, { col: 43, row: 39 }, { col: 43, row: 38 }
   ]},
   { id: 'l5-bottom-5', debugColor: '#66cc66',pauseAction: 'typing',  pauseDir: 3, waypoints: [
-    { col: 48, row: 37 }, { col: 48, row: 39 }, { col: 43, row: 39 }, { col: 43, row: 43.3 }
+    { col: 48, row: 37 }, { col: 48, row: 39 }, { col: 43, row: 39 }, { col: 43, row: 43 }
   ]},
   { id: 'l5-bottom-6', debugColor: '#66cc66',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 48, row: 37 }, { col: 48, row: 39 }, { col: 58, row: 39 }, { col: 58, row: 21 }, { col: 73, row: 21 }, { col: 73, row: 18 }
