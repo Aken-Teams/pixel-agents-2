@@ -19,7 +19,7 @@ export const SEAT_REST_MIN_SEC = 120.0
 export const SEAT_REST_MAX_SEC = 240.0
 
 // ── Route Walking ───────────────────────────────────────
-export const MAX_ROUTE_WALKERS = 2
+export const MAX_ROUTE_WALKERS = 5
 export const ROUTE_PAUSE_MIN_SEC = 3.0
 export const ROUTE_PAUSE_MAX_SEC = 8.0
 export const ROUTE_STAGGER_MIN_SEC = 5.0
