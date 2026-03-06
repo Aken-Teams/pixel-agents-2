@@ -493,6 +493,9 @@ const level6Routes: WalkRoute[] = [
   { id: 'l6-bottom-left-4', debugColor: '#66cc70', waypoints: [
     { col: 12, row: 35 },{ col: 15, row: 35 }, { col: 15, row: 37 },  { col: 21, row: 37 },{ col: 21, row: 26 },{ col: 28, row: 26 }, 
   ]},
+  { id: 'l6-bottom-left-5', debugColor: '#66cc70',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 12, row: 35 },{ col: 15, row: 35 }, { col: 15, row: 37 }, { col: 21, row: 37 }, { col: 21, row: 27 },{ col: 9, row: 27 }, 
+  ]},
 
   { id: 'l6-bottom-left2-1', debugColor: '#ccaa66', waypoints: [
     { col: 27, row: 37 },{ col: 27, row: 36 }, { col: 34, row: 36 },  { col: 34, row: 35 }
@@ -545,11 +548,20 @@ const level7Routes: WalkRoute[] = [
   { id: 'l7-center', debugColor: '#00cccc', waypoints: [
     { col: 25, row: 15 }, { col: 35, row: 15 }, { col: 35, row: 28 },
   ]},
+
   { id: 'l7-left', debugColor: '#cc66cc', waypoints: [
     { col: 10, row: 22 }, { col: 10, row: 32 }, { col: 20, row: 32 },
   ]},
+
   { id: 'l7-right', debugColor: '#cccc00', waypoints: [
     { col: 55, row: 20 }, { col: 55, row: 30 }, { col: 65, row: 30 },
+  ]},
+
+  { id: 'l7-left-bottom-1', debugColor: '#00cc00', waypoints: [
+    { col: 17, row: 41 }, { col: 19, row: 41 }, 
+  ]},
+  { id: 'l7-left-bottom-2', debugColor: '#00cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 17, row: 41 }, { col: 19, row: 41 }, { col: 19, row: 36 }, { col: 11, row: 36 }, 
   ]},
 ]
 
