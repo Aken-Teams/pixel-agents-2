@@ -126,6 +126,22 @@ export class OfficeState {
       }
     }
 
+    // Clear all route/walk state so characters don't continue old-scene routes
+    for (const ch of this.characters.values()) {
+      ch.path = []
+      ch.moveProgress = 0
+      ch.routePhase = null
+      ch.routeId = null
+      ch.routeReturning = false
+      ch.routeWaypointIndex = 0
+      ch.routeEntryIndex = 0
+      ch.routePauseTimer = 0
+      ch.state = CharacterState.TYPE
+      ch.frame = 0
+      ch.frameTimer = 0
+      ch.seatTimer = 0
+    }
+
     // Reassign characters to new seats, preserving existing assignments when possible
     for (const seat of this.seats.values()) {
       seat.assigned = false

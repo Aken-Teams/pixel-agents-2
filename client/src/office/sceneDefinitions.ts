@@ -177,14 +177,95 @@ const level8Seats: StaticSeat[] = [
 // Placeholder waypoints — adjust using the debug overlay
 
 const level4Routes: WalkRoute[] = [
-  { id: 'l4-main-hall', debugColor: '#00cccc', waypoints: [
-    { col: 20, row: 18 }, { col: 20, row: 24 }, { col: 15, row: 24 },
+  { id: 'l4-main-hall-1', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 27 }, { col: 9, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 25, row: 22 }, { col: 25, row: 21 }
   ]},
-  { id: 'l4-meeting', debugColor: '#cc66cc', waypoints: [
-    { col: 20, row: 18 }, { col: 28, row: 18 }, { col: 28, row: 25 },
+  { id: 'l4-main-hall-2', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 27 }, { col: 9, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 15, row: 22 }, { col: 15, row: 21 }
   ]},
-  { id: 'l4-lower', debugColor: '#cccc00', waypoints: [
-    { col: 10, row: 30 }, { col: 10, row: 38 }, { col: 20, row: 38 },
+  { id: 'l4-main-hall-3', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 27 }, { col: 9, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 11, row: 22 }, { col: 11, row: 21 }
+  ]},
+  { id: 'l4-main-hall-4', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 27 }, { col: 9, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 31, row: 22 }, { col: 31, row: 21 }
+  ]},
+  { id: 'l4-main-hall-5', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 27 }, { col: 9, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 36, row: 22 }, { col: 36, row: 21 }
+  ]},
+
+  { id: 'l4-main-hall-6', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 27 }, { col: 16, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 25, row: 22 }, { col: 25, row: 21 }
+  ]},
+  { id: 'l4-main-hall-7', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 27 }, { col: 16, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 15, row: 22 }, { col: 15, row: 21 }
+  ]},
+  { id: 'l4-main-hall-8', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 27 }, { col: 16, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 11, row: 22 }, { col: 11, row: 21 }
+  ]},
+  { id: 'l4-main-hall-9', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 27 }, { col: 16, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 31, row: 22 }, { col: 31, row: 21 }
+  ]},
+  { id: 'l4-main-hall-10', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 27 }, { col: 16, row: 28 }, { col: 23, row: 28 }, { col: 23, row: 22 }, { col: 36, row: 22 }, { col: 36, row: 21 }
+  ]},
+
+  { id: 'l4-main-hall2-1', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 33 }, { col: 9, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 25, row: 22 }, { col: 25, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-2', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 33 }, { col: 9, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 15, row: 22 }, { col: 15, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-3', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 33 }, { col: 9, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 11, row: 22 }, { col: 11, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-4', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 33 }, { col: 9, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 31, row: 22 }, { col: 31, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-5', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 33 }, { col: 9, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 36, row: 22 }, { col: 36, row: 21 }
+  ]},
+
+  { id: 'l4-main-hall2-6', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 33 }, { col: 16, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 25, row: 22 }, { col: 25, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-7', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 33 }, { col: 16, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 15, row: 22 }, { col: 15, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-8', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 33 }, { col: 16, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 11, row: 22 }, { col: 11, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-9', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+   { col: 16, row: 33 }, { col: 16, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 31, row: 22 }, { col: 31, row: 21 }
+  ]},
+  { id: 'l4-main-hall2-10', debugColor: '#cc2900',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 16, row: 33 }, { col: 16, row: 34 }, { col: 23, row: 34 }, { col: 23, row: 22 }, { col: 36, row: 22 }, { col: 36, row: 21 }
+  ]},
+
+  { id: 'l4-meeting-1', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 20, row: 6 }, { col: 24, row: 6 },
+  ]},
+  { id: 'l4-meeting-2', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 20, row: 6 }
+  ]},
+  { id: 'l4-meeting-3', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 20, row: 6 }, { col: 16, row: 6 },
+  ]},
+
+  { id: 'l4-lower-1', debugColor: '#cccc00',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 12, row: 40 }, { col: 17, row: 40 }, { col: 17, row: 45 },
+  ]},
+  { id: 'l4-lower-2', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 12, row: 40 }, { col: 17, row: 40 }, { col: 17, row: 42 }, { col: 23, row: 42 }, { col: 23, row: 22 }, { col: 25, row: 22 }, { col: 25, row: 21 }
+  ]},
+
+  { id: 'l4-bottom-1', debugColor: '#008bcc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 33, row: 45 }, { col: 36, row: 45 },
+  ]},
+  { id: 'l4-bottom-2', debugColor: '#008bcc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 33, row: 45 }, { col: 36, row: 45 }, { col: 36, row: 39 }, 
+  ]},
+  { id: 'l4-bottom-3', debugColor: '#008bcc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 33, row: 45 }, { col: 36, row: 45 }, { col: 36, row: 39 }, { col: 31, row: 39 }, { col: 31, row: 38 } 
   ]},
 ]
 
@@ -345,14 +426,118 @@ const level5Routes: WalkRoute[] = [
 ]
 
 const level6Routes: WalkRoute[] = [
-  { id: 'l6-main', debugColor: '#00cccc', waypoints: [
-    { col: 25, row: 15 }, { col: 35, row: 15 }, { col: 35, row: 25 },
+  { id: 'l6-right-top-1', debugColor: '#c900cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 64, row: 13 },{ col: 64, row: 9 }
   ]},
-  { id: 'l6-left', debugColor: '#cc66cc', waypoints: [
-    { col: 10, row: 20 }, { col: 10, row: 30 }, { col: 20, row: 30 },
+  { id: 'l6-right-top-2', debugColor: '#c900cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 64, row: 13 },{ col: 72, row: 13 },{ col: 72, row: 12 }
   ]},
-  { id: 'l6-right', debugColor: '#cccc00', waypoints: [
-    { col: 55, row: 15 }, { col: 55, row: 28 }, { col: 65, row: 28 },
+
+  { id: 'l6-left-top-1', debugColor: '#00cccc',pauseAction: 'typing',  pauseDir: 3, waypoints: [
+    { col: 5, row: 17 },{ col: 8, row: 17 },{ col: 14, row: 17 },{ col: 18, row: 17 },{ col: 24, row: 17 }, { col: 24, row: 13 },{ col: 24, row: 7 }
+  ]},
+  { id: 'l6-left-top-2', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 5, row: 17 },{ col: 8, row: 17 },{ col: 14, row: 17 },{ col: 18, row: 17 },{ col: 24, row: 17 }, { col: 24, row: 13 },{ col: 24, row: 9 },  { col: 32, row: 9 },  { col: 32, row: 8 }
+  ]},
+  { id: 'l6-left-top-3', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 5, row: 17 },{ col: 8, row: 17 },{ col: 14, row: 17 },{ col: 18, row: 17 },{ col: 24, row: 17 }, { col: 24, row: 13 },  { col: 24, row: 9 },  { col: 34, row: 9 },  { col: 34, row: 8 }
+  ]},
+  { id: 'l6-left-top-4', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 5, row: 17 },{ col: 8, row: 17 },{ col: 14, row: 17 },{ col: 18, row: 17 },{ col: 24, row: 17 }, { col: 24, row: 13 }, { col: 24, row: 9 },  { col: 43, row: 9 },  
+  ]},
+  { id: 'l6-left-top-5', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 5, row: 17 },{ col: 8, row: 17 },{ col: 14, row: 17 },{ col: 18, row: 17 },{ col: 24, row: 17 }, { col: 24, row: 13 }, { col: 24, row: 9 },  { col: 48, row: 9 },  { col: 48, row: 8 },  
+  ]},
+
+  { id: 'l6-left-top-6', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 2, waypoints: [
+    { col: 55, row: 9 },{ col: 55, row: 11 },
+  ]},
+  { id: 'l6-left-top-7', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 55, row: 9 },{ col: 55, row: 12 },{ col: 51, row: 12 },{ col: 51, row: 18 },{ col: 64, row: 18 },
+  ]},
+
+
+  { id: 'l6-left-middle-1', debugColor: '#6675cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 31, row: 18 }, { col: 28, row: 18 },   { col: 28, row: 9 },  { col: 34, row: 9 },  { col: 34, row: 8 }
+  ]},
+  { id: 'l6-left-middle-2', debugColor: '#6675cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 31, row: 18 }, { col: 28, row: 18 },  { col: 28, row: 9 },  { col: 32, row: 9 },  { col: 32, row: 8 }
+  ]},
+  { id: 'l6-left-middle-3', debugColor: '#6675cc',pauseAction: 'typing',  pauseDir: 3, waypoints: [
+    { col: 31, row: 18 }, { col: 28, row: 18 },  { col: 28, row: 9 },  { col: 24, row: 9 },  { col: 24, row: 7 }
+  ]},
+
+
+  { id: 'l6-left-1', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 11, row: 25 }, { col: 11, row: 27 }, { col: 9, row: 27 },
+  ]},
+  { id: 'l6-left-2', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 11, row: 25 }, { col: 7, row: 25 }, 
+  ]},
+  { id: 'l6-left-3', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 11, row: 25 }, { col: 11, row: 27 }, { col: 9, row: 27 },{ col: 9, row: 28 },
+  ]},
+  { id: 'l6-left-4', debugColor: '#cc66cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 13, row: 26 }, { col: 28, row: 26 }, { col: 28, row: 24 },{ col: 31, row: 24 },
+  ]},
+
+  { id: 'l6-bottom-left-1', debugColor: '#66cc70', waypoints: [
+    { col: 12, row: 35 },{ col: 15, row: 35 }, { col: 15, row: 37 },  { col: 21, row: 37 },{ col: 21, row: 25 }, 
+  ]},
+  { id: 'l6-bottom-left-2', debugColor: '#66cc70', waypoints: [
+    { col: 12, row: 35 },{ col: 15, row: 35 },{ col: 15, row: 37 },  { col: 34, row: 37 },  { col: 34, row: 35 },
+  ]},
+  { id: 'l6-bottom-left-3', debugColor: '#66cc70',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 9, row: 35 },{ col: 8, row: 35 },{ col: 8, row: 36 },{ col: 7, row: 36 },{ col: 7, row: 37 },{ col: 5, row: 37 },
+  ]},
+  { id: 'l6-bottom-left-4', debugColor: '#66cc70', waypoints: [
+    { col: 12, row: 35 },{ col: 15, row: 35 }, { col: 15, row: 37 },  { col: 21, row: 37 },{ col: 21, row: 26 },{ col: 28, row: 26 }, 
+  ]},
+
+  { id: 'l6-bottom-left2-1', debugColor: '#ccaa66', waypoints: [
+    { col: 27, row: 37 },{ col: 27, row: 36 }, { col: 34, row: 36 },  { col: 34, row: 35 }
+  ]},
+  { id: 'l6-bottom-left2-2', debugColor: '#ccaa66',pauseAction: 'standing',  pauseDir: 2, waypoints: [
+    { col: 27, row: 37 },{ col: 27, row: 36 }, { col: 31, row: 36 },  { col: 31, row: 27 },  { col: 28, row: 27 },  { col: 28, row: 18 },  { col: 29, row: 18 }
+  ]},
+  { id: 'l6-bottom-left2-3', debugColor: '#ccaa66',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 27, row: 37 },{ col: 27, row: 36 }, { col: 31, row: 36 },  { col: 31, row: 27 },  { col: 28, row: 27 },  { col: 28, row: 9 },  { col: 34, row: 9 },  { col: 34, row: 8 }
+  ]},
+
+  { id: 'l6-bottom-1', debugColor: '#cc6666', waypoints: [
+    { col: 38, row: 38 }, { col: 38, row: 32 }, 
+  ]},
+  { id: 'l6-bottom-2', debugColor: '#cc6666', waypoints: [
+    { col: 38, row: 38 }, { col: 38, row: 35 }, { col: 39, row: 35 }, 
+  ]},
+  { id: 'l6-bottom-3', debugColor: '#cc6666', waypoints: [
+    { col: 38, row: 38 }, { col: 38, row: 36 }, { col: 34, row: 36 }, { col: 34, row: 35 }, 
+  ]},
+  { id: 'l6-bottom-4', debugColor: '#cc6666',pauseAction: 'typing',  pauseDir: 1, waypoints: [
+    { col: 38, row: 38 }, { col: 38, row: 36 }, { col: 33, row: 36 }, { col: 33, row: 40 }, 
+  ]},
+  { id: 'l6-bottom-5', debugColor: '#cc6666',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 38, row: 38 }, { col: 38, row: 36 }, { col: 20, row: 36 }, { col: 20, row: 39 },
+  ]},
+
+  { id: 'l6-bottom-6', debugColor: '#cc6666',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 42, row: 32 }, { col: 49, row: 32 }, 
+  ]},
+
+  { id: 'l6-bottom-right-1', debugColor: '#cccc00', waypoints: [
+    { col: 64, row: 31 }, { col: 62, row: 31 }, { col: 62, row: 30 },
+  ]},
+  { id: 'l6-bottom-right-2', debugColor: '#cccc00', waypoints: [
+    { col: 71, row: 31 }, { col: 73, row: 31 }, { col: 73, row: 30 },
+  ]},
+  { id: 'l6-bottom-right-3', debugColor: '#cccc00', waypoints: [
+    { col: 64, row: 31 }, { col: 60, row: 31 }, { col: 60, row: 35 }, { col: 50, row: 35 },
+  ]},
+  { id: 'l6-bottom-right-4', debugColor: '#cccc00',pauseAction: 'typing',  pauseDir: 1, waypoints: [
+    { col: 75, row: 34 }, { col: 77, row: 34 }, 
+  ]},
+  { id: 'l6-bottom-right-5', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 64, row: 31 }, { col: 60, row: 31 }, { col: 60, row: 35 }, { col: 54, row: 35 },{ col: 54, row: 18 },{ col: 74, row: 18 },
   ]},
 ]
 
