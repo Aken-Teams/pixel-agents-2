@@ -658,22 +658,22 @@ const level8Routes: WalkRoute[] = [
     { col: 61, row: 12 }, { col: 61, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 36 }, { col: 63, row: 36 }, 
   ]},
 
-  { id: 'l8-left-middle-1', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 2, waypoints: [
+  { id: 'l8-top-middle-1', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 2, waypoints: [
     { col: 48, row: 15 }, { col: 52, row: 15 }, 
   ]},
-  { id: 'l8-left-middle-2', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+  { id: 'l8-top-middle-2', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 43, row: 15 }, { col: 39, row: 15 }, { col: 39, row: 13 }, 
   ]},
-  { id: 'l8-left-middle-3', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+  { id: 'l8-top-middle-3', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 37 },{ col: 45, row: 37 }, 
   ]},
-  { id: 'l8-left-middle-4', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+  { id: 'l8-top-middle-4', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
     { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 37 },{ col: 45, row: 37 }, { col: 45, row: 38 }, 
   ]},
-  { id: 'l8-left-middle-5', debugColor: '#41cc00',pauseAction: 'reading',  pauseDir: 2, waypoints: [
+  { id: 'l8-top-middle-5', debugColor: '#41cc00',pauseAction: 'reading',  pauseDir: 2, waypoints: [
     { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 20 }, { col: 63, row: 20 }, { col: 63, row: 15 },
   ]},
-  { id: 'l8-left-middle-6', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+  { id: 'l8-top-middle-6', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
     { col: 43, row: 15 }, { col: 42, row: 15 }, { col: 42, row: 19 }, 
   ]},
 
@@ -696,20 +696,20 @@ const level8Routes: WalkRoute[] = [
   { id: 'l8-left-top-6', debugColor: '#cc0000',pauseAction: 'reading',  pauseDir: 0, waypoints: [
     { col: 13, row: 21 }, { col: 7, row: 21 }, { col: 7, row: 18 },{ col: 7, row: 16 },{ col: 5, row: 16 },{ col: 4, row: 14 },
   ]},
-  { id: 'l8-left-top-6', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+  { id: 'l8-left-top-7', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 1, waypoints: [
     { col: 13, row: 21 }, { col: 7, row: 21 }, { col: 7, row: 18 },{ col: 5, row: 18 },
   ]},
 
-  { id: 'l8-left-top-7', debugColor: '#0700cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+  { id: 'l8-left-top-8', debugColor: '#0700cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 15, row: 12 }, { col: 18, row: 12 }, 
   ]},
-  { id: 'l8-left-top-8', debugColor: '#0700cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+  { id: 'l8-left-top-9', debugColor: '#0700cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 15, row: 12 }, { col: 18, row: 12 }, { col: 18, row: 13 }, { col: 23, row: 13 }, 
   ]},
-  { id: 'l8-left-top-9', debugColor: '#0700cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+  { id: 'l8-left-top-10', debugColor: '#0700cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
     { col: 12, row: 13 }, { col: 8, row: 13 }, 
   ]},
-  { id: 'l8-left-top-10', debugColor: '#0700cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+  { id: 'l8-left-top-11', debugColor: '#0700cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
     { col: 13, row: 13 }, { col: 13, row: 14 }, { col: 15, row: 14 }, 
   ]},
 
