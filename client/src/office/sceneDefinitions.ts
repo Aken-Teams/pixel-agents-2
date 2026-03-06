@@ -545,17 +545,86 @@ const level6Routes: WalkRoute[] = [
 ]
 
 const level7Routes: WalkRoute[] = [
-  { id: 'l7-center', debugColor: '#00cccc', waypoints: [
-    { col: 25, row: 15 }, { col: 35, row: 15 }, { col: 35, row: 28 },
+  { id: 'l7-right-top-1', debugColor: '#004bcc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 64, row: 12 },  { col: 61, row: 12 }, 
+  ]},
+  { id: 'l7-right-top-2', debugColor: '#004bcc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 74, row: 12 },  { col: 76, row: 12 }, 
   ]},
 
-  { id: 'l7-left', debugColor: '#cc66cc', waypoints: [
-    { col: 10, row: 22 }, { col: 10, row: 32 }, { col: 20, row: 32 },
+  { id: 'l7-right-bottom-1', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 62, row: 35 },  { col: 55, row: 35 }, { col: 53, row: 35 }, { col: 53, row: 36 }, { col: 45, row: 36 }, 
+  ]},
+  { id: 'l7-right-bottom-2', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 62, row: 35 },  { col: 55, row: 35 }, { col: 53, row: 35 }, { col: 53, row: 36 }, { col: 45, row: 36 }, { col: 45, row: 38 }, 
+  ]},
+  { id: 'l7-right-bottom-3', debugColor: '#cc0000',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 62, row: 35 },  { col: 62, row: 36 },{ col: 64, row: 36 }, { col: 64, row: 37 }, { col: 73, row: 37 }, { col: 73, row: 36 }, { col: 74, row: 36 }, { col: 74, row: 33 },{ col: 75, row: 33 },  
+  ]},
+  { id: 'l7-right-bottom-4', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 62, row: 35 },  { col: 55, row: 35 },{ col: 55, row: 19 }, { col: 61, row: 19 }, { col: 61, row: 20 }, { col: 74, row: 20 }, 
+  ]},
+  { id: 'l7-right-bottom-5', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 62, row: 35 },  { col: 55, row: 35 },{ col: 55, row: 19 }, { col: 51, row: 19 }, { col: 51, row: 17 }, { col: 42, row: 17 }, 
   ]},
 
-  { id: 'l7-right', debugColor: '#cccc00', waypoints: [
-    { col: 55, row: 20 }, { col: 55, row: 30 }, { col: 65, row: 30 },
+  { id: 'l7-center-top-1', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 2, waypoints: [
+    { col: 48, row: 15 }, { col: 52, row: 15 }, 
   ]},
+  { id: 'l7-center-top-2', debugColor: '#00cccc',pauseAction: 'reading',  pauseDir: 2, waypoints: [
+    { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 19 }, { col: 63, row: 19 }, { col: 63, row: 15 }, 
+  ]},
+  { id: 'l7-center-top-3', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 19 }, { col: 55, row: 19 }, { col: 55, row: 35 }, { col: 53, row: 35 }, { col: 53, row: 36 }, { col: 45, row: 36 }, 
+  ]},
+  { id: 'l7-center-top-4', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 19 }, { col: 55, row: 19 }, { col: 55, row: 35 }, { col: 53, row: 35 }, { col: 53, row: 36 }, { col: 45, row: 36 }, { col: 45, row: 38 }, 
+  ]},
+
+  { id: 'l7-center-top-5', debugColor: '#00cccc',pauseAction: 'reading',  pauseDir: 1, waypoints: [
+    { col: 39, row: 36 }, { col: 39, row: 37 }, { col: 35, row: 37 }, { col: 35, row: 39 }, { col: 34, row: 39 },
+  ]},
+
+  { id: 'l7-left-top-1', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 20, row: 13 }, { col: 28, row: 13 }, 
+  ]},
+  { id: 'l7-left-top-2', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 20, row: 13 }, { col: 6, row: 13 }, { col: 6, row: 12 }, 
+  ]},
+  { id: 'l7-left-top-3', debugColor: '#cc66cc', waypoints: [
+    { col: 20, row: 13 }, { col: 6, row: 13 }, { col: 6, row: 12 }, 
+  ]},
+  { id: 'l7-left-top-4', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 20, row: 13 }, { col: 34, row: 13 }, { col: 34, row: 14 }, { col: 37, row: 14 }, { col: 37, row: 17 },{ col: 49, row: 17 },
+  ]},
+
+  { id: 'l7-left-top-5', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 18, row: 19 }, { col: 19, row: 19 },{ col: 19, row: 17 }, { col: 19, row: 14 },  
+  ]},
+  { id: 'l7-left-top-6', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 13, row: 19 }, { col: 12, row: 19 }, { col: 12, row: 15 }, { col: 12, row: 14 },  { col: 19, row: 14 },  
+  ]},
+
+  { id: 'l7-left-middle-1', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 33, row: 27 }, { col: 28, row: 27 }, { col: 28, row: 18 },
+  ]},
+  { id: 'l7-left-middle-2', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 33, row: 27 }, { col: 28, row: 27 }, { col: 28, row: 13 },
+  ]},
+  { id: 'l7-left-middle-3', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 33, row: 27 }, { col: 28, row: 27 }, { col: 28, row: 13 },{ col: 20, row: 13 },{ col: 20, row: 14 },
+  ]},
+
+  { id: 'l7-left-middle-4', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 31, row: 18 }, { col: 28, row: 18 },
+  ]},
+  { id: 'l7-left-middle-5', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 31, row: 18 }, { col: 28, row: 18 }, { col: 28, row: 13 },
+  ]},
+  { id: 'l7-left-middle-6', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 31, row: 18 }, { col: 28, row: 18 }, { col: 28, row: 13 },{ col: 20, row: 13 },{ col: 20, row: 14 },
+  ]},
+
 
   { id: 'l7-left-bottom-1', debugColor: '#00cc00', waypoints: [
     { col: 17, row: 41 }, { col: 19, row: 41 }, 
@@ -563,20 +632,108 @@ const level7Routes: WalkRoute[] = [
   { id: 'l7-left-bottom-2', debugColor: '#00cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
     { col: 17, row: 41 }, { col: 19, row: 41 }, { col: 19, row: 36 }, { col: 11, row: 36 }, 
   ]},
-  { id: 'l7-left-bottom-3', debugColor: '#00cc00',pauseAction: 'typing',  pauseDir: 0, waypoints: [
+  { id: 'l7-left-bottom-3', debugColor: '#00cc00',pauseAction: 'reading',  pauseDir: 0, waypoints: [
     { col: 17, row: 41 }, { col: 19, row: 41 }, { col: 19, row: 36 }, { col: 21, row: 36 },  { col: 21, row: 25 }, { col: 28, row: 25 }, { col: 28, row: 24 }, { col: 31, row: 24 },  { col: 31, row: 23 }, 
+  ]},
+
+  { id: 'l7-left-bottom-4', debugColor: '#00cc00',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 6, row: 39 }, { col: 6, row: 41 }, { col: 11, row: 41 },
   ]},
 ]
 
 const level8Routes: WalkRoute[] = [
-  { id: 'l8-center', debugColor: '#00cccc', waypoints: [
-    { col: 30, row: 15 }, { col: 40, row: 15 }, { col: 40, row: 28 },
+  { id: 'l8-right-top-1', debugColor: '#cc8f00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 77, row: 15 }, { col: 77, row: 13 }, 
   ]},
-  { id: 'l8-left', debugColor: '#cc66cc', waypoints: [
-    { col: 15, row: 25 }, { col: 15, row: 35 }, { col: 25, row: 35 },
+  { id: 'l8-right-top-2', debugColor: '#cc8f00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 74, row: 17 }, { col: 74, row: 19 }, 
   ]},
-  { id: 'l8-right', debugColor: '#cccc00', waypoints: [
-    { col: 60, row: 20 }, { col: 60, row: 30 }, { col: 70, row: 30 },
+  { id: 'l8-right-top-3', debugColor: '#cc8f00',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 71, row: 20 }, { col: 66, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 37 }, { col: 50, row: 37 }, { col: 50, row: 34 }, 
+  ]},
+  { id: 'l8-right-top-4', debugColor: '#cc8f00',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 61, row: 12 }, { col: 61, row: 20 }, { col: 51, row: 20 }, { col: 51, row: 15 }, 
+  ]},
+  { id: 'l8-right-top-5', debugColor: '#cc8f00',pauseAction: 'standing',  pauseDir: 2, waypoints: [
+    { col: 61, row: 12 }, { col: 61, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 36 }, { col: 63, row: 36 }, 
+  ]},
+
+  { id: 'l8-left-middle-1', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 2, waypoints: [
+    { col: 48, row: 15 }, { col: 52, row: 15 }, 
+  ]},
+  { id: 'l8-left-middle-2', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 43, row: 15 }, { col: 39, row: 15 }, { col: 39, row: 13 }, 
+  ]},
+  { id: 'l8-left-middle-3', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 37 },{ col: 45, row: 37 }, 
+  ]},
+  { id: 'l8-left-middle-4', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 20 }, { col: 55, row: 20 }, { col: 55, row: 37 },{ col: 45, row: 37 }, { col: 45, row: 38 }, 
+  ]},
+  { id: 'l8-left-middle-5', debugColor: '#41cc00',pauseAction: 'reading',  pauseDir: 2, waypoints: [
+    { col: 48, row: 15 }, { col: 51, row: 15 }, { col: 51, row: 20 }, { col: 63, row: 20 }, { col: 63, row: 15 },
+  ]},
+  { id: 'l8-left-middle-6', debugColor: '#41cc00',pauseAction: 'standing',  pauseDir: 0, waypoints: [
+    { col: 43, row: 15 }, { col: 42, row: 15 }, { col: 42, row: 19 }, 
+  ]},
+
+  { id: 'l8-left-top-1', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 33, row: 15 }, { col: 33, row: 13 }, { col: 28, row: 13 },
+  ]},
+  { id: 'l8-left-top-2', debugColor: '#00cccc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 33, row: 15 }, { col: 33, row: 13 }, { col: 23, row: 13 },
+  ]},
+
+  { id: 'l8-left-top-3', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 24, row: 24 }, { col: 28, row: 24 }, { col: 28, row: 21 },{ col: 28, row: 18 },{ col: 28, row: 13 },
+  ]},
+  { id: 'l8-left-top-4', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 24, row: 24 }, { col: 28, row: 24 }, { col: 28, row: 21 },{ col: 28, row: 18 },{ col: 28, row: 13 },{ col: 23, row: 13 },
+  ]},
+  { id: 'l8-left-top-5', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 24, row: 24 }, { col: 28, row: 24 }, { col: 28, row: 21 },{ col: 28, row: 18 },{ col: 28, row: 13 },{ col: 17, row: 13 },
+  ]},
+  { id: 'l8-left-top-6', debugColor: '#cc0000',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 13, row: 21 }, { col: 7, row: 21 }, { col: 7, row: 18 },{ col: 7, row: 16 },{ col: 5, row: 16 },{ col: 4, row: 14 },
+  ]},
+  { id: 'l8-left-top-6', debugColor: '#cc0000',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 13, row: 21 }, { col: 7, row: 21 }, { col: 7, row: 18 },{ col: 5, row: 18 },
+  ]},
+
+  { id: 'l8-left-top-7', debugColor: '#0700cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 15, row: 12 }, { col: 18, row: 12 }, 
+  ]},
+  { id: 'l8-left-top-8', debugColor: '#0700cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 15, row: 12 }, { col: 18, row: 12 }, { col: 18, row: 13 }, { col: 23, row: 13 }, 
+  ]},
+  { id: 'l8-left-top-9', debugColor: '#0700cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 12, row: 13 }, { col: 8, row: 13 }, 
+  ]},
+  { id: 'l8-left-top-10', debugColor: '#0700cc',pauseAction: 'reading',  pauseDir: 0, waypoints: [
+    { col: 13, row: 13 }, { col: 13, row: 14 }, { col: 15, row: 14 }, 
+  ]},
+
+  { id: 'l8-left-middle-1', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 26, row: 37 }, { col: 26, row: 36 }, { col: 34, row: 36 },{ col: 34, row: 35 },
+  ]},
+  { id: 'l8-left-middle-2', debugColor: '#cc66cc',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 34, row: 37 },{ col: 34, row: 35 },
+  ]},
+  { id: 'l8-left-middle-3', debugColor: '#cc66cc',pauseAction: 'reading',  pauseDir: 3, waypoints: [
+    { col: 26, row: 37 },{ col: 26, row: 36 },{ col: 31, row: 36 },{ col: 31, row: 23 },
+  ]},
+  { id: 'l8-left-middle-4', debugColor: '#cc66cc',pauseAction: 'reading',  pauseDir: 1, waypoints: [
+    { col: 34, row: 37 },{ col: 34, row: 36 },{ col: 31, row: 36 },{ col: 31, row: 25 },{ col: 34, row: 25 },
+  ]},
+
+  { id: 'l8-left-bottom-1', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 17, row: 41 }, { col: 20, row: 41 }, { col: 20, row: 36 },{ col: 12, row: 36 },
+  ]},
+  { id: 'l8-left-bottom-2', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 1, waypoints: [
+    { col: 15, row: 42 }, { col: 6, row: 42 }, { col: 6, row: 38 },
+  ]},
+  { id: 'l8-left-bottom-3', debugColor: '#cccc00',pauseAction: 'standing',  pauseDir: 3, waypoints: [
+    { col: 17, row: 41 }, { col: 20, row: 41 }, { col: 20, row: 36 },{ col: 34, row: 36 },{ col: 34, row: 35 },
   ]},
 ]
 
