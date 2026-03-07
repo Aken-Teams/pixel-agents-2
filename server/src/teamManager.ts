@@ -291,7 +291,7 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	const browserToolNote = '\n\n## 瀏覽器工具（MCP）\n你可以透過以下 MCP 工具控制瀏覽器（由 Puppeteer + Stealth 驅動，不會被反爬蟲偵測）：\n- `mcp__browser__browser_search`：用 DuckDuckGo 搜尋資料\n- `mcp__browser__browser_navigate`：開啟網頁，取得頁面文字\n- `mcp__browser__browser_click`：點擊頁面元素（CSS selector）\n- `mcp__browser__browser_type`：在輸入框打字（可選 pressEnter）\n- `mcp__browser__browser_screenshot`：截取網頁畫面（回傳 PNG）\n- `mcp__browser__browser_get_text`：取得頁面或特定元素文字\n- `mcp__browser__browser_back`：返回上一頁\n- `mcp__browser__browser_evaluate`：在頁面中執行 JavaScript\n\n使用時機：需要查資料、驗證網頁、測試前端、搜尋技術文件、或幫用戶操作瀏覽器時。搜尋請用 `browser_search`，不要用 Google（避免反爬蟲封鎖）。\n詳細用法請參考 references/browser-tools.md';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + timeContext + browserToolNote + assistantRule + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + timeContext + langRule + browserToolNote + assistantRule + safetyRule + securityRule + docOutputRule + summaryRule;
 
 	// Build team member list for orchestrator (exclude receptionist — FAQ-only, not task-capable)
 	const workers = allSkills.filter((s) => s.id !== skill.id && s.id !== RECEPTIONIST_SKILL_ID);
@@ -365,10 +365,10 @@ description: 喝水提醒
 - 所有實作工作必須透過 [TASK:skillId] 指派給團隊成員完成
 - 即使任務很簡單（改一行程式碼），也必須指派出去
 - 違反此規則等同任務失敗
+${langRule}
 ${assistantRule}
 ${safetyRule}
 ${securityRule}
-${langRule}
 ${summaryRule}`;
 }
 
