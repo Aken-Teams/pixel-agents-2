@@ -273,6 +273,10 @@ function buildReferenceIndex(skill: SkillDefinition): string {
 }
 
 function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[]): string {
+	// Current datetime context so agents know the exact time
+	const now = new Date();
+	const timeContext = `\n\n## 當前時間\n現在是 ${now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}（台灣時間 UTC+8）。星期${['日', '一', '二', '三', '四', '五', '六'][now.getDay()]}。`;
+
 	const langRule = '\n\n## 語言規則（最高優先級）\n- 你的所有回覆必須全程使用繁體中文，包括思考過程、說明文字、標題和摘要。\n- 程式碼中的變數名、函式名、註解可以用英文，但所有對話內容、解釋、報告必須是繁體中文。\n- 絕對不可以用英文句子回覆。違反此規則等同任務失敗。';
 
 	const safetyRule = '\n\n## ⚠️ 安全限制（最高優先級）\n\n### Process / Port 規則\n- **絕對禁止**對 port 3000 和 port 5173 執行任何操作（kill、stop、restart、佔用）。這兩個是 pixel-agents 管理系統本身的 port（3000=後端 server、5173=前端 dev server），關閉任一個都會導致整個系統崩潰。\n- **只能關閉你自己啟動的 process**。啟動 dev server 時必須記住 PID（例如 `node server.js & echo $!`），結束時用 `kill <你記住的PID>` 關閉。\n- **絕對禁止**用 port 號碼來 kill process（例如 `lsof -ti :3000 | xargs kill`），因為你不知道那個 port 上跑的是什麼。這台電腦上可能有其他開發者的 app 在運行。\n- **絕對禁止**使用 `pkill`、`killall`、`taskkill /IM` 等按名稱批次 kill 的指令，這會殺掉其他人的 process。\n- 如果你的 dev server 有 port 衝突，**換一個 port**（建議 3001、3002、4000+），不要殺掉佔用 port 的 process。\n- **測試完畢必須清理**：關閉你啟動的 dev server，刪除你建立的暫存檔案。不清理會導致下一個 AI 工作失敗。\n\n### 檔案系統規則\n- **工作目錄**：你的沙盒工作目錄是 `~/.pixel-agents/workspace/{專案名}/app/`。所有開發工作（clone、安裝套件、build、測試）都在這個目錄下進行。不要修改 `app/` 以外的檔案（`docs/` 和 `designs/` 由系統管理）。\n- **複製到外部**：如果用戶要求把成果放到其他路徑（例如 `D:\\\\tt`），先在工作目錄完成所有開發和測試，最後用 `cp -r` 或 `xcopy` 把成品複製到用戶指定的目錄。\n- **可以刪除**你自己建立的測試檔案、build output（dist/、.next/、build/）、暫存檔。\n- **絕對禁止**刪除你不確定是誰建立的檔案。如果不確定，不要刪。\n- **禁止存取**：~/.claude/、~/.pixel-agents/settings.json、~/.ssh/、~/.aws/、C:\\\\Windows\\\\、任何系統目錄。\n\n### 資安檢測規則（必須遵守）\n\n#### npm / pnpm / pip 套件安裝（輕量檢測）\n- 安裝完成後，執行 `npm audit`（或 `pnpm audit`）快速檢查已知漏洞\n- 如果出現 **critical** 或 **high** 等級漏洞，必須在回覆中告知用戶，並嘗試 `npm audit fix`\n- 如果漏洞無法自動修復，列出受影響套件讓用戶決定是否繼續\n- pip 套件安裝後，若有 `pip-audit` 可用則執行，沒有的話可跳過\n\n#### git clone GitHub repo（完整資安檢測 — 必做）\n別人的程式碼完全不可信，clone 後、執行前，**必須**完成以下全部步驟：\n  1. 用 `gh repo view <owner/repo>` 檢查 star 數、最近更新、作者資訊。star < 10 或超過一年沒更新的要特別警惕\n  2. 閱讀 `package.json`（或 `setup.py`/`pyproject.toml`）的完整 `scripts` 區段，特別注意 `preinstall`、`postinstall`、`prepare` 是否有可疑指令（`curl | sh`、`wget`、`eval`、`rm -rf`、存取 `~/.ssh`、`~/.aws`、`~/.config` 等）\n  3. 搜尋 repo 中是否有 `.env` 檔案、hardcoded API key/token（`grep -r "sk-" --include="*.js" --include="*.ts"`）、混淆過的 JS 檔案（minified 單行 > 10KB 的 .js）\n  4. 檢查是否有可疑的二進位檔案（.exe、.dll、.so、.dylib）\n  5. **如果發現任何可疑內容**，立即停止操作，在回覆中詳細說明發現的問題，等待用戶指示。不可自行決定「應該沒問題」\n  6. 全部通過後才可以執行 `npm install`、`npm run`、`node`、`python` 等指令\n\n#### 絕對禁止\n- 直接執行 `curl URL | sh` 或 `wget URL | bash` 等「下載並立即執行」的指令\n- 未經檢測就執行 clone 下來的 repo 中的任何 script';
@@ -287,7 +291,7 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	const browserToolNote = '\n\n## 瀏覽器工具（MCP）\n你可以透過以下 MCP 工具控制瀏覽器（由 Puppeteer + Stealth 驅動，不會被反爬蟲偵測）：\n- `mcp__browser__browser_search`：用 DuckDuckGo 搜尋資料\n- `mcp__browser__browser_navigate`：開啟網頁，取得頁面文字\n- `mcp__browser__browser_click`：點擊頁面元素（CSS selector）\n- `mcp__browser__browser_type`：在輸入框打字（可選 pressEnter）\n- `mcp__browser__browser_screenshot`：截取網頁畫面（回傳 PNG）\n- `mcp__browser__browser_get_text`：取得頁面或特定元素文字\n- `mcp__browser__browser_back`：返回上一頁\n- `mcp__browser__browser_evaluate`：在頁面中執行 JavaScript\n\n使用時機：需要查資料、驗證網頁、測試前端、搜尋技術文件、或幫用戶操作瀏覽器時。搜尋請用 `browser_search`，不要用 Google（避免反爬蟲封鎖）。\n詳細用法請參考 references/browser-tools.md';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + browserToolNote + assistantRule + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + timeContext + browserToolNote + assistantRule + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
 
 	// Build team member list for orchestrator (exclude receptionist — FAQ-only, not task-capable)
 	const workers = allSkills.filter((s) => s.id !== skill.id && s.id !== RECEPTIONIST_SKILL_ID);
@@ -302,7 +306,7 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 		? `\n\n## 記憶備忘（用戶要你記住的事項）\n${memoryNotes.map(n => `- ${n.description}：${n.message}`).join('\n')}`
 		: '';
 
-	return `${skill.systemPrompt}${buildReferenceIndex(skill)}${memorySection}
+	return `${skill.systemPrompt}${buildReferenceIndex(skill)}${timeContext}${memorySection}
 
 ## 你的團隊成員
 
