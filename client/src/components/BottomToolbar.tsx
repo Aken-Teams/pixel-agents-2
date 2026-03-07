@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SettingsModal } from './SettingsModal.js'
 import { ProjectPortfolioModal } from './ProjectPortfolioModal.js'
 import { ScenePickerModal } from './ScenePickerModal.js'
+import { SchedulerPanel, type ScheduledTask } from './SchedulerPanel.js'
 import { wsClient } from '../wsClient.js'
 import type { OfficeLayout } from '../office/types.js'
 
@@ -27,6 +28,7 @@ interface BottomToolbarProps {
   teamMembers: TeamMemberInfo[]
   aiProvider: string
   deepseekModel: string
+  scheduledTasks: ScheduledTask[]
 }
 
 const panelStyle: React.CSSProperties = {
@@ -74,11 +76,13 @@ export function BottomToolbar({
   teamMembers,
   aiProvider,
   deepseekModel,
+  scheduledTasks,
 }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isPortfolioOpen, setIsPortfolioOpen] = useState(false)
   const [isScenePickerOpen, setIsScenePickerOpen] = useState(false)
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false)
 
   const handleSelectScene = (layout: OfficeLayout, defaultZoom: number) => {
     if (onSwitchScene) {
@@ -141,6 +145,22 @@ export function BottomToolbar({
       >
         Portfolio
       </button>
+      <button
+        onClick={() => setIsSchedulerOpen(true)}
+        onMouseEnter={() => setHovered('scheduler')}
+        onMouseLeave={() => setHovered(null)}
+        style={
+          isSchedulerOpen
+            ? { ...btnActive }
+            : {
+                ...btnBase,
+                background: hovered === 'scheduler' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
+              }
+        }
+        title="Scheduled tasks & reminders"
+      >
+        Scheduler{scheduledTasks.length > 0 ? ` (${scheduledTasks.length})` : ''}
+      </button>
       <div style={{ position: 'relative' }}>
         <button
           onClick={() => setIsSettingsOpen((v) => !v)}
@@ -178,6 +198,11 @@ export function BottomToolbar({
         onClose={() => setIsScenePickerOpen(false)}
         currentBackgroundImage={currentBackgroundImage}
         onSelectScene={handleSelectScene}
+      />
+      <SchedulerPanel
+        isOpen={isSchedulerOpen}
+        onClose={() => setIsSchedulerOpen(false)}
+        tasks={scheduledTasks}
       />
     </div>
   )

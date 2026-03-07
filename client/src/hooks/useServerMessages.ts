@@ -96,6 +96,7 @@ export interface ServerMessageState {
   aiProvider: string
   deepseekModel: string
   currentProject: { name: string; status: string; dir: string } | null
+  scheduledTasks: Array<{ id: string; type: string; description: string; message: string; enabled: boolean; nextRun?: string; action: string; recurring?: { pattern: string; time: string; dayOfWeek?: number; dayOfMonth?: number }; triggerAt?: string; createdBy: string; createdAt: string; lastRun?: string }>
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -136,6 +137,7 @@ export function useServerMessages(
   const [aiProvider, setAIProvider] = useState<string>('claude-cli')
   const [deepseekModel, setDeepseekModel] = useState<string>('deepseek-chat')
   const [currentProject, setCurrentProject] = useState<{ name: string; status: string; dir: string } | null>(null)
+  const [scheduledTasks, setScheduledTasks] = useState<Array<{ id: string; type: string; description: string; message: string; enabled: boolean; nextRun?: string; action: string; recurring?: { pattern: string; time: string; dayOfWeek?: number; dayOfMonth?: number }; triggerAt?: string; createdBy: string; createdAt: string; lastRun?: string }>>([])
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -754,6 +756,38 @@ export function useServerMessages(
         })
       } else if (msg.type === 'pipelineCompleted') {
         setActivePipeline(null)
+      } else if (msg.type === 'pipelineCollaboration') {
+        // Show a collaboration chat bubble when an agent posts to the shared bulletin board
+        const agentId = msg.agentId as number
+        const summary = msg.summary as string
+        if (agentId && summary) {
+          setThoughtData((prev) => ({
+            ...prev,
+            [agentId]: {
+              ...prev[agentId],
+              text: `📋 ${summary}`,
+              updatedAt: Date.now(),
+              isWorking: prev[agentId]?.isWorking ?? true,
+              justCompleted: false,
+              isIdleChat: true,
+            },
+          }))
+          // Auto-clear collaboration bubble after 5 seconds, revert to working state
+          setTimeout(() => {
+            setThoughtData((prev) => {
+              const cur = prev[agentId]
+              if (!cur || !cur.isIdleChat) return prev
+              return {
+                ...prev,
+                [agentId]: {
+                  ...cur,
+                  text: '',
+                  isIdleChat: false,
+                },
+              }
+            })
+          }, 5000)
+        }
       } else if (msg.type === 'orchestratorBusy') {
         setOrchestratorBusy(msg.busy as boolean)
         if (!(msg.busy as boolean)) {
@@ -838,6 +872,59 @@ export function useServerMessages(
           }
           return next
         })
+      // ── Scheduler ──
+      } else if (msg.type === 'scheduledTaskList') {
+        setScheduledTasks(msg.tasks as typeof scheduledTasks)
+      } else if (msg.type === 'scheduledTaskCreated') {
+        setScheduledTasks((prev) => [...prev, msg.task as typeof prev[0]])
+      } else if (msg.type === 'scheduledTaskUpdated') {
+        const updated = msg.task as typeof scheduledTasks[0]
+        setScheduledTasks((prev) => prev.map(t => t.id === updated.id ? updated : t))
+      } else if (msg.type === 'scheduledTaskDeleted') {
+        const taskId = msg.taskId as string
+        setScheduledTasks((prev) => prev.filter(t => t.id !== taskId))
+      } else if (msg.type === 'scheduledTaskFired') {
+        // Prominent notification when a scheduled task fires
+        const taskMsg = msg.message as string
+        const orchSkill = orchestratorSkillId || ''
+        const orchId = skillAgentMapRef.current[orchSkill]
+
+        // 1. Show alert bubble on CTO character (red "!")
+        if (orchId) {
+          os.showAlertBubble(orchId)
+        }
+
+        // 2. Play alert sound
+        playAlertSound()
+
+        // 3. Show thought bubble with the reminder text
+        if (orchId) {
+          setThoughtData((prev) => ({
+            ...prev,
+            [orchId]: {
+              text: `${taskMsg}`,
+              updatedAt: Date.now(),
+              isWorking: false,
+              justCompleted: false,
+              isIdleChat: true,
+            },
+          }))
+        }
+
+        // 4. Add reminder as a chat message in CTO's chat panel
+        if (orchSkill) {
+          setTeamChats((prev) => {
+            const chat = prev[orchSkill]
+            if (!chat) return prev
+            return {
+              ...prev,
+              [orchSkill]: {
+                ...chat,
+                messages: [...chat.messages, { role: 'assistant', content: `⏰ **排程提醒**\n\n${taskMsg}` }],
+              },
+            }
+          })
+        }
       }
     }
     wsClient.addMessageListener(handler)
@@ -917,5 +1004,6 @@ export function useServerMessages(
     interviewQuestions, clearInterview,
     aiProvider, deepseekModel,
     currentProject,
+    scheduledTasks,
   }
 }

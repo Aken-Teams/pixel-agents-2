@@ -1,6 +1,54 @@
 import { spawn, type ChildProcess } from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import type { AIProvider, AIMessage, GenerateCallbacks, GenerateOptions, GenerateHandle } from '../aiProvider.js';
 import { formatToolStatus } from '../transcriptParser.js';
+
+/**
+ * Generate MCP config file for Claude CLI, enabling the browser MCP server.
+ * Returns the config file path if successful, null otherwise.
+ */
+function getMcpConfigPath(): string | null {
+	try {
+		const configDir = path.join(os.homedir(), '.pixel-agents');
+		const configPath = path.join(configDir, 'mcp-config.json');
+
+		// Resolve the MCP browser server entry point
+		// In dev: server/src/mcp-browser/index.ts (run via tsx)
+		// In prod: dist/mcp-browser/index.js (bundled)
+		const devPath = path.resolve(__dirname, '../mcp-browser/index.ts');
+		const prodPath = path.resolve(__dirname, '../mcp-browser/index.js');
+
+		let serverCommand: string;
+		let serverArgs: string[];
+
+		if (fs.existsSync(prodPath)) {
+			serverCommand = 'node';
+			serverArgs = [prodPath];
+		} else if (fs.existsSync(devPath)) {
+			serverCommand = 'npx';
+			serverArgs = ['tsx', devPath];
+		} else {
+			return null;
+		}
+
+		const config = {
+			mcpServers: {
+				browser: {
+					command: serverCommand,
+					args: serverArgs,
+				},
+			},
+		};
+
+		fs.mkdirSync(configDir, { recursive: true });
+		fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+		return configPath;
+	} catch {
+		return null;
+	}
+}
 
 /**
  * Convert AIMessage[] to Claude CLI stdin format.
@@ -68,6 +116,12 @@ export class ClaudeCLIProvider implements AIProvider {
 				}
 			} else if (options?.dangerouslySkipPermissions) {
 				args.push('--dangerously-skip-permissions');
+			}
+
+			// MCP browser server config
+			const mcpConfig = getMcpConfigPath();
+			if (mcpConfig) {
+				args.push('--mcp-config', mcpConfig);
 			}
 
 			// Build command string manually to control quoting for shell.

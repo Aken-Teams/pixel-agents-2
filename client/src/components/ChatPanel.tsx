@@ -645,6 +645,9 @@ function stripInternalBlocks(text: string): { cleanText: string; tasks: { skillI
     // Remove orphaned opening TASK tags during streaming
     .replace(/\[TASK:\w[\w-]*\]/g, '')
     .replace(/\[\/TASK\]/g, '')
+    // Remove SCHEDULE blocks (full and partial during streaming)
+    .replace(/\[SCHEDULE\]\s*[\s\S]*?\s*\[\/SCHEDULE\]/g, '')
+    .replace(/\[SCHEDULE\][\s\S]*$/g, '')  // partial block during streaming
     // Remove [SUMMARY] line and everything after (always at end of message)
     .replace(/\n?\[SUMMARY\][\s\S]*/g, '')
     // Hide partial [SUMMARY tag during streaming (incomplete token)

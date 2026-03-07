@@ -68,6 +68,13 @@ import {
 	resetProject,
 	resetOrchestratorState,
 } from './teamManager.js';
+import {
+	initScheduler,
+	addScheduledTask,
+	updateScheduledTask,
+	deleteScheduledTask,
+	listScheduledTasks,
+} from './schedulerManager.js';
 
 // ── State ────────────────────────────────────────────────────
 const agents = new Map<number, AgentState>();
@@ -377,6 +384,23 @@ function handleClientMessage(_ws: WebSocket, message: ClientMessage): void {
 			} catch { /* file not readable */ }
 			break;
 		}
+
+		// ── Scheduler ────────────────────────────────────────
+		case 'listScheduledTasks':
+			broadcast({ type: 'scheduledTaskList', tasks: listScheduledTasks() });
+			break;
+
+		case 'createScheduledTask':
+			addScheduledTask(message.task);
+			break;
+
+		case 'updateScheduledTask':
+			updateScheduledTask(message.taskId, message.updates);
+			break;
+
+		case 'deleteScheduledTask':
+			deleteScheduledTask(message.taskId);
+			break;
 	}
 }
 
@@ -386,6 +410,12 @@ function handleWebviewReady(): void {
 
 	// Send settings (including mode and AI provider)
 	broadcast({ type: 'settingsLoaded', soundEnabled: getSoundEnabled(), mode: getMode(), aiProvider: getAIProvider(), deepseekModel: getDeepseekModel() });
+
+	// Initialize scheduler (idempotent — safe to call on every webviewReady)
+	initScheduler(broadcast, sendOrchestratorMessage);
+
+	// Send scheduled tasks list to client
+	broadcast({ type: 'scheduledTaskList', tasks: listScheduledTasks() });
 
 	// Send cached assets
 	if (cachedAssets.characterSprites) {

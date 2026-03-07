@@ -144,6 +144,7 @@ function App() {
     interviewQuestions, clearInterview,
     aiProvider, deepseekModel,
     currentProject,
+    scheduledTasks,
   } = useServerMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty)
 
   // Set default zoom to 1x when layout first loads
@@ -534,6 +535,7 @@ function App() {
         teamMembers={enrichedTeamMembers}
         aiProvider={aiProvider}
         deepseekModel={deepseekModel}
+        scheduledTasks={scheduledTasks}
       />
 
       {editor.isEditMode && editor.isDirty && (

@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { watch as chokidarWatch } from 'chokidar';
 import type { TeamSession, ChatMessage } from './types.js';
 import type { TeamMemberInfo } from './wsProtocol.js';
 import type { Broadcast } from './timerManager.js';
@@ -9,6 +10,7 @@ import { getWorkspaceRoot } from './config.js';
 import { getProvider, getProviderIdentityNote } from './aiProvider.js';
 import type { AIMessage } from './aiProvider.js';
 import { startIdleChatScheduler, stopIdleChat, triggerEasterEgg, type IdleAgent } from './idleChatManager.js';
+import { parseScheduleBlocks, addScheduledTask, getMemoryNotes } from './schedulerManager.js';
 import { setBossAgent, trackTask, untrackTask, stopAllNagging } from './bossNagManager.js';
 import { findAnswer, RECEPTIONIST_WELCOME_MESSAGES } from './receptionistFAQ.js';
 import {
@@ -46,6 +48,12 @@ const initializedSessions = new Set<string>(); // session IDs that have sent ful
 const ORCHESTRATOR_ALLOWED_TOOLS: string[] = [
 	'Read', 'Glob', 'Grep',
 	'Bash', 'WebFetch', 'WebSearch',
+	// MCP browser tools
+	'mcp__browser__browser_search',
+	'mcp__browser__browser_navigate',
+	'mcp__browser__browser_screenshot',
+	'mcp__browser__browser_get_text',
+	'mcp__browser__browser_back',
 ];
 
 // Orchestrator blocklist: prevent CTO from writing code or running dev commands
@@ -57,6 +65,15 @@ const ORCHESTRATOR_DISALLOWED_TOOLS: string[] = [
 const WORKER_ALLOWED_TOOLS: string[] = [
 	'Read', 'Write', 'Edit', 'Glob', 'Grep', 'MultiEdit',
 	'Bash', 'WebFetch', 'WebSearch',
+	// MCP browser tools
+	'mcp__browser__browser_search',
+	'mcp__browser__browser_navigate',
+	'mcp__browser__browser_click',
+	'mcp__browser__browser_type',
+	'mcp__browser__browser_screenshot',
+	'mcp__browser__browser_get_text',
+	'mcp__browser__browser_back',
+	'mcp__browser__browser_evaluate',
 ];
 
 // Worker blocklist: block mass-kill and dangerous system commands
@@ -268,7 +285,9 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 
 	const docOutputRule = '\n\n## 文件產出規則（必須遵守）\n- 你的文件內容（PRD、架構設計、測試報告、技術文件等）必須直接寫在回覆中，系統會自動存檔並加上 metadata\n- **禁止**使用 Write 工具另外存文件到 `docs/` 目錄（如 `prd.md`、`architecture.md` 等），這會導致文件沒有 metadata、無法追蹤作者\n- 程式碼檔案（如 `.tsx`、`.ts`、`.css`、`.html`）可以用 Write 工具存到適當目錄（如 `src/`、`designs/`）\n- 簡單說：「文件寫在回覆裡，程式碼寫進檔案」';
 
-	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + assistantRule + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
+	const browserToolNote = '\n\n## 瀏覽器工具（MCP）\n你可以透過以下 MCP 工具控制瀏覽器（由 Puppeteer + Stealth 驅動，不會被反爬蟲偵測）：\n- `mcp__browser__browser_search`：用 DuckDuckGo 搜尋資料\n- `mcp__browser__browser_navigate`：開啟網頁，取得頁面文字\n- `mcp__browser__browser_click`：點擊頁面元素（CSS selector）\n- `mcp__browser__browser_type`：在輸入框打字（可選 pressEnter）\n- `mcp__browser__browser_screenshot`：截取網頁畫面（回傳 PNG）\n- `mcp__browser__browser_get_text`：取得頁面或特定元素文字\n- `mcp__browser__browser_back`：返回上一頁\n- `mcp__browser__browser_evaluate`：在頁面中執行 JavaScript\n\n使用時機：需要查資料、驗證網頁、測試前端、搜尋技術文件、或幫用戶操作瀏覽器時。搜尋請用 `browser_search`，不要用 Google（避免反爬蟲封鎖）。\n詳細用法請參考 references/browser-tools.md';
+
+	if (skill.role !== 'orchestrator') return skill.systemPrompt + buildReferenceIndex(skill) + browserToolNote + assistantRule + safetyRule + securityRule + langRule + docOutputRule + summaryRule;
 
 	// Build team member list for orchestrator (exclude receptionist — FAQ-only, not task-capable)
 	const workers = allSkills.filter((s) => s.id !== skill.id && s.id !== RECEPTIONIST_SKILL_ID);
@@ -277,7 +296,13 @@ function buildSystemPrompt(skill: SkillDefinition, allSkills: SkillDefinition[])
 		return `- **${w.name}** (${w.id}) — ${desc.slice(0, 100)}`;
 	}).join('\n');
 
-	return `${skill.systemPrompt}${buildReferenceIndex(skill)}
+	// Inject memory notes (persistent context from scheduler)
+	const memoryNotes = getMemoryNotes();
+	const memorySection = memoryNotes.length > 0
+		? `\n\n## 記憶備忘（用戶要你記住的事項）\n${memoryNotes.map(n => `- ${n.description}：${n.message}`).join('\n')}`
+		: '';
+
+	return `${skill.systemPrompt}${buildReferenceIndex(skill)}${memorySection}
 
 ## 你的團隊成員
 
@@ -309,6 +334,24 @@ ${memberList}
 - 不需要所有成員都參與，根據任務需要選擇
 - 當所有任務完成，直接回覆用戶總結成果（不要用 [TASK] 標記）
 - 如果需要討論，可以把上一個成員的結果作為下一個成員的上下文
+
+## 排程與提醒功能
+你可以幫用戶建立排程和提醒。使用 [SCHEDULE]...[/SCHEDULE] 語法：
+- type: once（一次性提醒）、recurring（定時任務）、memory（記憶備忘）
+- 用戶說「提醒我...」「每天...」「記住...」時，主動建立排程
+- **重要**：每個欄位必須獨立一行，不要把多個欄位寫在同一行
+- **重要**：近期提醒請用相對時間 trigger: +5m（5分鐘後）、+1h（1小時後）
+- **重要**：一次性提醒最短間隔 1 分鐘，定時任務（recurring）最短間隔 30 分鐘（pattern 為 daily/weekly/monthly）
+- 格式請參考 references/scheduler-syntax.md
+
+[SCHEDULE] 格式範例：
+[SCHEDULE]
+type: once
+trigger: +5m
+action: notify
+message: 該喝水了！
+description: 喝水提醒
+[/SCHEDULE]
 
 ## ⚠️ 嚴禁自己實作（最高優先級）
 你是調度者和審核者，絕對不可以自己寫程式碼、建立設計稿、修改檔案或執行部署。
@@ -1037,8 +1080,18 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		}
 	}
 
+	// Sanitize user input — strip protocol tags to prevent injection
+	// Only orchestrator (CTO) responses should contain these control blocks
+	const sanitizedMessage = message
+		.replace(/\[SCHEDULE\]/gi, '[schedule-text]')
+		.replace(/\[\/SCHEDULE\]/gi, '[/schedule-text]')
+		.replace(/\[TASK:\w[\w-]*\]/gi, '')
+		.replace(/\[\/TASK\]/gi, '')
+		.replace(/\[PIPELINE[^\]]*\]/gi, '')
+		.replace(/\[\/PIPELINE\]/gi, '');
+
 	// Defer project creation — only create when orchestrator dispatches [TASK]
-	pendingProjectMessage = message;
+	pendingProjectMessage = sanitizedMessage;
 
 	// Stop idle chat when work begins
 	stopIdleChat();
@@ -1046,7 +1099,7 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 	orchestratorBusy = true;
 	broadcast({ type: 'orchestratorBusy', busy: true });
 
-	orchestrateStep(orchestratorSkillId, message, broadcast, 0).finally(() => {
+	orchestrateStep(orchestratorSkillId, sanitizedMessage, broadcast, 0).finally(() => {
 		orchestratorBusy = false;
 		stopAllNagging();
 		broadcast({ type: 'orchestratorBusy', busy: false });
@@ -1224,8 +1277,58 @@ async function executePipeline(
 }
 
 /**
+ * Build a shared bulletin board note for parallel pipeline agents.
+ * Tells each agent about its teammates and a shared directory for coordination.
+ */
+function buildSharedContextNote(sharedDir: string, tasks: ParsedTask[], mySkillId: string): string {
+	const teammates = tasks
+		.filter(t => t.skillId !== mySkillId)
+		.map(t => {
+			const session = teamSessions.get(t.skillId);
+			return session ? `${session.name}(${t.skillId})` : t.skillId;
+		});
+
+	if (teammates.length === 0) return '';
+
+	const normalizedDir = sharedDir.replace(/\\/g, '/');
+	return `\n\n---\n## 並行協作（重要）\n你正在與以下成員 **同時** 工作：${teammates.join('、')}\n\n### 共享公告欄\n路徑：\`${normalizedDir}\`\n\n**規則：**\n1. 當你完成了重要的決策或產出（如 API 規格、DB schema、設計稿路徑），立即寫一份摘要到共享公告欄：\n   \`Write\` 工具 → \`${normalizedDir}/${mySkillId}-update.md\`\n2. 在開始工作前，先檢查公告欄是否有隊友的更新：\n   \`Glob\` → \`${normalizedDir}/*.md\` → 有檔案就 \`Read\` 查看\n3. 如果隊友的產出會影響你的工作（例如後端看到 DBA 的 schema），請參考它\n4. 摘要格式：標題 + 關鍵決策 + 檔案路徑（如有）\n---`;
+}
+
+/**
+ * Handle a file written to the shared bulletin board during parallel pipeline.
+ * Broadcasts a collaboration message so the client can show a chat bubble.
+ */
+function handleCollaborationFile(filePath: string, tasks: ParsedTask[], broadcast: Broadcast): void {
+	try {
+		const fileName = path.basename(filePath);
+		// Extract skillId from filename pattern: {skillId}-update.md
+		const match = fileName.match(/^(.+)-update\.md$/);
+		if (!match) return;
+
+		const skillId = match[1];
+		const session = teamSessions.get(skillId);
+		if (!session) return;
+
+		const content = fs.readFileSync(filePath, 'utf-8').trim();
+		if (!content) return;
+
+		// Extract first meaningful line as summary (skip markdown headers)
+		const lines = content.split('\n').filter(l => l.trim());
+		const summaryLine = lines.find(l => !l.startsWith('#')) || lines[0] || '';
+		const summary = summaryLine.slice(0, 80);
+
+		broadcast({
+			type: 'pipelineCollaboration',
+			skillId,
+			agentId: session.agentId,
+			summary,
+		});
+	} catch { /* non-critical */ }
+}
+
+/**
  * Execute a parallel pipeline: run all tasks concurrently.
- * No context chaining (tasks are independent).
+ * Creates a shared bulletin board directory so agents can coordinate via filesystem.
  * Returns results in original task order.
  */
 async function executePipelineParallel(
@@ -1241,13 +1344,51 @@ async function executePipelineParallel(
 	// - Same-skill tasks: if two parallel tasks target the same skill, executeTask's activeGeneration
 	//   wait loop naturally serializes them.
 
+	// Create shared bulletin board directory for inter-agent coordination
+	const cwd = getAgentCwd();
+	let sharedDir: string | null = null;
+	if (cwd) {
+		sharedDir = path.join(cwd, '.pipeline-shared', pipelineId);
+		try { fs.mkdirSync(sharedDir, { recursive: true }); } catch { /* */ }
+	}
+
+	// Inject shared context note into each task's description
+	const enhancedTasks = sharedDir
+		? pipeline.tasks.map(task => ({
+			...task,
+			description: task.description + buildSharedContextNote(sharedDir!, pipeline.tasks, task.skillId),
+		}))
+		: pipeline.tasks;
+
+	// Watch shared directory for collaboration messages (chat bubbles)
+	let watcher: ReturnType<typeof chokidarWatch> | null = null;
+	if (sharedDir) {
+		try {
+			watcher = chokidarWatch(sharedDir, {
+				ignoreInitial: true,
+				awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
+			});
+			watcher.on('add', (filePath) => handleCollaborationFile(filePath, pipeline.tasks, broadcast));
+			watcher.on('change', (filePath) => handleCollaborationFile(filePath, pipeline.tasks, broadcast));
+		} catch { /* watcher is optional */ }
+	}
+
 	broadcast({ type: 'pipelineStarted', pipelineId, taskCount: pipeline.tasks.length });
 
-	const resultPromises = pipeline.tasks.map((task, i) =>
+	const resultPromises = enhancedTasks.map((task, i) =>
 		executeTask(task, broadcast, pipelineId, i),
 	);
 
 	const taskResults = await Promise.all(resultPromises);
+
+	// Stop watching and clean up shared bulletin board directory
+	if (watcher) {
+		try { await watcher.close(); } catch { /* */ }
+	}
+	if (sharedDir) {
+		try { fs.rmSync(sharedDir, { recursive: true, force: true }); } catch { /* */ }
+	}
+
 	broadcast({ type: 'pipelineCompleted', pipelineId });
 	return taskResults.map(r => r.result);
 }
@@ -1360,6 +1501,16 @@ async function orchestrateStep(
 		const feedbackMsg = `用戶的回覆：\n${sanitized}`;
 		await orchestrateStep(orchSkillId, feedbackMsg, broadcast, depth + 1);
 		return;
+	}
+
+	// Parse and create scheduled tasks (if any [SCHEDULE] blocks present)
+	const { cleanText: afterSchedule, scheduledTasks } = parseScheduleBlocks(response);
+	if (scheduledTasks.length > 0) {
+		for (const st of scheduledTasks) {
+			addScheduledTask(st);
+		}
+		console.log(`[Orchestrator] Created ${scheduledTasks.length} scheduled task(s)`);
+		response = afterSchedule;
 	}
 
 	// Parse for pipeline and task blocks

@@ -99,7 +99,7 @@ export function sendMessage(chatId: string, message: string, broadcast: Broadcas
 	}
 	const truncated = truncateHistory(session.history);
 	for (const msg of truncated) {
-		messages.push({ role: msg.role, content: msg.content });
+		messages.push({ role: msg.role as 'user' | 'assistant' | 'system', content: msg.content });
 	}
 	messages.push({ role: 'user', content: message });
 

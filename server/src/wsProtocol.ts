@@ -1,4 +1,5 @@
 import type { ProjectSummary, TaskRecord } from './projectPersistence.js';
+import type { ScheduledTask } from './schedulerManager.js';
 
 // ── Shared interfaces ────────────────────────────────────────
 
@@ -57,6 +58,7 @@ export type ServerMessage =
 	| { type: 'pipelineStarted'; pipelineId: string; taskCount: number }
 	| { type: 'pipelineTaskCompleted'; pipelineId: string; taskIndex: number; taskId: string; targetSkillId: string }
 	| { type: 'pipelineCompleted'; pipelineId: string }
+	| { type: 'pipelineCollaboration'; skillId: string; agentId: number; summary: string }
 	// Interview (pre-development questionnaire)
 	| { type: 'interviewRequest'; questions: { id: string; question: string }[] }
 	// Idle chat
@@ -68,7 +70,14 @@ export type ServerMessage =
 	| { type: 'projectHistoryRestored'; history: Record<string, { role: string; content: string }[]> }
 	// Portfolio
 	| { type: 'projectDetail'; projectDir: string; name: string; status: string; currentPhase: number; userMessage: string; tasks: Record<string, TaskRecord>; docs: DocMeta[] }
-	| { type: 'docContent'; projectDir: string; fileName: string; content: string };
+	| { type: 'docContent'; projectDir: string; fileName: string; content: string }
+	// Scheduler
+	| { type: 'scheduledTaskList'; tasks: ScheduledTask[] }
+	| { type: 'scheduledTaskCreated'; task: ScheduledTask }
+	| { type: 'scheduledTaskUpdated'; task: ScheduledTask }
+	| { type: 'scheduledTaskDeleted'; taskId: string }
+	| { type: 'scheduledTaskFired'; task: ScheduledTask; message: string }
+	| { type: 'projectCleared' };
 
 // ── Client → Server Messages ──────────────────────────────────
 
@@ -99,7 +108,12 @@ export type ClientMessage =
 	| { type: 'getProjectDetail'; projectDir: string }
 	| { type: 'getDocContent'; projectDir: string; fileName: string }
 	// AI Provider
-	| { type: 'setAIProvider'; provider: string; apiKey?: string; model?: string };
+	| { type: 'setAIProvider'; provider: string; apiKey?: string; model?: string }
+	// Scheduler
+	| { type: 'listScheduledTasks' }
+	| { type: 'createScheduledTask'; task: Omit<ScheduledTask, 'id' | 'createdAt' | 'nextRun'> }
+	| { type: 'updateScheduledTask'; taskId: string; updates: Partial<ScheduledTask> }
+	| { type: 'deleteScheduledTask'; taskId: string };
 
 export interface AgentMeta {
 	palette?: number;
