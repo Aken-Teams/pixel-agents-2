@@ -30,6 +30,15 @@ interface SchedulerPanelProps {
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const SYS_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif"
 
+const CREATOR_NAMES: Record<string, string> = {
+  techlead: '技術長', pm: '產品經理', architect: '架構師',
+  designer: '設計師', frontend: '前端工程師', backend: '後端工程師',
+  qa: 'QA 工程師', security: '資安工程師', devops: '維運工程師',
+  dba: '資料庫管理師', reviewer: '程式碼審查員',
+  'technical-writer': '技術文件撰寫師', sre: 'SRE 工程師',
+  user: '使用者',
+}
+
 function formatNextRun(task: ScheduledTask): string {
   if (task.type === 'memory') return '記憶備忘'
   if (!task.nextRun) return task.enabled ? '已過期' : '已停用'
@@ -121,7 +130,7 @@ export function SchedulerPanel({ isOpen, onClose, tasks }: SchedulerPanelProps) 
         }}
       />
       {/* Panel */}
-      <div style={{
+      <div className="scheduler-panel" style={{
         position: 'fixed',
         top: '50%', left: '50%',
         transform: 'translate(-50%, -50%)',
@@ -134,7 +143,6 @@ export function SchedulerPanel({ isOpen, onClose, tasks }: SchedulerPanelProps) 
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-        fontFamily: SYS_FONT,
       }}>
         {/* Header */}
         <div style={{
@@ -143,7 +151,7 @@ export function SchedulerPanel({ isOpen, onClose, tasks }: SchedulerPanelProps) 
           borderBottom: '2px solid rgba(255,255,255,0.1)',
         }}>
           <span style={{ fontSize: 18, color: '#fff', fontFamily: SYS_FONT }}>
-            排程管理
+            Scheduler
           </span>
           <button
             onClick={onClose}
@@ -286,7 +294,7 @@ export function SchedulerPanel({ isOpen, onClose, tasks }: SchedulerPanelProps) 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
                       <span>
                         <span style={{ color: 'rgba(255,255,255,0.4)' }}>建立者：</span>
-                        {task.createdBy}
+                        {CREATOR_NAMES[task.createdBy] || task.createdBy}
                       </span>
                       <span>
                         <span style={{ color: 'rgba(255,255,255,0.4)' }}>建立時間：</span>

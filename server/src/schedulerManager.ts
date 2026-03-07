@@ -184,6 +184,15 @@ export function stopScheduler(): void {
 }
 
 export function addScheduledTask(input: Omit<ScheduledTask, 'id' | 'createdAt' | 'nextRun'>): ScheduledTask {
+	// Enforce minimum intervals
+	if (input.type === 'once' && input.triggerAt) {
+		const triggerMs = new Date(input.triggerAt).getTime() - Date.now();
+		if (triggerMs < 60_000 && triggerMs > 0) {
+			// Minimum 1 minute for once tasks — clamp to 1 minute
+			input = { ...input, triggerAt: new Date(Date.now() + 60_000).toISOString() };
+		}
+	}
+
 	const task: ScheduledTask = {
 		...input,
 		id: crypto.randomUUID(),
