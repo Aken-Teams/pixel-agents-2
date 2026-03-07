@@ -59,16 +59,37 @@ export class ClaudeCLIProvider implements AIProvider {
 				args.push('--no-session-persistence');
 			}
 
-			if (options?.dangerouslySkipPermissions) {
+			if (options?.allowedTools && options.allowedTools.length > 0) {
+				// --allowedTools accepts a single comma-separated string: "Bash(git:*),Edit,Read"
+				args.push('--allowedTools', options.allowedTools.join(','));
+				// Explicit blocklist takes precedence over allowedTools
+				if (options.disallowedTools && options.disallowedTools.length > 0) {
+					args.push('--disallowedTools', options.disallowedTools.join(','));
+				}
+			} else if (options?.dangerouslySkipPermissions) {
 				args.push('--dangerously-skip-permissions');
 			}
 
-			proc = spawn('claude', args, {
+			// Build command string manually to control quoting for shell.
+			// shell: true with args array causes double-escaping issues on Windows
+			// (parentheses in Bash(git:*) break cmd.exe).
+			const cmdParts = ['claude'];
+			for (const arg of args) {
+				// Quote args that contain shell-special chars: () , * :
+				if (/[(),* :]/.test(arg)) {
+					cmdParts.push(`"${arg}"`);
+				} else {
+					cmdParts.push(arg);
+				}
+			}
+			const fullCmd = cmdParts.join(' ');
+			console.log('[ClaudeCLI] Spawning:', fullCmd);
+			proc = spawn(fullCmd, {
 				cwd: options?.cwd || process.cwd(),
 				shell: true,
 				stdio: ['pipe', 'pipe', 'pipe'],
 				env: cleanEnv,
-			});
+			} as any);
 
 			// For persistent sessions after the first call, send only the latest user message
 			// (Claude remembers the system prompt and conversation history)

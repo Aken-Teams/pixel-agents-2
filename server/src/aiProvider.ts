@@ -12,6 +12,10 @@ export interface GenerateCallbacks {
 export interface GenerateOptions {
 	cwd?: string;
 	dangerouslySkipPermissions?: boolean;
+	/** Pre-approved tool names (e.g. ['Bash', 'Read', 'Write']). Replaces dangerouslySkipPermissions for granular control. */
+	allowedTools?: string[];
+	/** Blocked tool names. Hard-deny even if in allowedTools. */
+	disallowedTools?: string[];
 	/** Session ID for persistent sessions (Claude CLI only, ignored by other providers) */
 	sessionId?: string;
 	/** If true, this is the first call in a session — send full messages. Subsequent calls send only the latest user message. */
