@@ -5,6 +5,9 @@ import * as path from 'path';
 import type { AIProvider, AIMessage, GenerateCallbacks, GenerateOptions, GenerateHandle } from '../aiProvider.js';
 import { formatToolStatus } from '../transcriptParser.js';
 
+// __dirname is provided by esbuild banner (prod) or tsx polyfill (dev)
+declare const __dirname: string;
+
 /**
  * Generate MCP config file for Claude CLI, enabling the browser MCP server.
  * Returns the config file path if successful, null otherwise.
@@ -15,23 +18,23 @@ function getMcpConfigPath(): string | null {
 		const configPath = path.join(configDir, 'mcp-config.json');
 
 		// Resolve the MCP browser server entry point
-		// In dev: server/src/mcp-browser/index.ts (run via tsx)
-		// In prod: dist/mcp-browser/index.js (bundled)
-		const devPath = path.resolve(__dirname, '../mcp-browser/index.ts');
-		const prodPath = path.resolve(__dirname, '../mcp-browser/index.js');
+		// Try multiple candidate paths since __dirname differs between dev (server/src/providers/)
+		// and prod (dist/)
+		const candidates = [
+			// Dev: tsx running from server/src/providers/
+			path.resolve(__dirname, '../mcp-browser/index.ts'),
+			// Prod: bundled dist/server.js → look at sibling server/src/
+			path.resolve(__dirname, '../server/src/mcp-browser/index.ts'),
+		];
 
-		let serverCommand: string;
-		let serverArgs: string[];
-
-		if (fs.existsSync(prodPath)) {
-			serverCommand = 'node';
-			serverArgs = [prodPath];
-		} else if (fs.existsSync(devPath)) {
-			serverCommand = 'npx';
-			serverArgs = ['tsx', devPath];
-		} else {
+		const devPath = candidates.find(p => fs.existsSync(p));
+		if (!devPath) {
+			console.warn('[MCP] Browser server not found, tried:', candidates);
 			return null;
 		}
+
+		const serverCommand = 'npx';
+		const serverArgs = ['tsx', devPath];
 
 		const config = {
 			mcpServers: {
