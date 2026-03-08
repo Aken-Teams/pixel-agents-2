@@ -1357,7 +1357,12 @@ async function orchestrateStep(
 		});
 	}
 
-	session.history.push({ role: 'user', content: message });
+	// Only save user's actual message (depth 0) to history.
+	// depth > 0 messages are system-generated ([RESULT] feedback, safety valve corrections)
+	// and should NOT appear as "You" messages in the chat UI.
+	if (depth === 0) {
+		session.history.push({ role: 'user', content: message });
+	}
 
 	console.log(`[Orchestrator] Step ${depth}: sending message to ${session.name}`);
 
@@ -1439,20 +1444,22 @@ async function orchestrateStep(
 
 	if (pipelines.length === 0 && bareTasks.length === 0) {
 		// Safety valve: if CTO received [RESULT] feedback (depth > 0) but produced no [TASK] blocks,
-		// it's likely describing plans or writing code instead of dispatching.
-		// Lower threshold (300 chars) catches "plan descriptions" early, not just code generation.
+		// silently send a correction. No broadcast to UI — user should not see internal corrections.
+		// If CTO genuinely has no more tasks (project complete), the correction message won't contain
+		// [RESULT:, so the safety valve won't re-trigger on the next depth.
 		const isPostResult = depth > 0 && message.includes('[RESULT:');
+
 		if (isPostResult && response.length > 300) {
-			console.warn(`[Orchestrator] Safety valve triggered: CTO produced ${response.length} chars without [TASK] after receiving [RESULT]. Sending correction.`);
-			broadcast({ type: 'teamStreamChunk', skillId: orchSkillId, text: '\n\n（系統：未偵測到指派語法，自動提醒中...）\n' });
+			console.warn(`[Orchestrator] Safety valve triggered: CTO produced ${response.length} chars without [TASK] after receiving [RESULT]. Sending silent correction.`);
+			// No broadcast — correction is invisible to user
 			const correctionMsg = `⚠️ 你的回覆缺少 [TASK] 指派語法。請不要只描述計畫，而是直接輸出 [TASK] 或 [PIPELINE] 區塊。
 
 你必須使用以下格式之一：
 - 單一任務：[TASK:skillId] 指示內容 [/TASK]
 - 並行多工：[PIPELINE parallel]\\n[TASK:skillId] ... [/TASK]\\n[/PIPELINE]
-- 暫停回報：直接告訴用戶目前進度（不需要 [TASK]，但回覆要簡短）
+- 如果所有工作已完成，直接簡短回覆結案總結（不需要 [TASK]）
 
-請現在輸出正確的指派。`;
+請現在輸出正確的指派，或簡短結案。`;
 			await orchestrateStep(orchSkillId, correctionMsg, broadcast, depth + 1);
 			return;
 		}
@@ -1615,10 +1622,21 @@ export function resumeProject(projectDir: string, broadcast: Broadcast): boolean
 		status: 'running',
 	});
 
-	// Send conversation history to client so chat panels can be populated
+	// Send conversation history to client so chat panels can be populated.
+	// Filter out internal system messages (safety valve corrections, [RESULT] feedback)
+	// that were saved as role:'user' in older versions — they should not display as "You".
+	const filteredHistory: Record<string, { role: string; content: string }[]> = {};
+	for (const [skillId, messages] of Object.entries(state.history)) {
+		filteredHistory[skillId] = messages.filter((m) => {
+			if (m.role !== 'user') return true;
+			if (m.content.startsWith('⚠️')) return false;
+			if (m.content.startsWith('[RESULT:')) return false;
+			return true;
+		});
+	}
 	broadcast({
 		type: 'projectHistoryRestored',
-		history: state.history,
+		history: filteredHistory,
 	});
 
 	console.log(`[Team] Resumed project: ${state.name} (phase ${state.currentPhase}, ${responseCounter} responses)`);
