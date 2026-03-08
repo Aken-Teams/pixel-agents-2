@@ -756,38 +756,6 @@ export function useServerMessages(
         })
       } else if (msg.type === 'pipelineCompleted') {
         setActivePipeline(null)
-      } else if (msg.type === 'pipelineCollaboration') {
-        // Show a collaboration chat bubble when an agent posts to the shared bulletin board
-        const agentId = msg.agentId as number
-        const summary = msg.summary as string
-        if (agentId && summary) {
-          setThoughtData((prev) => ({
-            ...prev,
-            [agentId]: {
-              ...prev[agentId],
-              text: `📋 ${summary}`,
-              updatedAt: Date.now(),
-              isWorking: prev[agentId]?.isWorking ?? true,
-              justCompleted: false,
-              isIdleChat: true,
-            },
-          }))
-          // Auto-clear collaboration bubble after 5 seconds, revert to working state
-          setTimeout(() => {
-            setThoughtData((prev) => {
-              const cur = prev[agentId]
-              if (!cur || !cur.isIdleChat) return prev
-              return {
-                ...prev,
-                [agentId]: {
-                  ...cur,
-                  text: '',
-                  isIdleChat: false,
-                },
-              }
-            })
-          }, 5000)
-        }
       } else if (msg.type === 'orchestratorBusy') {
         setOrchestratorBusy(msg.busy as boolean)
         if (!(msg.busy as boolean)) {

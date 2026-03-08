@@ -58,7 +58,6 @@ export type ServerMessage =
 	| { type: 'pipelineStarted'; pipelineId: string; taskCount: number }
 	| { type: 'pipelineTaskCompleted'; pipelineId: string; taskIndex: number; taskId: string; targetSkillId: string }
 	| { type: 'pipelineCompleted'; pipelineId: string }
-	| { type: 'pipelineCollaboration'; skillId: string; agentId: number; summary: string }
 	// Interview (pre-development questionnaire)
 	| { type: 'interviewRequest'; questions: { id: string; question: string }[] }
 	// Idle chat
