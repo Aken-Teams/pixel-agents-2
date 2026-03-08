@@ -148,13 +148,21 @@ export class ClaudeCLIProvider implements AIProvider {
 				env: cleanEnv,
 			} as any);
 
-			// For persistent sessions after the first call, send only the latest user message
-			// (Claude remembers the system prompt and conversation history)
+			// For persistent sessions after the first call, re-send the system prompt
+			// along with the latest user message. Claude CLI session memory may lose
+			// critical rules (like "don't implement code yourself") on subsequent calls.
 			let stdinPayload: string;
 			if (options?.sessionId && !options.isFirstSessionCall) {
-				// Extract just the latest user message
+				const systemMessages = messages.filter(m => m.role === 'system');
 				const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-				stdinPayload = lastUserMsg?.content || '';
+				let payload = '';
+				// Always re-send system prompt so agent doesn't forget its role/rules
+				if (systemMessages.length > 0) {
+					const systemPrompt = systemMessages.map(m => m.content).join('\n\n');
+					payload += `<role>\n${systemPrompt}\n</role>\n\n`;
+				}
+				payload += lastUserMsg?.content || '';
+				stdinPayload = payload;
 			} else {
 				stdinPayload = messagesToStdin(messages);
 			}

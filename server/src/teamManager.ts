@@ -44,11 +44,13 @@ const initializedSessions = new Set<string>(); // session IDs that have sent ful
 // Fine-grained Bash(cmd:*) patterns caused CLI parsing issues on Windows.
 // System prompt provides additional soft rules (port protection, security scanning, etc.)
 
-// Orchestrator (CTO): read-only + research tools, no Write/Edit
+// Orchestrator (CTO): read-only + research ONLY.
+// No Bash/Write/Edit — CTO delegates ALL execution via [TASK].
+// Git/deploy → [TASK:devops], code → [TASK:frontend/backend], etc.
 const ORCHESTRATOR_ALLOWED_TOOLS: string[] = [
 	'Read', 'Glob', 'Grep',
-	'Bash', 'WebFetch', 'WebSearch',
-	// MCP browser tools
+	'WebFetch', 'WebSearch',
+	// MCP browser tools (read-only)
 	'mcp__browser__browser_search',
 	'mcp__browser__browser_navigate',
 	'mcp__browser__browser_screenshot',
@@ -56,9 +58,10 @@ const ORCHESTRATOR_ALLOWED_TOOLS: string[] = [
 	'mcp__browser__browser_back',
 ];
 
-// Orchestrator blocklist: prevent CTO from writing code or running dev commands
+// Orchestrator blocklist: prevent CTO from any file modification or command execution
 const ORCHESTRATOR_DISALLOWED_TOOLS: string[] = [
-	'Write', 'Edit', 'MultiEdit',
+	'Write', 'Edit', 'MultiEdit', 'NotebookEdit',
+	'Bash',
 ];
 
 // Worker (developers): all tools available, blocklist for dangerous ops
@@ -357,14 +360,14 @@ message: 該喝水了！
 description: 喝水提醒
 [/SCHEDULE]
 
-## ⚠️ 嚴禁自己實作（最高優先級）
-你是調度者和審核者，絕對不可以自己寫程式碼、建立設計稿、修改檔案或執行部署。
-- **禁止** 使用 Write、Edit 工具建立或修改程式碼/設計稿/設定檔
-- **禁止** 使用 Bash 工具執行 npm、npx、node 等開發指令
-- **允許** 使用 Read、Glob、Grep、Bash(ls) 來驗證成員的產出是否存在
-- 所有實作工作必須透過 [TASK:skillId] 指派給團隊成員完成
-- 即使任務很簡單（改一行程式碼），也必須指派出去
-- 違反此規則等同任務失敗
+## ⚠️ 嚴禁自己實作（最高優先級 — 系統已強制執行）
+你是調度者和審核者。系統已移除你的 Write、Edit、Bash 工具權限。
+- 你**唯一的產出方式**是 [TASK:skillId] 指派語法 — 這會將任務派給團隊成員執行
+- **絕對禁止把程式碼貼在回覆中叫用戶自己執行** — 這不是你的職責
+- **絕對禁止輸出「請在終端機執行以下指令」這類內容** — 用 [TASK:devops] 或 [TASK:frontend] 指派
+- 無論任務多簡單（一個表單、一個按鈕、初始化專案），都必須用 [TASK] 指派給成員
+- 正確的流程：分析需求 → 用 [TASK:pm] 和 [TASK:architect] 釐清 → 用 [TASK:frontend/backend/designer] 實作 → 用 [TASK:reviewer/qa/security] 審查
+- 你的回覆內容只有：分析說明、指派任務（[TASK]）、審核結果、進度回報
 ${langRule}
 ${assistantRule}
 ${safetyRule}
@@ -934,10 +937,13 @@ function spawnForSkill(
 		if (isFirstSessionCall) {
 			initializedSessions.add(sessionId);
 		}
+		const allowed = getAllowedToolsForSkill(session.skillId);
+		const disallowed = getDisallowedToolsForSkill(session.skillId);
+		console.log(`[Team ${session.name}] Tool restrictions — allowed: [${allowed.join(', ')}] | disallowed: [${disallowed.join(', ')}]`);
 		const handle = provider.generate(messages, callbacks, {
 			cwd: getAgentCwd(),
-			allowedTools: getAllowedToolsForSkill(session.skillId),
-			disallowedTools: getDisallowedToolsForSkill(session.skillId),
+			allowedTools: allowed,
+			disallowedTools: disallowed,
 			sessionId,
 			isFirstSessionCall,
 		});
@@ -1521,6 +1527,30 @@ async function orchestrateStep(
 	const { pipelines, bareTasks } = parsePipelineBlocks(response);
 
 	if (pipelines.length === 0 && bareTasks.length === 0) {
+		// Safety valve: if CTO received [RESULT] feedback (depth > 0) but produced no [TASK] blocks
+		// and the response is very long (>800 chars), it's likely generating code instead of dispatching.
+		// Send a correction message to force it to use [TASK] syntax.
+		const isPostResult = depth > 0 && message.includes('[RESULT:');
+		const isLongResponse = response.length > 800;
+		if (isPostResult && isLongResponse) {
+			console.warn(`[Orchestrator] Safety valve triggered: CTO produced ${response.length} chars without [TASK] after receiving [RESULT]. Sending correction.`);
+			broadcast({ type: 'teamStreamChunk', skillId: orchSkillId, text: '\n\n（系統偵測到未正確指派，重新調度中...）\n' });
+			const correctionMsg = `⚠️ 系統提醒：你剛才的回覆沒有包含 [TASK] 指派。你不可以自己寫程式碼。
+
+請立即使用 [TASK] 或 [PIPELINE] 語法指派下一階段的工作給團隊成員。
+
+範例（連續執行模式 Phase 2）：
+[PIPELINE parallel]
+[TASK:designer] 設計 UI [/TASK]
+[TASK:frontend] 實作前端 [/TASK]
+[TASK:dba] 設計資料庫 [/TASK]
+[TASK:backend] 實作後端 [/TASK]
+[/PIPELINE]
+
+請現在輸出正確的 [TASK] 指派。`;
+			await orchestrateStep(orchSkillId, correctionMsg, broadcast, depth + 1);
+			return;
+		}
 		// No tasks dispatched — orchestration complete for this round
 		console.log(`[Orchestrator] No tasks in response — round complete`);
 		return;
@@ -1562,7 +1592,15 @@ async function orchestrateStep(
 
 	// Feed ALL results back to orchestrator in one message
 	if (allResults.length > 0) {
-		const feedbackMessage = allResults.join('\n\n');
+		// Inject dispatch reminder into feedback — session persistence may lose system prompt rules
+		const dispatchReminder = `\n\n---\n⚠️ 系統提醒（每次都會附上）：
+- 你是調度者，絕對不可以自己寫程式碼或執行實作。你的 Write、Edit、Bash 工具已被系統移除。
+- 所有回覆必須使用繁體中文。
+- 收到成員的 [RESULT] 後，你必須：審核結果 → 用 [TASK:skillId] 或 [PIPELINE] 指派下一階段工作，或者暫停回報給用戶確認。
+- 請依照你系統提示中的調度模式（分階段確認 或 連續執行）決定下一步流程。
+- 禁止在回覆中輸出任何程式碼、終端指令、或實作內容。
+---`;
+		const feedbackMessage = allResults.join('\n\n') + dispatchReminder;
 		console.log(`[Orchestrator] Feeding ${allResults.length} result(s) back (from ${pipelines.length} pipeline(s) + ${bareTasks.length} bare task(s))`);
 		await orchestrateStep(orchSkillId, feedbackMessage, broadcast, depth + 1);
 	}
