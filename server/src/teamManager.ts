@@ -359,6 +359,24 @@ message: 該喝水了！
 description: 喝水提醒
 [/SCHEDULE]
 
+## 對齊會議（並行開發前必須召開）
+當你要指派開發類的 [PIPELINE parallel]（設計師、前端、後端、DBA 等 2+ 人並行）時，**必須先用 [MEETING] 召開對齊會議**。不可以跳過會議直接派任務。
+
+⚠️ **重要**：你的執行計畫和實際指派必須一致。如果你在計畫中寫了「4 人並行開發」，就必須 [MEETING] 後用一個 [PIPELINE parallel] 包含全部 4 人，不可以拆成多個階段（例如先設計師+DBA，再前端+後端）。
+
+使用 [MEETING]...[/MEETING] 語法：
+[MEETING]
+topic: 會議主題（例：前後端協作對齊 - 用戶認證系統）
+participants: designer, frontend, backend, dba
+context:
+提供背景資訊和需求摘要，讓參與者了解整體計畫
+[/MEETING]
+
+**必須使用**：開發類並行任務涉及 2+ 人時（設計師、前端、後端、DBA 的組合）
+**不需要使用**：串行任務、獨立審查（reviewer/QA/security 各自檢查）
+
+系統會讓所有參與者同時說明各自計畫，彙整為會議紀錄後回傳給你。你再根據會議結論用一個 [PIPELINE parallel] 指派所有開發任務，每個成員的任務描述應包含會議中的協作約定。
+
 ## ⚠️ 嚴禁自己實作（最高優先級 — 系統已強制執行）
 你是調度者和審核者。系統已移除你的 Write、Edit、Bash 工具權限。
 - 你**唯一的產出方式**是 [TASK:skillId] 指派語法 — 這會將任務派給團隊成員執行
@@ -635,7 +653,9 @@ function sanitizeInterviewResponse(raw: string): { safe: boolean; sanitized: str
 		.replace(/\[INTERVIEW\]/gi, '')
 		.replace(/\[\/INTERVIEW\]/gi, '')
 		.replace(/\[PIPELINE[^\]]*\]/gi, '')
-		.replace(/\[\/PIPELINE\]/gi, '');
+		.replace(/\[\/PIPELINE\]/gi, '')
+		.replace(/\[MEETING\]/gi, '')
+		.replace(/\[\/MEETING\]/gi, '');
 
 	// Detect prompt injection patterns
 	const injectionPatterns = [
@@ -771,6 +791,37 @@ function parsePipelineBlocks(text: string): {
 	const { cleanText, tasks: bareTasks } = parseTaskBlocks(afterPipelines);
 
 	return { cleanText, pipelines, bareTasks };
+}
+
+// ── Meeting Block Parsing ────────────────────────────────────
+
+interface ParsedMeeting {
+	topic: string;
+	participants: string[];
+	context: string;
+}
+
+function parseMeetingBlock(text: string): { cleanText: string; meeting: ParsedMeeting | null } {
+	let meeting: ParsedMeeting | null = null;
+	const cleanText = text.replace(
+		/\[MEETING\]\s*([\s\S]*?)\s*\[\/MEETING\]/g,
+		(_match, content: string) => {
+			const topicMatch = content.match(/topic:\s*(.+)/i);
+			const participantsMatch = content.match(/participants:\s*(.+)/i);
+			// context: everything after the "context:" line
+			const contextMatch = content.match(/context:\s*([\s\S]*?)$/i);
+
+			if (topicMatch && participantsMatch) {
+				meeting = {
+					topic: topicMatch[1].trim(),
+					participants: participantsMatch[1].split(',').map(s => s.trim()).filter(Boolean),
+					context: contextMatch?.[1]?.trim() || '',
+				};
+			}
+			return '';
+		},
+	).trim();
+	return { cleanText, meeting };
 }
 
 // ── Project Directory & Response Persistence ────────────────
@@ -1097,7 +1148,9 @@ export function sendOrchestratorMessage(message: string, broadcast: Broadcast): 
 		.replace(/\[TASK:\w[\w-]*\]/gi, '')
 		.replace(/\[\/TASK\]/gi, '')
 		.replace(/\[PIPELINE[^\]]*\]/gi, '')
-		.replace(/\[\/PIPELINE\]/gi, '');
+		.replace(/\[\/PIPELINE\]/gi, '')
+		.replace(/\[MEETING\]/gi, '')
+		.replace(/\[\/MEETING\]/gi, '');
 
 	// Defer project creation — only create when orchestrator dispatches [TASK]
 	pendingProjectMessage = sanitizedMessage;
@@ -1314,6 +1367,106 @@ async function executePipelineParallel(
 	return taskResults.map(r => r.result);
 }
 
+// ── Pre-Parallel Meeting ────────────────────────────────────
+
+let meetingCounter = 0;
+
+async function executeMeeting(
+	meeting: ParsedMeeting,
+	broadcast: Broadcast,
+): Promise<string> {
+	const meetingId = `meeting-${++meetingCounter}-${Date.now()}`;
+
+	// Broadcast meeting start
+	broadcast({
+		type: 'meetingStarted',
+		meetingId,
+		topic: meeting.topic,
+		participants: meeting.participants.map(skillId => {
+			const session = teamSessions.get(skillId);
+			return { skillId, name: session?.name ?? skillId };
+		}),
+	});
+
+	console.log(`[Meeting] Started: ${meeting.topic} — participants: ${meeting.participants.join(', ')}`);
+
+	// Build meeting prompt for each participant
+	const buildMeetingPrompt = (skillId: string): string => {
+		const others = meeting.participants
+			.filter(id => id !== skillId)
+			.map(id => {
+				const s = teamSessions.get(id);
+				return s ? `${s.name}(${id})` : id;
+			});
+
+		return `## 開發前對齊會議
+
+**會議主題**：${meeting.topic}
+
+**其他參與成員**：${others.join('、')}
+
+**背景資訊**：
+${meeting.context}
+
+---
+
+請簡要說明（200 字以內）：
+1. 你負責的部分打算怎麼做（技術方案）
+2. 你需要其他成員提供或配合什麼（API 格式、資料結構、設計稿等）
+3. 你會產出什麼（其他成員可能需要的東西）
+4. 你預見的風險或需要討論的決定
+
+**注意**：這是對齊會議，不需要寫程式碼，只需要說明計畫。`;
+	};
+
+	// Execute all participant prompts in parallel
+	const responsePromises = meeting.participants.map(async (skillId) => {
+		const session = teamSessions.get(skillId);
+		if (!session) {
+			return { skillId, name: skillId, response: `找不到成員 ${skillId}` };
+		}
+
+		// Wait if agent is busy
+		if (session.activeGeneration) {
+			await new Promise<void>((resolve) => {
+				const check = setInterval(() => {
+					if (!session.activeGeneration) { clearInterval(check); resolve(); }
+				}, 500);
+			});
+		}
+
+		broadcast({ type: 'meetingParticipantStart', meetingId, skillId, agentId: session.agentId });
+
+		try {
+			const prompt = buildMeetingPrompt(skillId);
+			const response = await spawnForSkill(session, prompt, broadcast);
+			const responseText = response || '（未回覆）';
+
+			broadcast({ type: 'meetingParticipantEnd', meetingId, skillId, agentId: session.agentId });
+			return { skillId, name: session.name, response: responseText };
+		} catch (err) {
+			const errMsg = err instanceof Error ? err.message : String(err);
+			broadcast({ type: 'meetingParticipantEnd', meetingId, skillId, agentId: session.agentId });
+			return { skillId, name: session.name, response: `錯誤：${errMsg}` };
+		}
+	});
+
+	const responses = await Promise.all(responsePromises);
+
+	// Compile meeting notes
+	const meetingNotes = responses.map(r => {
+		const truncated = truncateResultForOrchestrator(r.response, 1500);
+		return `### ${r.name}（${r.skillId}）\n${truncated}`;
+	}).join('\n\n');
+
+	const compiledResult = `## 會議紀錄：${meeting.topic}\n\n${meetingNotes}`;
+
+	broadcast({ type: 'meetingCompleted', meetingId, notes: compiledResult });
+	console.log(`[Meeting] Completed: ${meeting.topic}`);
+
+	return compiledResult;
+}
+
 // ── Core: Recursive Orchestration ───────────────────────────
 
 /**
@@ -1425,6 +1578,20 @@ async function orchestrateStep(
 
 		// Feed sanitized user response back to the orchestrator
 		const feedbackMsg = `用戶的回覆：\n${sanitized}`;
+		await orchestrateStep(orchSkillId, feedbackMsg, broadcast, depth + 1);
+		return;
+	}
+
+	// Check for meeting blocks (pre-parallel alignment meeting)
+	const { cleanText: afterMeeting, meeting } = parseMeetingBlock(response);
+	if (meeting) {
+		console.log(`[Orchestrator] Meeting block detected — topic: ${meeting.topic}, participants: ${meeting.participants.join(', ')}`);
+
+		const meetingNotes = await executeMeeting(meeting, broadcast);
+
+		// Feed meeting notes back to CTO so it can dispatch parallel tasks with context
+		const remainingText = afterMeeting.trim();
+		const feedbackMsg = `${remainingText ? remainingText + '\n\n' : ''}${meetingNotes}\n\n---\n⚠️ 會議已完成，請根據會議結論用 [PIPELINE parallel] 指派開發任務。每個成員的任務描述中應包含會議中達成的協作約定。`;
 		await orchestrateStep(orchSkillId, feedbackMsg, broadcast, depth + 1);
 		return;
 	}

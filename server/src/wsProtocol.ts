@@ -60,6 +60,11 @@ export type ServerMessage =
 	| { type: 'pipelineCompleted'; pipelineId: string }
 	// Interview (pre-development questionnaire)
 	| { type: 'interviewRequest'; questions: { id: string; question: string }[] }
+	// Meeting (pre-parallel alignment)
+	| { type: 'meetingStarted'; meetingId: string; topic: string; participants: { skillId: string; name: string }[] }
+	| { type: 'meetingParticipantStart'; meetingId: string; skillId: string; agentId: number }
+	| { type: 'meetingParticipantEnd'; meetingId: string; skillId: string; agentId: number }
+	| { type: 'meetingCompleted'; meetingId: string; notes: string }
 	// Idle chat
 	| { type: 'idleChatMessage'; agentId: number; text: string }
 	| { type: 'idleChatEnd'; agentId: number }

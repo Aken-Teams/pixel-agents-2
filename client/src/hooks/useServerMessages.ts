@@ -68,6 +68,23 @@ export interface DispatchedTask {
   completed: boolean
 }
 
+export interface MeetingMessage {
+  skillId: string
+  name: string
+  content: string
+  isStreaming: boolean
+  streamBuffer: string
+}
+
+export interface MeetingState {
+  meetingId: string
+  topic: string
+  participants: { skillId: string; name: string }[]
+  messages: MeetingMessage[]
+  notes: string
+  isActive: boolean
+}
+
 export interface ServerMessageState {
   agents: number[]
   selectedAgent: number | null
@@ -97,6 +114,7 @@ export interface ServerMessageState {
   deepseekModel: string
   currentProject: { name: string; status: string; dir: string } | null
   scheduledTasks: Array<{ id: string; type: string; description: string; message: string; enabled: boolean; nextRun?: string; action: string; recurring?: { pattern: string; time: string; dayOfWeek?: number; dayOfMonth?: number }; triggerAt?: string; createdBy: string; createdAt: string; lastRun?: string }>
+  activeMeeting: MeetingState | null
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -138,6 +156,7 @@ export function useServerMessages(
   const [deepseekModel, setDeepseekModel] = useState<string>('deepseek-chat')
   const [currentProject, setCurrentProject] = useState<{ name: string; status: string; dir: string } | null>(null)
   const [scheduledTasks, setScheduledTasks] = useState<Array<{ id: string; type: string; description: string; message: string; enabled: boolean; nextRun?: string; action: string; recurring?: { pattern: string; time: string; dayOfWeek?: number; dayOfMonth?: number }; triggerAt?: string; createdBy: string; createdAt: string; lastRun?: string }>>([])
+  const [activeMeeting, setActiveMeeting] = useState<MeetingState | null>(null)
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false)
@@ -632,6 +651,15 @@ export function useServerMessages(
             [skillId]: { ...chat, isStreaming: true, streamBuffer: chat.streamBuffer + text },
           }
         })
+        // Also update active meeting if this participant is in the meeting
+        setActiveMeeting((prev) => {
+          if (!prev || !prev.isActive) return prev
+          const idx = prev.messages.findIndex(m => m.skillId === skillId)
+          if (idx === -1) return prev
+          const updated = [...prev.messages]
+          updated[idx] = { ...updated[idx], streamBuffer: updated[idx].streamBuffer + text }
+          return { ...prev, messages: updated }
+        })
         // Update thought bubble with latest text snippet (keep last ~100 chars)
         const chunkAgentId = skillAgentMapRef.current[skillId]
         if (chunkAgentId !== undefined) {
@@ -694,6 +722,16 @@ export function useServerMessages(
             ...prev,
             [skillId]: { messages: newMessages, isStreaming: false, streamBuffer: '' },
           }
+        })
+        // Finalize meeting message content
+        setActiveMeeting((prev) => {
+          if (!prev) return prev
+          const idx = prev.messages.findIndex(m => m.skillId === skillId)
+          if (idx === -1) return prev
+          const updated = [...prev.messages]
+          const m = updated[idx]
+          updated[idx] = { ...m, content: m.streamBuffer || m.content, streamBuffer: '', isStreaming: false }
+          return { ...prev, messages: updated }
         })
       } else if (msg.type === 'teamError') {
         const skillId = msg.skillId as string
@@ -893,6 +931,49 @@ export function useServerMessages(
             }
           })
         }
+      // ── Meeting (pre-parallel alignment) ──
+      } else if (msg.type === 'meetingStarted') {
+        setActiveMeeting({
+          meetingId: msg.meetingId as string,
+          topic: msg.topic as string,
+          participants: msg.participants as { skillId: string; name: string }[],
+          messages: [],
+          notes: '',
+          isActive: true,
+        })
+      } else if (msg.type === 'meetingParticipantStart') {
+        const skillId = msg.skillId as string
+        setActiveMeeting((prev) => {
+          if (!prev) return prev
+          if (prev.messages.find(m => m.skillId === skillId)) return prev
+          const participant = prev.participants.find(p => p.skillId === skillId)
+          return {
+            ...prev,
+            messages: [...prev.messages, {
+              skillId,
+              name: participant?.name ?? skillId,
+              content: '',
+              isStreaming: true,
+              streamBuffer: '',
+            }],
+          }
+        })
+      } else if (msg.type === 'meetingParticipantEnd') {
+        const skillId = msg.skillId as string
+        setActiveMeeting((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            messages: prev.messages.map(m =>
+              m.skillId === skillId ? { ...m, isStreaming: false } : m
+            ),
+          }
+        })
+      } else if (msg.type === 'meetingCompleted') {
+        setActiveMeeting((prev) => {
+          if (!prev) return prev
+          return { ...prev, isActive: false, notes: (msg.notes as string) || '' }
+        })
       }
     }
     wsClient.addMessageListener(handler)
@@ -973,5 +1054,6 @@ export function useServerMessages(
     aiProvider, deepseekModel,
     currentProject,
     scheduledTasks,
+    activeMeeting,
   }
 }

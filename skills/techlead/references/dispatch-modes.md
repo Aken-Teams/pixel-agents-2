@@ -65,13 +65,25 @@
 ```
 收到結果後審核，通過後直接進入 Phase 2（不暫停）。
 
-**Phase 2：設計 + 開發（並行，獨立工作）**
+**Phase 2a：對齊會議（並行開發前協調）**
+```
+[MEETING]
+topic: 前後端協作對齊 - {功能名稱}
+participants: designer, frontend, dba, backend
+context:
+PM 的需求摘要：{user story 重點}
+架構師的方案：{API 規範 + 資料模型重點}
+[/MEETING]
+```
+收到會議紀錄後，根據各成員的計畫和協作約定指派並行任務。
+
+**Phase 2b：設計 + 開發（並行，帶著會議共識）**
 ```
 [PIPELINE parallel]
-[TASK:designer]  設計 UI/UX → 產出 HTML 設計稿到 designs/（附上 PM 的需求和架構師的 API 規範） [/TASK]
-[TASK:frontend]  實作前端（附上 PM 的需求、架構師的 API 規範，先照需求開發，設計稿完成後系統會提供） [/TASK]
-[TASK:dba]       設計資料庫 schema、索引策略、migration（附上架構師的資料模型） [/TASK]
-[TASK:backend]   實作後端 API（附上架構師的 API 規範、資料模型，先照規範開發，DBA schema 完成後系統會提供） [/TASK]
+[TASK:designer]  設計 UI/UX → 產出 HTML 設計稿到 designs/（附上 PM 的需求、架構師的 API 規範、會議中的協作約定） [/TASK]
+[TASK:frontend]  實作前端（附上 PM 的需求、架構師的 API 規範、會議中的協作約定，先照需求開發） [/TASK]
+[TASK:dba]       設計資料庫 schema、索引策略、migration（附上架構師的資料模型、會議中的協作約定） [/TASK]
+[TASK:backend]   實作後端 API（附上架構師的 API 規範、資料模型、會議中的協作約定） [/TASK]
 [/PIPELINE]
 ```
 收到所有結果後統一審核，通過後進入 Phase 3。
