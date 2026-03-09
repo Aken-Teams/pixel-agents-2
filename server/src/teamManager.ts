@@ -20,6 +20,7 @@ import {
 	type ProjectState,
 	type ProjectSummary,
 	type TaskRecord,
+	type MeetingRecord,
 } from './projectPersistence.js';
 import { setActiveProjectDir } from './settingsPersistence.js';
 
@@ -1464,6 +1465,24 @@ ${meeting.context}
 	broadcast({ type: 'meetingCompleted', meetingId, notes: compiledResult });
 	console.log(`[Meeting] Completed: ${meeting.topic}`);
 
+	// Persist meeting record to project.json
+	if (currentProjectDir) {
+		const participants = meeting.participants.map(skillId => {
+			const s = teamSessions.get(skillId);
+			return { skillId, name: s?.name ?? skillId };
+		});
+		const meetingRecord: MeetingRecord = {
+			meetingId,
+			topic: meeting.topic,
+			participants,
+			messages: responses.map(r => ({ skillId: r.skillId, name: r.name, content: r.response })),
+			notes: compiledResult,
+		};
+		const existing = loadProjectState(currentProjectDir);
+		const meetings = [...(existing?.meetings ?? []), meetingRecord];
+		saveProjectStateImmediate(currentProjectDir, { meetings });
+	}
+
 	return compiledResult;
 }
 
@@ -1805,6 +1824,16 @@ export function resumeProject(projectDir: string, broadcast: Broadcast): boolean
 		type: 'projectHistoryRestored',
 		history: filteredHistory,
 	});
+
+	// Restore meeting records so the MeetingPanel can display past meetings
+	if (state.meetings && state.meetings.length > 0) {
+		const lastMeeting = state.meetings[state.meetings.length - 1];
+		broadcast({
+			type: 'meetingRestored',
+			meeting: lastMeeting,
+		});
+		console.log(`[Team] Restored ${state.meetings.length} meeting(s), showing latest: ${lastMeeting.topic}`);
+	}
 
 	console.log(`[Team] Resumed project: ${state.name} (phase ${state.currentPhase}, ${responseCounter} responses)`);
 	return true;

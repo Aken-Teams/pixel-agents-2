@@ -13,6 +13,14 @@ export interface TaskRecord {
 	pipelineId?: string;
 }
 
+export interface MeetingRecord {
+	meetingId: string;
+	topic: string;
+	participants: { skillId: string; name: string }[];
+	messages: { skillId: string; name: string; content: string }[];
+	notes: string;
+}
+
 export interface ProjectState {
 	name: string;
 	createdAt: string;
@@ -23,6 +31,7 @@ export interface ProjectState {
 	responseCounter: number;
 	history: Record<string, ChatMessage[]>;
 	tasks: Record<string, TaskRecord>;
+	meetings?: MeetingRecord[];
 }
 
 export interface ProjectSummary {

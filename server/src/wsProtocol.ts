@@ -1,4 +1,4 @@
-import type { ProjectSummary, TaskRecord } from './projectPersistence.js';
+import type { ProjectSummary, TaskRecord, MeetingRecord } from './projectPersistence.js';
 import type { ScheduledTask } from './schedulerManager.js';
 
 // ── Shared interfaces ────────────────────────────────────────
@@ -65,6 +65,7 @@ export type ServerMessage =
 	| { type: 'meetingParticipantStart'; meetingId: string; skillId: string; agentId: number }
 	| { type: 'meetingParticipantEnd'; meetingId: string; skillId: string; agentId: number }
 	| { type: 'meetingCompleted'; meetingId: string; notes: string }
+	| { type: 'meetingRestored'; meeting: MeetingRecord }
 	// Idle chat
 	| { type: 'idleChatMessage'; agentId: number; text: string }
 	| { type: 'idleChatEnd'; agentId: number }

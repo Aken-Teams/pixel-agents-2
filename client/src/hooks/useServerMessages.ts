@@ -974,6 +974,23 @@ export function useServerMessages(
           if (!prev) return prev
           return { ...prev, isActive: false, notes: (msg.notes as string) || '' }
         })
+      // ── Meeting restore (project resume) ──
+      } else if (msg.type === 'meetingRestored') {
+        const m = msg.meeting as { meetingId: string; topic: string; participants: { skillId: string; name: string }[]; messages: { skillId: string; name: string; content: string }[]; notes: string }
+        setActiveMeeting({
+          meetingId: m.meetingId,
+          topic: m.topic,
+          participants: m.participants,
+          messages: m.messages.map(mm => ({
+            skillId: mm.skillId,
+            name: mm.name,
+            content: mm.content,
+            isStreaming: false,
+            streamBuffer: '',
+          })),
+          isActive: false,
+          notes: m.notes,
+        })
       }
     }
     wsClient.addMessageListener(handler)
