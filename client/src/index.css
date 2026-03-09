@@ -70,6 +70,62 @@ html, body, #root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
 }
 
+/* Meeting panel markdown content overflow control */
+.meeting-panel .chat-message-bubble {
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.meeting-panel .chat-message-bubble pre {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 6px 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.meeting-panel .chat-message-bubble code {
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 11px;
+}
+
+.meeting-panel .chat-message-bubble p {
+  margin: 4px 0;
+}
+
+.meeting-panel .chat-message-bubble h2,
+.meeting-panel .chat-message-bubble h3 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.meeting-panel .chat-message-bubble ul,
+.meeting-panel .chat-message-bubble ol {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.meeting-panel .chat-message-bubble li {
+  margin: 2px 0;
+}
+
+.meeting-panel .chat-message-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 6px 0;
+}
+
+.meeting-panel .chat-message-bubble td,
+.meeting-panel .chat-message-bubble th {
+  padding: 2px 4px;
+  border: 1px solid var(--pixel-border);
+}
+
 /* Scheduler panel uses system font for consistent CJK/Latin rendering */
 .scheduler-panel,
 .scheduler-panel * {

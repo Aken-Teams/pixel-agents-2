@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { wsClient } from '../wsClient.js'
 import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js'
-import { ProjectListModal } from './ProjectListModal.js'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -133,7 +132,7 @@ function PixelSelect({ value, options, onChange, maxWidth = 170 }: PixelSelectPr
 export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode, aiProvider, deepseekModel }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled)
-  const [showProjects, setShowProjects] = useState(false)
+
   const [apiKeyLocal, setApiKeyLocal] = useState('')
   const [apiKeySaved, setApiKeySaved] = useState(false)
 
@@ -205,22 +204,6 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
             X
           </button>
         </div>
-
-        {/* Load Project */}
-        <button
-          onClick={() => {
-            setShowProjects(true)
-            wsClient.postMessage({ type: 'listProjects' })
-          }}
-          onMouseEnter={() => setHovered('projects')}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            ...rowStyle,
-            background: hovered === 'projects' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-          }}
-        >
-          Load Project
-        </button>
 
         {/* Sound */}
         <button
@@ -376,15 +359,6 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
           )}
         </div>
       </div>
-      {showProjects && (
-        <ProjectListModal
-          onClose={() => setShowProjects(false)}
-          onProjectClose={() => {
-            setShowProjects(false)
-            onClose()
-          }}
-        />
-      )}
     </>
   )
 }

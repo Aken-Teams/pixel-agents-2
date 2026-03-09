@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { wsClient } from '../wsClient.js'
+import { ProjectListModal } from './ProjectListModal.js'
 
 interface ProjectStatusBarProps {
   currentProject: { name: string; status: string; dir: string } | null
@@ -22,6 +23,12 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
     try { return localStorage.getItem('projectStatusCollapsed') === 'true' } catch { return false }
   })
   const [hovered, setHovered] = useState<string | null>(null)
+  const [showProjects, setShowProjects] = useState(false)
+
+  const handleLoadProject = () => {
+    setShowProjects(true)
+    wsClient.postMessage({ type: 'listProjects' })
+  }
 
   const toggleCollapse = () => {
     const next = !collapsed
@@ -155,6 +162,34 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
         </button>
       )}
 
+      {/* Load project button */}
+      <button
+        onClick={handleLoadProject}
+        onMouseEnter={() => setHovered('load')}
+        onMouseLeave={() => setHovered(null)}
+        title="載入專案"
+        style={{
+          background: hovered === 'load' ? 'rgba(255,255,255,0.12)' : 'transparent',
+          border: 'none',
+          borderRadius: 0,
+          color: hovered === 'load' ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)',
+          cursor: 'pointer',
+          padding: '2px',
+          lineHeight: 1,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {/* Upload/load icon — box with upward arrow */}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <polyline points="16,3 21,3 21,21 3,21 3,3 8,3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="12" y1="15" x2="12" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <polyline points="8,10 12,6 16,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
       {/* Collapse button */}
       <button
         onClick={toggleCollapse}
@@ -179,6 +214,14 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
           <polyline points="6,15 12,9 18,15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         </svg>
       </button>
+
+      {/* Project list modal */}
+      {showProjects && (
+        <ProjectListModal
+          onClose={() => setShowProjects(false)}
+          onProjectClose={() => setShowProjects(false)}
+        />
+      )}
     </div>
   )
 }
