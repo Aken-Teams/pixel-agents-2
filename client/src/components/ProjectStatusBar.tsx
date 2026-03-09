@@ -182,11 +182,11 @@ export function ProjectStatusBar({ currentProject }: ProjectStatusBarProps) {
           justifyContent: 'center',
         }}
       >
-        {/* Upload/load icon — box with upward arrow */}
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <polyline points="16,3 21,3 21,21 3,21 3,3 8,3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="12" y1="15" x2="12" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <polyline points="8,10 12,6 16,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Folder-download / load icon */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <polyline points="9,13.5 12,16.5 15,13.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
