@@ -41,10 +41,10 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
           background: 'var(--pixel-bg)',
           border: '2px solid var(--pixel-border)',
           borderRadius: 0,
-          padding: '4px',
           boxShadow: 'var(--pixel-shadow)',
           minWidth: 360,
           maxWidth: 560,
+          overflow: 'hidden',
         }}
       >
         {/* Header */}
@@ -53,24 +53,31 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '4px 10px',
-            borderBottom: '1px solid var(--pixel-border)',
-            marginBottom: '8px',
+            padding: '8px 14px',
+            borderBottom: '2px solid var(--pixel-border)',
+            background: 'rgba(90, 140, 255, 0.08)',
           }}
         >
-          <span style={{ fontSize: '24px', color: 'rgba(255, 255, 255, 0.9)' }}>Scene</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Map/scene icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--pixel-accent)', flexShrink: 0 }}>
+              <rect x="3" y="3" width="18" height="18" rx="1" stroke="currentColor" strokeWidth="2" />
+              <path d="M3 9h18M9 3v18" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            <span style={{ fontSize: '16px', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>場景選擇</span>
+          </div>
           <button
             onClick={onClose}
             onMouseEnter={() => setHovered('close')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
               border: 'none',
               borderRadius: 0,
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '24px',
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '16px',
               cursor: 'pointer',
-              padding: '0 4px',
+              padding: '2px 6px',
               lineHeight: 1,
             }}
           >
@@ -86,7 +93,7 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
             flexWrap: 'wrap',
             justifyContent: 'center',
             gap: 8,
-            padding: '4px 8px 8px',
+            padding: '10px 8px',
           }}
         >
           {SCENE_DEFINITIONS.map((scene) => {
@@ -141,12 +148,12 @@ export function ScenePickerModal({ isOpen, onClose, currentBackgroundImage, onSe
                 {/* Label */}
                 <div
                   style={{
-                    fontSize: '18px',
+                    fontSize: '14px',
                     color: isActive ? 'var(--pixel-accent)' : 'rgba(255, 255, 255, 0.8)',
                     textAlign: 'center',
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif",
                     userSelect: 'none',
                     whiteSpace: 'nowrap',
+                    fontWeight: isActive ? 600 : 400,
                   }}
                 >
                   {scene.name}

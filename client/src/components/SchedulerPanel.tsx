@@ -149,10 +149,18 @@ export function SchedulerPanel({ isOpen, onClose, tasks }: SchedulerPanelProps) 
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '12px 16px',
           borderBottom: '2px solid rgba(255,255,255,0.1)',
+          background: 'rgba(90, 140, 255, 0.08)',
         }}>
-          <span style={{ fontSize: 18, color: '#fff', fontFamily: SYS_FONT }}>
-            Scheduler
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Clock icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--pixel-accent, #5a8cff)', flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+              <polyline points="12,7 12,12 16,14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize: 16, color: '#fff', fontFamily: SYS_FONT, fontWeight: 600 }}>
+              排程管理
+            </span>
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -224,7 +232,7 @@ export function SchedulerPanel({ isOpen, onClose, tasks }: SchedulerPanelProps) 
                       fontFamily: SYS_FONT,
                     }}
                   >
-                    {task.enabled ? 'ON' : 'OFF'}
+                    {task.enabled ? '啟用' : '停用'}
                   </button>
                   {/* Delete */}
                   <button

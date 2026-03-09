@@ -108,7 +108,7 @@ export function BottomToolbar({
                   background: hovered === 'edit' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
                 }
           }
-          title="Edit office layout"
+          title="編輯辦公室佈局"
         >
           Layout
         </button>
@@ -125,7 +125,7 @@ export function BottomToolbar({
                 background: hovered === 'scene' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
               }
         }
-        title="Switch scene"
+        title="切換場景"
       >
         Scene
       </button>
@@ -141,7 +141,7 @@ export function BottomToolbar({
                 background: hovered === 'portfolio' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
               }
         }
-        title="View project portfolio"
+        title="專案作品集"
       >
         Portfolio
       </button>
@@ -157,7 +157,7 @@ export function BottomToolbar({
                 background: hovered === 'scheduler' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
               }
         }
-        title="Scheduled tasks & reminders"
+        title="排程與提醒"
       >
         Scheduler{scheduledTasks.length > 0 ? ` (${scheduledTasks.length})` : ''}
       </button>
@@ -174,7 +174,7 @@ export function BottomToolbar({
                   background: hovered === 'settings' ? 'var(--pixel-btn-hover-bg)' : btnBase.background,
                 }
           }
-          title="Settings"
+          title="設定"
         >
           Settings
         </button>

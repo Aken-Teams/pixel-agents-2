@@ -15,8 +15,8 @@ const rowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '6px 10px',
-  fontSize: '24px',
+  padding: '10px 14px',
+  fontSize: '15px',
   color: 'rgba(255, 255, 255, 0.8)',
   background: 'transparent',
   border: 'none',
@@ -24,9 +24,10 @@ const rowStyle: React.CSSProperties = {
   cursor: 'pointer',
   textAlign: 'left',
   boxSizing: 'border-box',
+  width: '100%',
 }
 
-/* ── Pixel-art custom dropdown ── */
+/* ── Custom dropdown ── */
 interface PixelSelectProps {
   value: string
   options: { value: string; label: string }[]
@@ -64,10 +65,10 @@ function PixelSelect({ value, options, onChange, maxWidth = 170 }: PixelSelectPr
           width: '100%',
           background: open ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.3)',
           color: 'rgba(255, 255, 255, 0.9)',
-          border: `1px solid ${open ? 'rgba(90, 140, 255, 0.6)' : 'rgba(255, 255, 255, 0.25)'}`,
+          border: `1px solid ${open ? 'rgba(90, 140, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)'}`,
           borderRadius: 0,
-          padding: '3px 8px',
-          fontSize: '20px',
+          padding: '4px 10px',
+          fontSize: '14px',
           cursor: 'pointer',
           outline: 'none',
           boxSizing: 'border-box',
@@ -76,7 +77,7 @@ function PixelSelect({ value, options, onChange, maxWidth = 170 }: PixelSelectPr
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected?.label ?? value}
         </span>
-        <span style={{ fontSize: '12px', opacity: 0.5, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+        <span style={{ fontSize: '10px', opacity: 0.5, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
       </button>
       {/* Dropdown */}
       {open && (
@@ -103,8 +104,8 @@ function PixelSelect({ value, options, onChange, maxWidth = 170 }: PixelSelectPr
               style={{
                 display: 'block',
                 width: '100%',
-                padding: '4px 8px',
-                fontSize: '20px',
+                padding: '5px 10px',
+                fontSize: '14px',
                 color: opt.value === value ? '#fff' : 'rgba(255, 255, 255, 0.8)',
                 background: hoveredIdx === i
                   ? 'rgba(90, 140, 255, 0.4)'
@@ -167,9 +168,8 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
           background: 'var(--pixel-bg)',
           border: '2px solid var(--pixel-border)',
           borderRadius: 0,
-          padding: '4px',
           boxShadow: 'var(--pixel-shadow)',
-          width: 380,
+          width: 340,
           boxSizing: 'border-box',
           overflow: 'visible',
         }}
@@ -180,24 +180,31 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '4px 10px',
-            borderBottom: '1px solid var(--pixel-border)',
-            marginBottom: '4px',
+            padding: '8px 14px',
+            borderBottom: '2px solid var(--pixel-border)',
+            background: 'rgba(90, 140, 255, 0.08)',
           }}
         >
-          <span style={{ fontSize: '24px', color: 'rgba(255, 255, 255, 0.9)' }}>Settings</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Gear icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--pixel-accent)', flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span style={{ fontSize: '16px', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>設定</span>
+          </div>
           <button
             onClick={onClose}
             onMouseEnter={() => setHovered('close')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
               border: 'none',
               borderRadius: 0,
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '24px',
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '16px',
               cursor: 'pointer',
-              padding: '0 4px',
+              padding: '2px 6px',
               lineHeight: 1,
             }}
           >
@@ -217,28 +224,28 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
           onMouseLeave={() => setHovered(null)}
           style={{
             ...rowStyle,
-            background: hovered === 'sound' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'sound' ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
           }}
         >
-          <span>Sound Notifications</span>
+          <span>音效通知</span>
           <span
             style={{
               marginLeft: 16,
-              width: 14,
-              height: 14,
-              border: '2px solid rgba(255, 255, 255, 0.5)',
+              width: 16,
+              height: 16,
+              border: '2px solid rgba(255, 255, 255, 0.4)',
               borderRadius: 0,
               background: soundLocal ? 'rgba(90, 140, 255, 0.8)' : 'transparent',
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '12px',
+              fontSize: '11px',
               lineHeight: 1,
               color: '#fff',
             }}
           >
-            {soundLocal ? 'X' : ''}
+            {soundLocal ? '✓' : ''}
           </span>
         </button>
 
@@ -249,33 +256,33 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
           onMouseLeave={() => setHovered(null)}
           style={{
             ...rowStyle,
-            background: hovered === 'debug' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'debug' ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
           }}
         >
-          <span>Route Overlay</span>
+          <span>路徑顯示</span>
           <span
             style={{
               marginLeft: 16,
-              width: 14,
-              height: 14,
-              border: '2px solid rgba(255, 255, 255, 0.5)',
+              width: 16,
+              height: 16,
+              border: '2px solid rgba(255, 255, 255, 0.4)',
               borderRadius: 0,
               background: isDebugMode ? 'rgba(90, 140, 255, 0.8)' : 'transparent',
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '12px',
+              fontSize: '11px',
               lineHeight: 1,
               color: '#fff',
             }}
           >
-            {isDebugMode ? 'X' : ''}
+            {isDebugMode ? '✓' : ''}
           </span>
         </button>
 
         {/* AI Provider */}
-        <div style={{ borderTop: '1px solid var(--pixel-border)', marginTop: '4px', paddingTop: '4px' }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '2px', paddingTop: '2px' }}>
           <div style={{ ...rowStyle, cursor: 'default' }}>
             <span>AI Provider</span>
             <PixelSelect
@@ -319,10 +326,10 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
                     style={{
                       background: 'rgba(0, 0, 0, 0.3)',
                       color: 'rgba(255, 255, 255, 0.9)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
                       borderRadius: 0,
-                      padding: '2px 6px',
-                      fontSize: '18px',
+                      padding: '4px 8px',
+                      fontSize: '13px',
                       width: 120,
                       flexShrink: 1,
                       minWidth: 0,
@@ -345,8 +352,8 @@ export function SettingsModal({ isOpen, onClose, isDebugMode, onToggleDebugMode,
                       color: '#fff',
                       border: 'none',
                       borderRadius: 0,
-                      padding: '3px 8px',
-                      fontSize: '18px',
+                      padding: '4px 10px',
+                      fontSize: '13px',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                     }}

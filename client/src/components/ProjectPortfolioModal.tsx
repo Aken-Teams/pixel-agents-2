@@ -51,9 +51,9 @@ interface ProjectPortfolioModalProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  running: 'Running',
-  paused: 'Paused',
-  completed: 'Completed',
+  running: '進行中',
+  paused: '已暫停',
+  completed: '已完成',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -344,12 +344,13 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '6px 12px',
+            padding: '8px 14px',
             borderBottom: '2px solid var(--pixel-border)',
+            background: 'rgba(90, 140, 255, 0.08)',
             flexShrink: 0,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {view === 'detail' && (
               <button
                 onClick={handleBack}
@@ -359,20 +360,31 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
                   background: hovered === 'back' ? 'rgba(255,255,255,0.08)' : 'transparent',
                   border: 'none',
                   borderRadius: 0,
-                  color: 'rgba(255,255,255,0.7)',
-                  fontSize: '22px',
+                  color: 'rgba(255,255,255,0.6)',
+                  fontSize: '14px',
                   cursor: 'pointer',
-                  padding: '2px 8px',
+                  padding: '3px 8px',
                 }}
               >
-                {selectedDoc ? '< Docs' : '< Back'}
+                {selectedDoc ? '< 文件' : '< 返回'}
               </button>
             )}
-            <span style={{ fontSize: '24px', color: 'rgba(255,255,255,0.9)' }}>
-              {view === 'list' ? 'Portfolio' : selectedProject?.name ?? ''}
+            {view === 'list' && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--pixel-accent)', flexShrink: 0 }}>
+                <path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            <span style={{ fontSize: '16px', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+              {view === 'list' ? '作品集' : selectedProject?.name ?? ''}
             </span>
             {view === 'detail' && selectedProject && (
-              <span style={{ fontSize: '16px', color: STATUS_COLORS[selectedProject.status] ?? '#94a3b8' }}>
+              <span style={{
+                fontSize: '12px',
+                color: STATUS_COLORS[selectedProject.status] ?? '#94a3b8',
+                background: `${STATUS_COLORS[selectedProject.status] ?? '#94a3b8'}18`,
+                padding: '2px 8px',
+                border: `1px solid ${STATUS_COLORS[selectedProject.status] ?? '#94a3b8'}33`,
+              }}>
                 {STATUS_LABELS[selectedProject.status] ?? selectedProject.status}
               </span>
             )}
@@ -383,13 +395,13 @@ export function ProjectPortfolioModal({ onClose, teamMembers }: ProjectPortfolio
             onMouseEnter={() => setHovered('close')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: hovered === 'close' ? 'rgba(255,255,255,0.08)' : 'transparent',
+              background: hovered === 'close' ? 'rgba(255,255,255,0.1)' : 'transparent',
               border: 'none',
               borderRadius: 0,
-              color: 'rgba(255,255,255,0.6)',
-              fontSize: '24px',
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: '16px',
               cursor: 'pointer',
-              padding: '0 4px',
+              padding: '2px 6px',
               lineHeight: 1,
             }}
           >
@@ -439,54 +451,99 @@ function ProjectListView({
   setHovered: (v: string | null) => void
   onProjectClick: (dir: string) => void
 }) {
+  const STATUS_BG: Record<string, string> = {
+    running: 'rgba(74, 222, 128, 0.12)',
+    paused: 'rgba(250, 204, 21, 0.12)',
+    completed: 'rgba(148, 163, 184, 0.10)',
+  }
+
   return (
-    <div style={{ overflowY: 'auto', height: '100%', padding: '8px 0' }}>
+    <div style={{ overflowY: 'auto', height: '100%', padding: '4px' }}>
       {loading && (
-        <div style={{ padding: '32px', fontSize: '20px', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-          Loading...
+        <div style={{ padding: '32px', fontSize: '15px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+          載入中...
         </div>
       )}
       {!loading && projects.length === 0 && (
-        <div style={{ padding: '32px', fontSize: '20px', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-          No projects yet
+        <div style={{ padding: '32px', fontSize: '15px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+          尚無專案紀錄
         </div>
       )}
-      {projects.map((p) => (
-        <button
-          key={p.dir}
-          onClick={() => onProjectClick(p.dir)}
-          onMouseEnter={() => setHovered(p.dir)}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            width: '100%',
-            padding: '10px 16px',
-            fontSize: '20px',
-            color: 'rgba(255,255,255,0.85)',
-            background: hovered === p.dir ? 'rgba(255,255,255,0.08)' : 'transparent',
-            border: 'none',
-            borderRadius: 0,
-            cursor: 'pointer',
-            textAlign: 'left',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '22px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
-              {p.name}
-            </span>
-            <span style={{ fontSize: '16px', color: STATUS_COLORS[p.status] ?? '#94a3b8', flexShrink: 0 }}>
+      {projects.map((p) => {
+        const isHovered = hovered === p.dir
+        const statusColor = STATUS_COLORS[p.status] ?? '#94a3b8'
+        return (
+          <button
+            key={p.dir}
+            onClick={() => onProjectClick(p.dir)}
+            onMouseEnter={() => setHovered(p.dir)}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              width: '100%',
+              padding: '10px 14px',
+              color: 'rgba(255,255,255,0.85)',
+              background: isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
+              border: 'none',
+              borderRadius: 0,
+              cursor: 'pointer',
+              textAlign: 'left',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              transition: 'background 0.1s',
+            }}
+          >
+            {/* Status dot */}
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: statusColor,
+              flexShrink: 0,
+            }} />
+
+            {/* Project info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: '15px',
+                color: isHovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.3,
+              }}>
+                {p.name}
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 3,
+                fontSize: '12px',
+                color: 'rgba(255,255,255,0.35)',
+              }}>
+                <span>Phase {p.currentPhase}</span>
+                <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+                <span>{formatTime(p.updatedAt)}</span>
+              </div>
+            </div>
+
+            {/* Status badge */}
+            <span style={{
+              fontSize: '11px',
+              color: statusColor,
+              background: STATUS_BG[p.status] ?? 'transparent',
+              padding: '2px 8px',
+              border: `1px solid ${statusColor}33`,
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}>
               {STATUS_LABELS[p.status] ?? p.status}
             </span>
-          </div>
-          <div style={{ display: 'flex', gap: 16, fontSize: '16px', color: 'rgba(255,255,255,0.45)' }}>
-            <span>Phase {p.currentPhase}</span>
-            <span>{formatTime(p.updatedAt)}</span>
-          </div>
-        </button>
-      ))}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -543,7 +600,7 @@ function ProjectDetailView({
 
         {/* Task count */}
         <div style={{ padding: '6px 12px', fontSize: '16px', color: 'rgba(255,255,255,0.5)' }}>
-          Tasks: {completedCount}/{taskEntries.length}
+          任務：{completedCount}/{taskEntries.length}
         </div>
 
         {/* Tasks grouped by phase */}
@@ -563,7 +620,7 @@ function ProjectDetailView({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}>
-                  <span style={{ fontWeight: 'bold' }}>Phase {phase}</span>
+                  <span style={{ fontWeight: 'bold' }}>階段 {phase}</span>
                   <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>
                     {phaseCompleted}/{phaseTasks.length}
                   </span>
@@ -627,7 +684,7 @@ function ProjectDetailView({
                       color: TASK_STATUS_COLORS[task.status] ?? '#94a3b8',
                       flexShrink: 0,
                     }}>
-                      {task.status}
+                      {task.status === 'completed' ? '完成' : task.status === 'dispatched' ? '執行中' : task.status === 'failed' ? '失敗' : task.status}
                     </span>
                   </div>
                 )
@@ -640,7 +697,7 @@ function ProjectDetailView({
       {/* Right: Document List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
         <div style={{ padding: '6px 12px', fontSize: '16px', color: 'rgba(255,255,255,0.5)' }}>
-          Documents ({project.docs.length})
+          文件 ({project.docs.length})
         </div>
         {project.docs.map((doc) => {
           const member = findMember(doc.skillId)
@@ -776,7 +833,7 @@ function DocPreviewView({
         >
           {content === null ? (
             <div style={{ padding: '32px', fontSize: '18px', color: 'rgba(0,0,0,0.35)', textAlign: 'center' }}>
-              Loading...
+              載入中...
             </div>
           ) : (
             <div dangerouslySetInnerHTML={{ __html: renderMarkdown(content, true) }} />
