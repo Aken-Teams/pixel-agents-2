@@ -15,9 +15,9 @@ interface ProjectListModalProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  running: 'Running',
-  paused: 'Paused',
-  completed: 'Completed',
+  running: '進行中',
+  paused: '已暫停',
+  completed: '已完成',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -26,14 +26,29 @@ const STATUS_COLORS: Record<string, string> = {
   completed: '#94a3b8',
 }
 
-function formatTime(iso: string): string {
+const STATUS_BG: Record<string, string> = {
+  running: 'rgba(74, 222, 128, 0.12)',
+  paused: 'rgba(250, 204, 21, 0.12)',
+  completed: 'rgba(148, 163, 184, 0.10)',
+}
+
+function formatRelativeTime(iso: string): string {
   try {
+    const now = Date.now()
+    const then = new Date(iso).getTime()
+    const diff = now - then
+    const mins = Math.floor(diff / 60_000)
+    if (mins < 1) return '剛剛'
+    if (mins < 60) return `${mins} 分鐘前`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs} 小時前`
+    const days = Math.floor(hrs / 24)
+    if (days < 7) return `${days} 天前`
+    // Fallback to date
     const d = new Date(iso)
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    return `${mm}/${dd} ${hh}:${min}`
+    return `${mm}/${dd}`
   } catch {
     return iso
   }
@@ -64,7 +79,7 @@ export function ProjectListModal({ onClose, onProjectClose }: ProjectListModalPr
 
   return (
     <>
-      {/* Higher z-index backdrop on top of settings */}
+      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -78,7 +93,7 @@ export function ProjectListModal({ onClose, onProjectClose }: ProjectListModalPr
         }}
       />
       <div
-        className="modal-responsive"
+        className="modal-responsive project-status-bar"
         style={{
           position: 'fixed',
           top: '50%',
@@ -88,13 +103,13 @@ export function ProjectListModal({ onClose, onProjectClose }: ProjectListModalPr
           background: 'var(--pixel-bg)',
           border: '2px solid var(--pixel-border)',
           borderRadius: 0,
-          padding: '4px',
           boxShadow: 'var(--pixel-shadow)',
-          minWidth: 340,
-          maxWidth: 500,
+          minWidth: 380,
+          maxWidth: 520,
           maxHeight: '70vh',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         }}
       >
         {/* Header */}
@@ -103,24 +118,37 @@ export function ProjectListModal({ onClose, onProjectClose }: ProjectListModalPr
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '4px 10px',
-            borderBottom: '1px solid var(--pixel-border)',
-            marginBottom: '4px',
+            padding: '8px 12px',
+            borderBottom: '2px solid var(--pixel-border)',
+            background: 'rgba(90, 140, 255, 0.08)',
           }}
         >
-          <span style={{ fontSize: '24px', color: 'rgba(255, 255, 255, 0.9)' }}>Projects</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Folder icon */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--pixel-accent)', flexShrink: 0 }}>
+              <path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize: '18px', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>
+              專案紀錄
+            </span>
+            {!loading && (
+              <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.35)' }}>
+                ({projects.length})
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             onMouseEnter={() => setHovered('close')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
               border: 'none',
               borderRadius: 0,
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '24px',
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '18px',
               cursor: 'pointer',
-              padding: '0 4px',
+              padding: '2px 6px',
               lineHeight: 1,
             }}
           >
@@ -129,60 +157,94 @@ export function ProjectListModal({ onClose, onProjectClose }: ProjectListModalPr
         </div>
 
         {/* Project list */}
-        <div style={{ overflowY: 'auto', padding: '4px 0' }}>
+        <div style={{ overflowY: 'auto', padding: '4px' }}>
           {loading && (
-            <div style={{ padding: '16px 10px', fontSize: '20px', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-              Loading...
+            <div style={{ padding: '24px 10px', fontSize: '16px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+              載入中...
             </div>
           )}
           {!loading && projects.length === 0 && (
-            <div style={{ padding: '16px 10px', fontSize: '20px', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-              No projects yet
+            <div style={{ padding: '24px 10px', fontSize: '16px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+              尚無專案紀錄
             </div>
           )}
-          {projects.map((p) => (
-            <button
-              key={p.dir}
-              onClick={() => handleResume(p.dir)}
-              onMouseEnter={() => setHovered(p.dir)}
-              onMouseLeave={() => setHovered(null)}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                width: '100%',
-                padding: '8px 10px',
-                fontSize: '20px',
-                color: 'rgba(255, 255, 255, 0.85)',
-                background: hovered === p.dir ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                border: 'none',
-                borderRadius: 0,
-                cursor: 'pointer',
-                textAlign: 'left',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '22px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}>
-                  {p.name}
-                </span>
-                <span
-                  style={{
+          {projects.map((p) => {
+            const isHovered = hovered === p.dir
+            const statusColor = STATUS_COLORS[p.status] ?? '#94a3b8'
+            return (
+              <button
+                key={p.dir}
+                onClick={() => handleResume(p.dir)}
+                onMouseEnter={() => setHovered(p.dir)}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '10px 10px',
+                  color: 'rgba(255, 255, 255, 0.85)',
+                  background: isHovered ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+                  border: 'none',
+                  borderRadius: 0,
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background 0.1s',
+                }}
+              >
+                {/* Status dot */}
+                <span style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: statusColor,
+                  flexShrink: 0,
+                }} />
+
+                {/* Project info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Name */}
+                  <div style={{
                     fontSize: '16px',
-                    color: STATUS_COLORS[p.status] ?? '#94a3b8',
-                    flexShrink: 0,
-                    marginLeft: 8,
-                  }}
-                >
+                    color: isHovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1.3,
+                  }}>
+                    {p.name}
+                  </div>
+                  {/* Meta row */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 3,
+                    fontSize: '12px',
+                    color: 'rgba(255,255,255,0.35)',
+                  }}>
+                    <span>Phase {p.currentPhase}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+                    <span>{formatRelativeTime(p.updatedAt)}</span>
+                  </div>
+                </div>
+
+                {/* Status badge */}
+                <span style={{
+                  fontSize: '11px',
+                  color: statusColor,
+                  background: STATUS_BG[p.status] ?? 'transparent',
+                  padding: '2px 8px',
+                  border: `1px solid ${statusColor}33`,
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                }}>
                   {STATUS_LABELS[p.status] ?? p.status}
                 </span>
-              </div>
-              <div style={{ display: 'flex', gap: 12, fontSize: '16px', color: 'rgba(255,255,255,0.45)' }}>
-                <span>Phase {p.currentPhase}</span>
-                <span>{formatTime(p.updatedAt)}</span>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
     </>
